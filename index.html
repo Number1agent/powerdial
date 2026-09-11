@@ -156,7 +156,7 @@
   .main {
     flex: 1;
     display: grid;
-    grid-template-columns: 280px 1fr 280px;
+    grid-template-columns: 430px 1fr 280px;
     gap: 0;
     overflow: hidden;
   }
@@ -744,6 +744,98 @@
   }
   .list-tab-add:hover { border-color: var(--accent); color: var(--accent); }
 
+  /* ===== MOJO SIDEBAR ===== */
+  .left-panel-inner {
+    display: flex;
+    flex-direction: row;
+    flex: 1;
+    overflow: hidden;
+  }
+  .mojo-sidebar {
+    width: 150px;
+    flex-shrink: 0;
+    background: var(--bg-0);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  .mojo-sidebar::-webkit-scrollbar { width: 3px; }
+  .mojo-sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .mojo-all-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 10px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-primary);
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    background: var(--accent-dim);
+    border-left: 3px solid var(--accent);
+    transition: background 0.1s;
+    flex-shrink: 0;
+  }
+  .mojo-all-btn.inactive {
+    background: transparent;
+    border-left-color: transparent;
+    color: var(--text-secondary);
+  }
+  .mojo-all-btn:hover { background: var(--bg-2); }
+  .mojo-all-btn .mojo-count { font-size: 10px; opacity: 0.7; font-weight: 600; }
+  .sidebar-section-label {
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    padding: 8px 10px 4px;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+  .sidebar-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: all 0.1s;
+    gap: 4px;
+    min-height: 28px;
+    flex-shrink: 0;
+  }
+  .sidebar-item:hover { background: var(--bg-2); color: var(--text-primary); }
+  .sidebar-item.active { background: var(--bg-2); color: var(--text-primary); border-left-color: var(--accent); font-weight: 600; }
+  .sidebar-item .si-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+  .sidebar-item .si-count { font-size: 10px; background: var(--bg-4); border-radius: 10px; padding: 1px 5px; flex-shrink: 0; opacity: 0.8; }
+  .sidebar-item.active .si-count { background: var(--accent-dim); color: var(--accent); opacity: 1; }
+  .sidebar-item .si-del { opacity: 0; font-size: 11px; flex-shrink: 0; color: var(--text-muted); margin-left: 2px; }
+  .sidebar-item:hover .si-del { opacity: 0.5; }
+  .sidebar-item .si-del:hover { opacity: 1; color: var(--red); }
+  .sidebar-new-list {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    font-size: 10px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color 0.1s;
+    flex-shrink: 0;
+  }
+  .sidebar-new-list:hover { color: var(--accent); }
+  .queue-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
+  }
+
   /* ===== QUEUE TOOLBAR ===== */
   .queue-toolbar {
     padding: 6px 8px 0;
@@ -1217,44 +1309,59 @@
 <!-- ===== MAIN ===== -->
 <div class="main">
 
-  <!-- LEFT: Queue -->
+  <!-- LEFT: Sidebar + Queue -->
   <div class="panel">
     <div class="panel-header">
       <span class="panel-title">Contact Queue</span>
       <span id="queueBadge" class="panel-badge">0</span>
     </div>
-    <div class="list-tabs-row" id="listTabsRow">
-      <button class="list-tab active" id="listtab-all" onclick="setActiveList(null)">📋 All</button>
-      <button class="list-tab-add" onclick="promptNewList()" title="New List">＋</button>
-    </div>
-    <div class="queue-toolbar">
-      <div class="queue-search">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="queueSearch" placeholder="Search contacts..." oninput="renderQueue()" />
+    <div class="left-panel-inner">
+
+      <!-- Mojo-style sidebar -->
+      <div class="mojo-sidebar">
+        <div class="mojo-all-btn" id="sidebarAllBtn" onclick="setActiveGroup(null);setActiveList(null)">
+          <span>All Contacts</span>
+          <span class="mojo-count" id="sidebarAllCount">0</span>
+        </div>
+
+        <div class="sidebar-section-label">CALLING LISTS</div>
+        <div id="sidebarLists"></div>
+        <div class="sidebar-new-list" onclick="promptNewList()">＋ New list</div>
+
+        <div class="sidebar-section-label">GROUPS</div>
+        <div id="sidebarGroups"></div>
       </div>
-      <div class="queue-filter-row">
-        <button class="queue-tab active" id="tab-all"        onclick="setQueueTab('all')">All</button>
-        <button class="queue-tab"        id="tab-pending"   onclick="setQueueTab('pending')">Pending</button>
-        <button class="queue-tab"        id="tab-hot"       onclick="setQueueTab('hot')" style="color:var(--red)">🔥 Hot</button>
-        <button class="queue-tab"        id="tab-interested" onclick="setQueueTab('interested')" style="color:var(--yellow)">🌟 Warm</button>
-        <button class="queue-tab"        id="tab-callback"  onclick="setQueueTab('callback')">📅 CB</button>
-        <button class="queue-tab"        id="tab-called"    onclick="setQueueTab('called')">Called</button>
-        <button class="queue-sort-btn"   id="sortBtn"       onclick="cycleSort()">A–Z ↕</button>
+
+      <!-- Queue area -->
+      <div class="queue-area">
+        <div class="queue-toolbar">
+          <div class="queue-search">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="queueSearch" placeholder="Search contacts..." oninput="renderQueue()" />
+          </div>
+          <div class="queue-filter-row">
+            <button class="queue-tab active" id="tab-all"      onclick="setQueueTab('all')">All</button>
+            <button class="queue-tab"        id="tab-pending"  onclick="setQueueTab('pending')">Pending</button>
+            <button class="queue-tab"        id="tab-called"   onclick="setQueueTab('called')">Called</button>
+            <button class="queue-sort-btn"   id="sortBtn"      onclick="cycleSort()">A–Z ↕</button>
+          </div>
+          <div class="city-filter-row" id="cityFilterRow" style="display:none">
+            <span class="city-filter-label">📍</span>
+          </div>
+        </div>
+        <div class="panel-body" id="queueList">
+          <div class="empty-state">
+            <div class="empty-icon">👥</div>
+            <div class="empty-title">No contacts loaded</div>
+            <div class="empty-sub">Import contacts to start dialing.</div>
+          </div>
+        </div>
+        <div class="import-bar">
+          <button class="btn btn-ghost" style="font-size:11px" onclick="showImportModal()">📥 Import</button>
+          <button class="btn btn-ghost btn-icon" title="Clear queue" onclick="clearQueue()">🗑</button>
+        </div>
       </div>
-      <div class="city-filter-row" id="cityFilterRow" style="display:none">
-        <span class="city-filter-label">📍</span>
-      </div>
-    </div>
-    <div class="panel-body" id="queueList">
-      <div class="empty-state">
-        <div class="empty-icon">👥</div>
-        <div class="empty-title">No contacts loaded</div>
-        <div class="empty-sub">Import from AgentOS or paste a CSV list to start dialing.</div>
-      </div>
-    </div>
-    <div class="import-bar">
-      <button class="btn btn-ghost" style="font-size:11px" onclick="showImportModal()">📥 Import Contacts</button>
-      <button class="btn btn-ghost btn-icon" title="Clear queue" onclick="clearQueue()">🗑</button>
+
     </div>
   </div>
 
@@ -1596,9 +1703,10 @@ const state = {
   callNotes: '',
   globalMuted: false,
   onHold: false,
-  queueTab: 'all',       // all | pending | callback | called
+  queueTab: 'all',       // all | pending | called
   queueSort: 'default',  // default | az | za | status
   activeCity: null,      // city filter (null = all cities)
+  activeGroup: null,     // sidebar group key (null = all)
   lists: [],             // [{ id, name }] — named call lists
   activeListId: null,    // null = show all lists
   sessionStartTime: null,
@@ -1950,6 +2058,66 @@ function clearQueue() {
 }
 
 // ============================================================
+//  SIDEBAR
+// ============================================================
+const SIDEBAR_GROUPS = [
+  { key: 'hot',       label: '🔥 Hot Lead',       match: c => c.disposition === 'Hot Lead' || c.disposition === 'Appointment' },
+  { key: 'appt',      label: '📆 Appointment Set', match: c => c.disposition === 'Appointment' },
+  { key: 'interested',label: '🌟 Interested',      match: c => c.disposition === 'Interested' },
+  { key: 'callback',  label: '📅 Callback',         match: c => c.status === 'callback' },
+  { key: 'leftvm',    label: '📬 Left VM',          match: c => c.disposition === 'Left VM' },
+  { key: 'notint',    label: '👎 Not Interested',   match: c => c.disposition === 'Not Interested' },
+  { key: 'dnc',       label: '🚫 DNC',              match: c => c.isDNC },
+];
+
+function renderSidebar() {
+  const allBtn = document.getElementById('sidebarAllBtn');
+  const allCount = document.getElementById('sidebarAllCount');
+  const isAllActive = state.activeListId === null && state.activeGroup === null;
+  if (allBtn) allBtn.classList.toggle('inactive', !isAllActive);
+  if (allCount) allCount.textContent = state.contacts.length;
+
+  // Calling Lists
+  const listsEl = document.getElementById('sidebarLists');
+  if (listsEl) {
+    let html = '';
+    state.lists.forEach(l => {
+      const count = state.contacts.filter(c => c.listId === l.id).length;
+      const active = state.activeListId === l.id && state.activeGroup === null;
+      html += `<div class="sidebar-item${active ? ' active' : ''}" onclick="setActiveList('${l.id}')">
+        <span class="si-label">📁 ${l.name}</span>
+        <span class="si-count">${count}</span>
+        <span class="si-del" onclick="deleteList('${l.id}',event)" title="Delete">✕</span>
+      </div>`;
+    });
+    listsEl.innerHTML = html;
+  }
+
+  // Groups
+  const groupsEl = document.getElementById('sidebarGroups');
+  if (groupsEl) {
+    let html = '';
+    SIDEBAR_GROUPS.forEach(g => {
+      const count = state.contacts.filter(g.match).length;
+      if (!count && state.activeGroup !== g.key) return; // hide empty groups
+      const active = state.activeGroup === g.key;
+      html += `<div class="sidebar-item${active ? ' active' : ''}" onclick="setActiveGroup('${g.key}')">
+        <span class="si-label">${g.label}</span>
+        <span class="si-count">${count}</span>
+      </div>`;
+    });
+    groupsEl.innerHTML = html || '<div style="padding:4px 10px;font-size:10px;color:var(--text-muted)">No dispositions yet</div>';
+  }
+}
+
+function setActiveGroup(key) {
+  state.activeGroup = state.activeGroup === key ? null : key;
+  if (state.activeGroup !== null) state.activeListId = null;
+  renderSidebar();
+  renderQueue();
+}
+
+// ============================================================
 //  QUEUE RENDER
 // ============================================================
 function renderCityChips() {
@@ -2026,18 +2194,18 @@ function renderQueue() {
   // Search filter
   const q = (document.getElementById('queueSearch')?.value || '').toLowerCase().trim();
 
-  // Rebuild city chips whenever queue renders
+  // Refresh sidebar counts + city chips
+  renderSidebar();
   renderCityChips();
 
-  // List filter + Tab filter + City filter
+  // List + Group + Tab + City filter
+  const activeGroupDef = SIDEBAR_GROUPS.find(g => g.key === state.activeGroup);
   let filtered = state.contacts.filter(c => {
     if (state.activeListId !== null && c.listId !== state.activeListId) return false;
+    if (activeGroupDef && !activeGroupDef.match(c)) return false;
     if (state.activeCity && (c.city || '').trim().toLowerCase() !== state.activeCity) return false;
-    if (state.queueTab === 'pending')    return c.status === 'pending';
-    if (state.queueTab === 'hot')        return c.disposition === 'Hot Lead' || c.disposition === 'Appointment';
-    if (state.queueTab === 'interested') return c.disposition === 'Interested';
-    if (state.queueTab === 'callback')   return c.status === 'callback';
-    if (state.queueTab === 'called')     return c.status !== 'pending' && c.status !== 'callback';
+    if (state.queueTab === 'pending') return c.status === 'pending';
+    if (state.queueTab === 'called')  return c.status !== 'pending';
     return true; // 'all'
   });
 
@@ -2150,25 +2318,13 @@ function deleteList(id, e) {
 
 function setActiveList(id) {
   state.activeListId = id;
-  renderListTabs();
+  state.activeGroup = null;
+  renderSidebar();
   renderQueue();
 }
 
 function renderListTabs() {
-  const row = document.getElementById('listTabsRow');
-  if (!row) return;
-  const allActive = state.activeListId === null;
-  let html = `<button class="list-tab${allActive ? ' active' : ''}" onclick="setActiveList(null)">📋 All <span class="list-count">${state.contacts.length}</span></button>`;
-  state.lists.forEach(l => {
-    const count = state.contacts.filter(c => c.listId === l.id).length;
-    const active = state.activeListId === l.id;
-    html += `<button class="list-tab${active ? ' active' : ''}" onclick="setActiveList('${l.id}')">
-      📁 ${l.name} <span class="list-count">${count}</span>
-      <span class="list-del" onclick="deleteList('${l.id}',event)" title="Delete list">✕</span>
-    </button>`;
-  });
-  html += `<button class="list-tab-add" onclick="promptNewList()" title="New list">＋</button>`;
-  row.innerHTML = html;
+  renderSidebar(); // sidebar replaces the old horizontal tabs
 }
 
 function promptNewList() {
@@ -2545,7 +2701,10 @@ async function dialNextSet() {
   if (!state.session || state.paused) return;
   if (state.activeLineId !== null) return; // already on a call
 
+  const activeGroupDef = SIDEBAR_GROUPS.find(g => g.key === state.activeGroup);
   const pending = state.contacts.filter(c => c.status === 'pending' && !c.isDNC &&
+    (!state.activeListId || c.listId === state.activeListId) &&
+    (!activeGroupDef || activeGroupDef.match(c)) &&
     (!state.activeCity || (c.city || '').trim().toLowerCase() === state.activeCity));
   if (!pending.length) {
     toast('✅ All contacts in queue have been dialed!', 'green');
@@ -3176,7 +3335,8 @@ async function init() {
     state.contacts = savedContacts;
     state.queue = [...savedContacts];
   }
-  renderListTabs();
+  renderSidebar();
+  renderQueue();
 
   // Close modals on overlay click
   document.querySelectorAll('.modal-overlay').forEach(m => {
