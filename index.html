@@ -2210,7 +2210,10 @@ function renderQueue() {
   });
 
   // Search filter
-  if (q) filtered = filtered.filter(c => c.name.toLowerCase().includes(q) || (c.phone || '').includes(q));
+  if (q) filtered = filtered.filter(c => [
+    c.name, c.phone, c.city, c.state, c.zip,
+    c.notes, c.address, c.type, c.disposition, c.callNotes
+  ].some(v => (v || '').toLowerCase().includes(q)));
 
   // Sort
   if (state.queueSort === 'az') filtered = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
