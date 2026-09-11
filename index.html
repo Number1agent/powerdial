@@ -555,6 +555,74 @@
     margin: 6px 4px;
   }
 
+  /* ===== QUEUE TOOLBAR ===== */
+  .queue-toolbar {
+    padding: 6px 8px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-1);
+    flex-shrink: 0;
+  }
+  .queue-search {
+    display: flex;
+    align-items: center;
+    background: var(--bg-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0 8px;
+    gap: 6px;
+  }
+  .queue-search input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-primary);
+    font-size: 12px;
+    padding: 6px 0;
+  }
+  .queue-search input::placeholder { color: var(--text-muted); }
+  .queue-search .search-icon { color: var(--text-muted); font-size: 12px; }
+  .queue-filter-row {
+    display: flex;
+    gap: 3px;
+    padding-bottom: 6px;
+    align-items: center;
+  }
+  .queue-tab {
+    flex: 1;
+    padding: 4px 4px;
+    font-size: 10px;
+    font-weight: 600;
+    text-align: center;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    border: 1px solid transparent;
+    color: var(--text-muted);
+    background: transparent;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .queue-tab:hover { background: var(--bg-3); color: var(--text-primary); }
+  .queue-tab.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(108,99,255,0.3); }
+  .queue-sort-btn {
+    padding: 4px 6px;
+    font-size: 10px;
+    font-weight: 600;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    background: transparent;
+    white-space: nowrap;
+    transition: all 0.15s;
+    margin-left: auto;
+  }
+  .queue-sort-btn:hover { background: var(--bg-3); color: var(--text-primary); }
+  .queue-sort-btn.active { color: var(--accent); border-color: rgba(108,99,255,0.3); }
+
   /* ===== IMPORT BAR ===== */
   .import-bar {
     padding: 8px;
@@ -828,6 +896,19 @@
     <div class="panel-header">
       <span class="panel-title">Contact Queue</span>
       <span id="queueBadge" class="panel-badge">0</span>
+    </div>
+    <div class="queue-toolbar">
+      <div class="queue-search">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="queueSearch" placeholder="Search contacts..." oninput="renderQueue()" />
+      </div>
+      <div class="queue-filter-row">
+        <button class="queue-tab active" id="tab-all"       onclick="setQueueTab('all')">All</button>
+        <button class="queue-tab"        id="tab-pending"   onclick="setQueueTab('pending')">Pending</button>
+        <button class="queue-tab"        id="tab-callback"  onclick="setQueueTab('callback')">Callback</button>
+        <button class="queue-tab"        id="tab-called"    onclick="setQueueTab('called')">Called</button>
+        <button class="queue-sort-btn"   id="sortBtn"       onclick="cycleSort()">A–Z ↕</button>
+      </div>
     </div>
     <div class="panel-body" id="queueList">
       <div class="empty-state">
@@ -1137,7 +1218,9 @@ const state = {
   disposition: null,
   callNotes: '',
   globalMuted: false,
-  onHold: false
+  onHold: false,
+  queueTab: 'all',       // all | pending | callback | called
+  queueSort: 'default',  // default | az | za | status
 };
 
 // ============================================================
@@ -1449,6 +1532,24 @@ function clearQueue() {
 // ============================================================
 //  QUEUE RENDER
 // ============================================================
+function setQueueTab(tab) {
+  state.queueTab = tab;
+  document.querySelectorAll('.queue-tab').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('tab-' + tab);
+  if (btn) btn.classList.add('active');
+  renderQueue();
+}
+
+function cycleSort() {
+  const order = ['default', 'az', 'za', 'status'];
+  const labels = { default: 'Default ↕', az: 'A–Z ↑', za: 'Z–A ↓', status: 'Status ↕' };
+  const idx = order.indexOf(state.queueSort);
+  state.queueSort = order[(idx + 1) % order.length];
+  const btn = document.getElementById('sortBtn');
+  if (btn) { btn.textContent = labels[state.queueSort]; btn.classList.toggle('active', state.queueSort !== 'default'); }
+  renderQueue();
+}
+
 function renderQueue() {
   const el = document.getElementById('queueList');
   const badge = document.getElementById('queueBadge');
@@ -1460,17 +1561,52 @@ function renderQueue() {
     return;
   }
 
-  const pending_c = state.contacts.filter(c => c.status === 'pending');
-  const called_c = state.contacts.filter(c => c.status !== 'pending');
+  // Search filter
+  const q = (document.getElementById('queueSearch')?.value || '').toLowerCase().trim();
 
-  let html = '';
-  if (pending_c.length) {
-    html += `<div class="queue-section-label">Up Next (${pending_c.length})</div>`;
-    html += pending_c.slice(0, 30).map((c, i) => contactItem(c, i)).join('');
+  // Tab filter
+  let filtered = state.contacts.filter(c => {
+    if (state.queueTab === 'pending')  return c.status === 'pending';
+    if (state.queueTab === 'callback') return c.status === 'callback';
+    if (state.queueTab === 'called')   return c.status !== 'pending' && c.status !== 'callback';
+    return true; // 'all'
+  });
+
+  // Search filter
+  if (q) filtered = filtered.filter(c => c.name.toLowerCase().includes(q) || (c.phone || '').includes(q));
+
+  // Sort
+  if (state.queueSort === 'az') filtered = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+  else if (state.queueSort === 'za') filtered = [...filtered].sort((a, b) => b.name.localeCompare(a.name));
+  else if (state.queueSort === 'status') filtered = [...filtered].sort((a, b) => a.status.localeCompare(b.status));
+
+  if (!filtered.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">No matches</div><div class="empty-sub">Try a different search or filter.</div></div>`;
+    updateProgress();
+    return;
   }
-  if (called_c.length) {
-    html += `<div class="queue-divider"></div><div class="queue-section-label">Completed (${called_c.length})</div>`;
-    html += called_c.slice(-15).map((c, i) => contactItem(c, i + pending_c.length)).join('');
+
+  // Split into pending/non-pending for section labels (only in 'all' tab with no search)
+  const showSections = state.queueTab === 'all' && !q;
+  const LIMIT = 50;
+  let html = '';
+
+  if (showSections) {
+    const pend = filtered.filter(c => c.status === 'pending');
+    const done = filtered.filter(c => c.status !== 'pending');
+    if (pend.length) {
+      html += `<div class="queue-section-label">Up Next (${pend.length})</div>`;
+      html += pend.slice(0, LIMIT).map((c, i) => contactItem(c, i)).join('');
+      if (pend.length > LIMIT) html += `<div class="queue-section-label" style="color:var(--accent);cursor:pointer" onclick="document.getElementById('queueSearch').focus()">+ ${pend.length - LIMIT} more — search to narrow</div>`;
+    }
+    if (done.length) {
+      html += `<div class="queue-divider"></div><div class="queue-section-label">Completed (${done.length})</div>`;
+      html += done.slice(-20).map((c, i) => contactItem(c, i + pend.length)).join('');
+    }
+  } else {
+    html += `<div class="queue-section-label">${filtered.length} contact${filtered.length !== 1 ? 's' : ''}</div>`;
+    html += filtered.slice(0, LIMIT).map((c, i) => contactItem(c, i)).join('');
+    if (filtered.length > LIMIT) html += `<div class="queue-section-label" style="color:var(--accent)">Showing ${LIMIT} of ${filtered.length} — search to narrow</div>`;
   }
 
   el.innerHTML = html;
@@ -1479,7 +1615,7 @@ function renderQueue() {
 
 function contactItem(c, i) {
   const initials = c.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
-  const typeClass = c.type.toLowerCase().includes('buyer') ? 'buyer' : 'seller';
+  const typeClass = (c.type || '').toLowerCase().includes('buyer') ? 'buyer' : 'seller';
   const statusIcons = { pending: '', connected: '✅', voicemail: '📬', noanswer: '⬜', callback: '📅', hot: '🔥', interested: '⭐', 'not interested': '🚫' };
   const icon = statusIcons[c.status] || '';
   let rowClass = 'contact-item';
