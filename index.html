@@ -1479,7 +1479,7 @@ function renderQueue() {
 
 function contactItem(c, i) {
   const initials = c.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
-  const typeClass = c.type.toLowerCase().includes('buyer') ? 'buyer' : 'seller';
+  const typeClass = (c.type || '').toLowerCase().includes('buyer') ? 'buyer' : 'seller';
   const statusIcons = { pending: '', connected: '✅', voicemail: '📬', noanswer: '⬜', callback: '📅', hot: '🔥', interested: '⭐', 'not interested': '🚫' };
   const icon = statusIcons[c.status] || '';
   let rowClass = 'contact-item';
@@ -1945,7 +1945,7 @@ function showActiveCall(line) {
   document.getElementById('activeTimer').textContent = '0:00';
 
   const tags = document.getElementById('activeTags');
-  const typeClass = line.contact.type.toLowerCase().includes('buyer') ? 'buyer' : 'seller';
+  const typeClass = (line.contact.type || '').toLowerCase().includes('buyer') ? 'buyer' : 'seller';
   tags.innerHTML = `<span class="tag tag-${typeClass}">${line.contact.type}</span><span class="tag tag-line">Line ${line.id}</span>`;
 }
 
