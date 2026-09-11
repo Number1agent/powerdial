@@ -1212,9 +1212,11 @@
         <input type="text" id="queueSearch" placeholder="Search contacts..." oninput="renderQueue()" />
       </div>
       <div class="queue-filter-row">
-        <button class="queue-tab active" id="tab-all"       onclick="setQueueTab('all')">All</button>
+        <button class="queue-tab active" id="tab-all"        onclick="setQueueTab('all')">All</button>
         <button class="queue-tab"        id="tab-pending"   onclick="setQueueTab('pending')">Pending</button>
-        <button class="queue-tab"        id="tab-callback"  onclick="setQueueTab('callback')">Callback</button>
+        <button class="queue-tab"        id="tab-hot"       onclick="setQueueTab('hot')" style="color:var(--red)">🔥 Hot</button>
+        <button class="queue-tab"        id="tab-interested" onclick="setQueueTab('interested')" style="color:var(--yellow)">🌟 Warm</button>
+        <button class="queue-tab"        id="tab-callback"  onclick="setQueueTab('callback')">📅 CB</button>
         <button class="queue-tab"        id="tab-called"    onclick="setQueueTab('called')">Called</button>
         <button class="queue-sort-btn"   id="sortBtn"       onclick="cycleSort()">A–Z ↕</button>
       </div>
@@ -1949,6 +1951,17 @@ function renderQueue() {
   const pending = state.contacts.filter(c => c.status === 'pending').length;
   badge.textContent = pending;
 
+  // Update folder tab counts
+  const hotCount  = state.contacts.filter(c => c.disposition === 'Hot Lead' || c.disposition === 'Appointment').length;
+  const wrmCount  = state.contacts.filter(c => c.disposition === 'Interested').length;
+  const cbCount   = state.contacts.filter(c => c.status === 'callback').length;
+  const hotBtn = document.getElementById('tab-hot');
+  const wrmBtn = document.getElementById('tab-interested');
+  const cbBtn  = document.getElementById('tab-callback');
+  if (hotBtn) hotBtn.textContent = hotCount ? `🔥 Hot (${hotCount})` : '🔥 Hot';
+  if (wrmBtn) wrmBtn.textContent = wrmCount ? `🌟 Warm (${wrmCount})` : '🌟 Warm';
+  if (cbBtn)  cbBtn.textContent  = cbCount  ? `📅 CB (${cbCount})`   : '📅 CB';
+
   if (!state.contacts.length) {
     el.innerHTML = `<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">No contacts loaded</div><div class="empty-sub">Import from AgentOS or paste a CSV list to start dialing.</div></div>`;
     return;
@@ -1960,9 +1973,11 @@ function renderQueue() {
   // List filter + Tab filter
   let filtered = state.contacts.filter(c => {
     if (state.activeListId !== null && c.listId !== state.activeListId) return false;
-    if (state.queueTab === 'pending')  return c.status === 'pending';
-    if (state.queueTab === 'callback') return c.status === 'callback';
-    if (state.queueTab === 'called')   return c.status !== 'pending' && c.status !== 'callback';
+    if (state.queueTab === 'pending')    return c.status === 'pending';
+    if (state.queueTab === 'hot')        return c.disposition === 'Hot Lead' || c.disposition === 'Appointment';
+    if (state.queueTab === 'interested') return c.disposition === 'Interested';
+    if (state.queueTab === 'callback')   return c.status === 'callback';
+    if (state.queueTab === 'called')     return c.status !== 'pending' && c.status !== 'callback';
     return true; // 'all'
   });
 
@@ -2686,6 +2701,7 @@ async function dispose(result) {
   if (contact) {
     const map = { 'Hot Lead': 'hot', 'Interested': 'interested', 'Callback': 'callback', 'Left VM': 'voicemail', 'No Answer': 'noanswer', 'Not Interested': 'not interested', 'Appointment': 'hot' };
     contact.status = map[result] || 'noanswer';
+    contact.disposition = result; // saved for folder filtering
     // Auto-set lead temperature by disposition
     const tempMap = { 'Hot Lead': 'hot', 'Appointment': 'hot', 'Interested': 'warm', 'Callback': 'warm', 'Left VM': 'cold', 'No Answer': 'cold', 'Not Interested': 'cold' };
     contact.temperature = tempMap[result] || contact.temperature || 'cold';
