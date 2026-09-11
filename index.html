@@ -811,6 +811,27 @@
   }
   .queue-sort-btn:hover { background: var(--bg-3); color: var(--text-primary); }
   .queue-sort-btn.active { color: var(--accent); border-color: rgba(108,99,255,0.3); }
+  .city-filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 0 0 6px;
+  }
+  .city-chip {
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 600;
+    background: var(--bg-3);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .city-chip:hover { background: var(--bg-4); color: var(--text-primary); }
+  .city-chip.active { background: rgba(6,182,212,0.15); color: var(--cyan); border-color: rgba(6,182,212,0.4); }
+  .city-filter-label { font-size: 9px; color: var(--text-muted); align-self: center; margin-right: 2px; }
 
   /* ===== IMPORT BAR ===== */
   .import-bar {
@@ -1220,6 +1241,9 @@
         <button class="queue-tab"        id="tab-called"    onclick="setQueueTab('called')">Called</button>
         <button class="queue-sort-btn"   id="sortBtn"       onclick="cycleSort()">A–Z ↕</button>
       </div>
+      <div class="city-filter-row" id="cityFilterRow" style="display:none">
+        <span class="city-filter-label">📍</span>
+      </div>
     </div>
     <div class="panel-body" id="queueList">
       <div class="empty-state">
@@ -1574,6 +1598,7 @@ const state = {
   onHold: false,
   queueTab: 'all',       // all | pending | callback | called
   queueSort: 'default',  // default | az | za | status
+  activeCity: null,      // city filter (null = all cities)
   lists: [],             // [{ id, name }] — named call lists
   activeListId: null,    // null = show all lists
   sessionStartTime: null,
@@ -1927,6 +1952,37 @@ function clearQueue() {
 // ============================================================
 //  QUEUE RENDER
 // ============================================================
+function renderCityChips() {
+  const row = document.getElementById('cityFilterRow');
+  if (!row) return;
+
+  // Collect unique cities from current list filter
+  const cities = {};
+  state.contacts.forEach(c => {
+    if (state.activeListId !== null && c.listId !== state.activeListId) return;
+    const city = (c.city || '').trim();
+    if (!city) return;
+    const key = city.toLowerCase();
+    if (!cities[key]) cities[key] = { label: city, count: 0 };
+    cities[key].count++;
+  });
+
+  const keys = Object.keys(cities).sort();
+  if (keys.length < 2) { row.style.display = 'none'; return; } // hide if only one city or none
+
+  row.style.display = 'flex';
+  row.innerHTML = `<span class="city-filter-label">📍</span>` +
+    keys.map(k => {
+      const active = state.activeCity === k;
+      return `<button class="city-chip${active ? ' active' : ''}" onclick="setCityFilter('${k}')">${cities[k].label} <span style="opacity:0.65">${cities[k].count}</span></button>`;
+    }).join('');
+}
+
+function setCityFilter(key) {
+  state.activeCity = state.activeCity === key ? null : key;
+  renderQueue();
+}
+
 function setQueueTab(tab) {
   state.queueTab = tab;
   document.querySelectorAll('.queue-tab').forEach(b => b.classList.remove('active'));
@@ -1970,9 +2026,13 @@ function renderQueue() {
   // Search filter
   const q = (document.getElementById('queueSearch')?.value || '').toLowerCase().trim();
 
-  // List filter + Tab filter
+  // Rebuild city chips whenever queue renders
+  renderCityChips();
+
+  // List filter + Tab filter + City filter
   let filtered = state.contacts.filter(c => {
     if (state.activeListId !== null && c.listId !== state.activeListId) return false;
+    if (state.activeCity && (c.city || '').trim().toLowerCase() !== state.activeCity) return false;
     if (state.queueTab === 'pending')    return c.status === 'pending';
     if (state.queueTab === 'hot')        return c.disposition === 'Hot Lead' || c.disposition === 'Appointment';
     if (state.queueTab === 'interested') return c.disposition === 'Interested';
@@ -2485,7 +2545,8 @@ async function dialNextSet() {
   if (!state.session || state.paused) return;
   if (state.activeLineId !== null) return; // already on a call
 
-  const pending = state.contacts.filter(c => c.status === 'pending' && !c.isDNC);
+  const pending = state.contacts.filter(c => c.status === 'pending' && !c.isDNC &&
+    (!state.activeCity || (c.city || '').trim().toLowerCase() === state.activeCity));
   if (!pending.length) {
     toast('✅ All contacts in queue have been dialed!', 'green');
     stopSession();
