@@ -1485,6 +1485,7 @@ function contactItem(c, i) {
     <div class="contact-info">
       <div class="contact-name">${c.name}</div>
       <div class="contact-phone">${formatPhone(c.phone)}${c.phoneLabel ? ` <span style="color:var(--text-muted);font-size:10px;font-weight:500;margin-left:4px">${c.phoneLabel}</span>` : ''}</div>
+      ${c.notes ? `<div style="font-size:10px;color:var(--text-muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px">${c.notes}</div>` : ''}
     </div>
     ${icon ? `<span class="contact-status-icon">${icon}</span>` : ''}
   </div>`;
