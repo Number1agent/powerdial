@@ -942,7 +942,7 @@
         <div class="empty-icon">☎️</div>
         <div class="empty-title">No active call</div>
         <div class="empty-sub">Start a session and lines will begin dialing automatically. First person to answer connects to you.</div>
-        <div class="arch-badge" style="margin-top:12px;max-width:300px">
+        <div class="arch-badge" id="demoBanner" style="margin-top:12px;max-width:300px">
           <strong>Demo Mode:</strong> Simulating calls. Connect Twilio backend for live calls.
         </div>
       </div>
@@ -1228,6 +1228,8 @@ function saveSettings() {
   state.settings.delay = parseInt(document.getElementById('settingDelay').value) || 3;
   state.demoMode = !state.settings.backendUrl;
   localStorage.setItem('powerdial_settings', JSON.stringify(state.settings));
+  const banner = document.getElementById('demoBanner');
+  if (banner) banner.style.display = state.demoMode ? '' : 'none';
   closeModal('settingsModal');
   toast(state.demoMode ? '⚠️ No backend URL — running in Demo Mode' : '✅ Settings saved — connected to backend', state.demoMode ? 'yellow' : 'green');
 }
@@ -1428,6 +1430,8 @@ function importContacts() {
   document.getElementById('dropZoneStatus').textContent = '';
   document.getElementById('csvFileInput').value = '';
   closeModal('importModal');
+  // Persist contacts so they survive a page refresh
+  try { localStorage.setItem('powerdial_contacts', JSON.stringify(contacts)); } catch(e) {}
   renderQueue();
 
   const unique = new Set(contacts.map(c => c.name)).size;
@@ -2022,6 +2026,15 @@ function init() {
     state.demoMode = !state.settings.backendUrl;
   } catch(e) {}
 
+  // Restore contacts from last session
+  try {
+    const savedContacts = JSON.parse(localStorage.getItem('powerdial_contacts') || '[]');
+    if (savedContacts.length) {
+      state.contacts = savedContacts;
+      state.queue = [...savedContacts];
+    }
+  } catch(e) {}
+
   // Close modals on overlay click
   document.querySelectorAll('.modal-overlay').forEach(m => {
     m.addEventListener('click', e => { if (e.target === m) m.classList.add('hidden'); });
@@ -2032,6 +2045,10 @@ function init() {
 
   // Initialize line UIs
   state.lines.forEach(l => updateLineUI(l));
+
+  // Show/hide demo banner
+  const banner = document.getElementById('demoBanner');
+  if (banner) banner.style.display = state.demoMode ? '' : 'none';
 
   setTimeout(() => {
     toast(state.demoMode ? '🎬 Demo Mode — Set backend URL in ⚙️ Settings for live calls' : '✅ Backend configured — ready for live calls', state.demoMode ? 'accent' : 'green');
