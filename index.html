@@ -1307,7 +1307,7 @@
           <div style="flex:1;min-width:0">
             <div class="active-contact-name" id="activeName">—</div>
             <div class="active-contact-sub" id="activeSub">—</div>
-            <div id="activeAddress" class="active-address" style="display:none"></div>
+            <div id="activeAddress" class="active-address" style="display:none;display:flex;align-items:center;gap:6px"><span id="activeAddressText"></span><a id="activeZillowBtn" href="#" target="_blank" rel="noopener" class="zillow-btn" style="display:none;font-size:9px;padding:1px 6px;flex-shrink:0">🏠 Zillow</a></div>
           </div>
           <div style="text-align:right;flex-shrink:0;margin-left:10px">
             <div class="active-timer-big" id="activeTimer">0:00</div>
@@ -2860,11 +2860,21 @@ function showActiveCall(line) {
   document.getElementById('activeSub').innerHTML = `${formatPhone(line.contact.phone)} · <span>Line ${line.id}</span>`;
   document.getElementById('activeTimer').textContent = '0:00';
 
-  // Show address/notes under name (Mojo style)
+  // Show address/notes + Zillow link under name (Mojo style)
   const addrEl = document.getElementById('activeAddress');
-  const addr = line.contact.notes || line.contact.address || '';
-  if (addr) { addrEl.textContent = addr; addrEl.style.display = ''; }
-  else { addrEl.style.display = 'none'; }
+  const addrText = document.getElementById('activeAddressText');
+  const zillowBtn = document.getElementById('activeZillowBtn');
+  const addr = (line.contact.notes || line.contact.address || '').trim();
+  const loc = addr || [line.contact.city, line.contact.state, line.contact.zip].filter(Boolean).join(', ');
+  if (loc) {
+    addrText.textContent = loc;
+    zillowBtn.href = `https://www.zillow.com/homes/${encodeURIComponent(loc)}_rb/`;
+    zillowBtn.style.display = '';
+    addrEl.style.display = 'flex';
+  } else {
+    addrEl.style.display = 'none';
+    zillowBtn.style.display = 'none';
+  }
 
   const tags = document.getElementById('activeTags');
   const typeClass = (line.contact.type || '').toLowerCase().includes('buyer') ? 'buyer' : 'seller';
