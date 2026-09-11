@@ -1,0 +1,2043 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PowerDial — Triple Line Dialer</title>
+<style>
+  :root {
+    --bg-0: #070709;
+    --bg-1: #0f0f12;
+    --bg-2: #16161c;
+    --bg-3: #1e1e27;
+    --bg-4: #272733;
+    --border: #2e2e3e;
+    --border-light: #3a3a4e;
+    --text-primary: #e8e8f0;
+    --text-secondary: #9090a8;
+    --text-muted: #5a5a72;
+    --accent: #6c63ff;
+    --accent-hover: #7c74ff;
+    --accent-dim: rgba(108,99,255,0.15);
+    --green: #22c55e;
+    --green-dim: rgba(34,197,94,0.12);
+    --red: #ef4444;
+    --red-dim: rgba(239,68,68,0.12);
+    --yellow: #f59e0b;
+    --yellow-dim: rgba(245,158,11,0.12);
+    --orange: #f97316;
+    --orange-dim: rgba(249,115,22,0.12);
+    --blue: #3b82f6;
+    --blue-dim: rgba(59,130,246,0.12);
+    --cyan: #06b6d4;
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg-0);
+    color: var(--text-primary);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    font-size: 13px;
+  }
+
+  /* ===== TOP BAR ===== */
+  .topbar {
+    background: var(--bg-2);
+    border-bottom: 1px solid var(--border);
+    padding: 0 16px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+    z-index: 10;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-right: 8px;
+  }
+  .logo-icon {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, var(--accent), #a855f7);
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+  .stat-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-3);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .stat-pill .val {
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--text-primary);
+  }
+  .stat-pill.green .val { color: var(--green); }
+  .stat-pill.yellow .val { color: var(--yellow); }
+  .stat-pill.accent .val { color: var(--accent); }
+  .stat-pill.red .val { color: var(--red); }
+
+  .topbar-spacer { flex: 1; }
+
+  .session-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn {
+    display: flex; align-items: center; gap: 6px;
+    border: none; cursor: pointer;
+    border-radius: var(--radius-sm);
+    padding: 7px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.15s;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+  }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-danger {
+    background: var(--red);
+    color: white;
+  }
+  .btn-danger:hover { background: #dc2626; }
+  .btn-ghost {
+    background: var(--bg-3);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { background: var(--bg-4); color: var(--text-primary); }
+  .btn-pause {
+    background: var(--yellow-dim);
+    color: var(--yellow);
+    border: 1px solid rgba(245,158,11,0.3);
+  }
+  .btn-pause:hover { background: rgba(245,158,11,0.2); }
+  .btn-icon {
+    padding: 7px 10px;
+  }
+
+  .session-badge {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--text-secondary);
+    background: var(--bg-3);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 12px;
+  }
+  .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--text-muted);
+  }
+  .dot.live { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse-dot 1.5s infinite; }
+  .dot.paused { background: var(--yellow); }
+  @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* ===== MAIN LAYOUT ===== */
+  .main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 280px 1fr 280px;
+    gap: 0;
+    overflow: hidden;
+  }
+
+  /* ===== PANELS ===== */
+  .panel {
+    background: var(--bg-1);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .panel.right { border-right: none; border-left: 1px solid var(--border); }
+  .panel-header {
+    padding: 12px 14px 10px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+    flex-shrink: 0;
+  }
+  .panel-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+  }
+  .panel-badge {
+    background: var(--accent-dim);
+    color: var(--accent);
+    border-radius: 20px;
+    padding: 1px 7px;
+    font-size: 11px;
+    font-weight: 700;
+    margin-left: auto;
+  }
+  .panel-body { flex: 1; overflow-y: auto; padding: 8px; }
+  .panel-body::-webkit-scrollbar { width: 4px; }
+  .panel-body::-webkit-scrollbar-track { background: transparent; }
+  .panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ===== CENTER COLUMN ===== */
+  .center-col {
+    background: var(--bg-0);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    gap: 0;
+  }
+
+  /* ===== LINE CARDS ===== */
+  .lines-area {
+    flex-shrink: 0;
+    padding: 14px 14px 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+
+  .line-card {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    position: relative;
+    transition: all 0.2s;
+    min-height: 140px;
+    display: flex;
+    flex-direction: column;
+  }
+  .line-card.idle { opacity: 0.6; }
+  .line-card.ringing { border-color: var(--yellow); background: var(--bg-2); }
+  .line-card.ringing .line-status-bar { background: var(--yellow-dim); }
+  .line-card.connected { border-color: var(--green); }
+  .line-card.connected .line-status-bar { background: var(--green-dim); }
+  .line-card.noanswer { border-color: var(--border-light); }
+  .line-card.voicemail { border-color: var(--orange); }
+  .line-card.voicemail .line-status-bar { background: var(--orange-dim); }
+  .line-card.busy { border-color: var(--red); }
+  .line-card.busy .line-status-bar { background: var(--red-dim); }
+
+  .line-top {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .line-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+  }
+  .line-status-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .status-idle { background: var(--bg-4); color: var(--text-muted); }
+  .status-ringing { background: var(--yellow-dim); color: var(--yellow); animation: blink 0.8s infinite; }
+  .status-connected { background: var(--green-dim); color: var(--green); }
+  .status-noanswer { background: var(--bg-4); color: var(--text-muted); }
+  .status-voicemail { background: var(--orange-dim); color: var(--orange); }
+  .status-busy { background: var(--red-dim); color: var(--red); }
+  .status-dropped { background: var(--bg-4); color: var(--text-muted); }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+  .line-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .line-number {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-family: 'SF Mono', monospace;
+    margin-bottom: 8px;
+  }
+  .line-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: auto;
+  }
+
+  .line-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+  .line-timer {
+    font-size: 13px;
+    font-weight: 700;
+    font-family: 'SF Mono', monospace;
+    color: var(--green);
+  }
+  .line-timer.ringing { color: var(--yellow); }
+  .line-btn {
+    padding: 4px 10px;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .line-btn-drop {
+    background: var(--red-dim);
+    color: var(--red);
+  }
+  .line-btn-drop:hover { background: rgba(239,68,68,0.25); }
+  .line-btn-mute {
+    background: var(--bg-4);
+    color: var(--text-secondary);
+  }
+  .line-btn-mute:hover { background: var(--bg-4); color: var(--text-primary); }
+  .line-btn-mute.active { background: var(--yellow-dim); color: var(--yellow); }
+
+  .line-ringing-anim {
+    position: absolute;
+    top: 8px; right: 8px;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--yellow);
+    animation: ring-pulse 0.8s infinite;
+  }
+  .line-connected-anim {
+    position: absolute;
+    top: 8px; right: 8px;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse-dot 1.5s infinite;
+  }
+  @keyframes ring-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(245,158,11,0.6); }
+    70% { box-shadow: 0 0 0 8px rgba(245,158,11,0); }
+    100% { box-shadow: 0 0 0 0 rgba(245,158,11,0); }
+  }
+
+  /* ===== ACTIVE CALL PANEL ===== */
+  .active-call-area {
+    flex: 1;
+    padding: 12px 14px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+  }
+
+  .active-call-card {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .active-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+  }
+  .active-contact-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+  }
+  .active-contact-sub {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+  }
+  .active-contact-sub span { color: var(--accent); }
+  .active-timer-big {
+    font-size: 22px;
+    font-weight: 700;
+    font-family: 'SF Mono', monospace;
+    color: var(--green);
+    text-align: right;
+  }
+  .active-timer-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-align: right;
+    text-transform: uppercase;
+  }
+
+  .active-tags {
+    display: flex; gap: 6px; flex-wrap: wrap;
+  }
+  .tag {
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .tag-buyer { background: var(--blue-dim); color: var(--blue); }
+  .tag-seller { background: var(--orange-dim); color: var(--orange); }
+  .tag-cold { background: var(--bg-4); color: var(--text-muted); }
+  .tag-warm { background: var(--yellow-dim); color: var(--yellow); }
+  .tag-hot { background: var(--red-dim); color: var(--red); }
+  .tag-line { background: var(--accent-dim); color: var(--accent); }
+
+  .active-controls {
+    display: flex; gap: 8px;
+  }
+  .ctrl-btn {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg-3);
+    color: var(--text-secondary);
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+  }
+  .ctrl-btn:hover { background: var(--bg-4); color: var(--text-primary); }
+  .ctrl-btn.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(108,99,255,0.3); }
+  .ctrl-btn.danger:hover { background: var(--red-dim); color: var(--red); border-color: rgba(239,68,68,0.3); }
+  .ctrl-icon { font-size: 16px; }
+
+  /* ===== DISPOSITION ===== */
+  .disp-section {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+  }
+  .disp-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+  .disp-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+  .disp-btn {
+    padding: 8px 6px;
+    border: 1px solid var(--border);
+    background: var(--bg-3);
+    color: var(--text-secondary);
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+    line-height: 1.3;
+  }
+  .disp-btn:hover { background: var(--bg-4); color: var(--text-primary); }
+  .disp-btn.na:hover { background: var(--bg-4); color: var(--text-muted); }
+  .disp-btn.vm:hover { background: var(--orange-dim); color: var(--orange); border-color: rgba(249,115,22,0.3); }
+  .disp-btn.callback:hover { background: var(--blue-dim); color: var(--blue); border-color: rgba(59,130,246,0.3); }
+  .disp-btn.not-int:hover { background: var(--red-dim); color: var(--red); border-color: rgba(239,68,68,0.3); }
+  .disp-btn.interested:hover { background: var(--yellow-dim); color: var(--yellow); border-color: rgba(245,158,11,0.3); }
+  .disp-btn.hot:hover { background: var(--green-dim); color: var(--green); border-color: rgba(34,197,94,0.3); }
+  .disp-btn.selected-hot { background: var(--green-dim); color: var(--green); border-color: rgba(34,197,94,0.3); }
+  .disp-btn.selected-cb { background: var(--blue-dim); color: var(--blue); border-color: rgba(59,130,246,0.3); }
+  .disp-btn.selected-vm { background: var(--orange-dim); color: var(--orange); border-color: rgba(249,115,22,0.3); }
+
+  /* ===== NOTES ===== */
+  .notes-area {
+    flex: 1;
+    overflow: hidden;
+  }
+  .notes-textarea {
+    width: 100%;
+    height: 100%;
+    min-height: 80px;
+    background: var(--bg-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 12px;
+    padding: 10px;
+    resize: none;
+    outline: none;
+    font-family: inherit;
+    line-height: 1.5;
+  }
+  .notes-textarea:focus { border-color: var(--accent); }
+  .notes-textarea::placeholder { color: var(--text-muted); }
+
+  /* ===== CONTACT QUEUE (left) ===== */
+  .contact-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    border: 1px solid transparent;
+    margin-bottom: 3px;
+    transition: all 0.15s;
+  }
+  .contact-item:hover { background: var(--bg-3); }
+  .contact-item.active-contact { background: var(--accent-dim); border-color: rgba(108,99,255,0.3); }
+  .contact-item.called { opacity: 0.45; }
+  .contact-item.calling { background: var(--yellow-dim); border-color: rgba(245,158,11,0.3); }
+
+  .contact-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+    background: var(--bg-4);
+    color: var(--text-secondary);
+  }
+  .contact-avatar.buyer { background: var(--blue-dim); color: var(--blue); }
+  .contact-avatar.seller { background: var(--orange-dim); color: var(--orange); }
+
+  .contact-info { flex: 1; overflow: hidden; }
+  .contact-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .contact-phone {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: monospace;
+  }
+  .contact-status-icon {
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .queue-section-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    padding: 8px 10px 4px;
+  }
+  .queue-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 6px 4px;
+  }
+
+  /* ===== IMPORT BAR ===== */
+  .import-bar {
+    padding: 8px;
+    border-top: 1px solid var(--border);
+    display: flex; gap: 6px;
+    flex-shrink: 0;
+  }
+  .import-bar .btn { flex: 1; justify-content: center; }
+
+  /* ===== RIGHT PANEL ===== */
+  .script-select {
+    width: 100%;
+    background: var(--bg-3);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    border-radius: var(--radius-sm);
+    padding: 6px 10px;
+    font-size: 12px;
+    outline: none;
+    margin-bottom: 8px;
+  }
+  .script-select:focus { border-color: var(--accent); }
+  .script-select option { background: var(--bg-3); }
+
+  .script-text {
+    background: var(--bg-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--text-secondary);
+    max-height: 260px;
+    overflow-y: auto;
+  }
+  .script-text strong { color: var(--text-primary); }
+  .script-text em { color: var(--accent); font-style: normal; font-weight: 600; }
+  .script-text .script-tag { color: var(--yellow); font-weight: 600; }
+
+  .right-section {
+    padding: 10px 8px 0;
+    flex-shrink: 0;
+  }
+  .section-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+
+  /* ===== CALL LOG ===== */
+  .log-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 8px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 3px;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+  }
+  .log-icon { font-size: 14px; flex-shrink: 0; }
+  .log-name { font-size: 12px; font-weight: 600; color: var(--text-primary); flex: 1; }
+  .log-result {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 20px;
+  }
+  .log-dur { font-size: 11px; color: var(--text-muted); font-family: monospace; }
+
+  .res-connected { background: var(--green-dim); color: var(--green); }
+  .res-vm { background: var(--orange-dim); color: var(--orange); }
+  .res-na { background: var(--bg-4); color: var(--text-muted); }
+  .res-hot { background: var(--accent-dim); color: var(--accent); }
+
+  /* ===== MODALS ===== */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100;
+    backdrop-filter: blur(4px);
+  }
+  .modal {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    width: 480px;
+    max-width: 95vw;
+    padding: 24px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+  }
+  .modal-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .modal-sub {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 18px;
+    line-height: 1.5;
+  }
+  .modal-actions {
+    display: flex; gap: 8px; justify-content: flex-end;
+    margin-top: 20px;
+  }
+
+  .input-group { margin-bottom: 14px; }
+  .input-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 5px;
+  }
+  .input-field {
+    width: 100%;
+    background: var(--bg-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 13px;
+    padding: 8px 12px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .input-field:focus { border-color: var(--accent); }
+  .input-field::placeholder { color: var(--text-muted); }
+  textarea.input-field { resize: vertical; min-height: 100px; font-family: monospace; font-size: 12px; }
+
+  .hint-box {
+    background: var(--accent-dim);
+    border: 1px solid rgba(108,99,255,0.3);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 14px;
+  }
+  .hint-box strong { color: var(--accent); }
+
+  /* ===== PROGRESS BAR ===== */
+  .progress-bar-wrap {
+    padding: 6px 14px 8px;
+    flex-shrink: 0;
+  }
+  .progress-label {
+    display: flex; justify-content: space-between;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+  .progress-track {
+    height: 4px;
+    background: var(--bg-3);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), #a855f7);
+    border-radius: 2px;
+    transition: width 0.3s;
+  }
+
+  /* ===== EMPTY STATES ===== */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+    color: var(--text-muted);
+    text-align: center;
+    gap: 8px;
+  }
+  .empty-icon { font-size: 28px; margin-bottom: 4px; }
+  .empty-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+  .empty-sub { font-size: 12px; line-height: 1.4; }
+
+  /* ===== TOAST ===== */
+  .toast-container {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+  }
+  .toast {
+    background: var(--bg-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    animation: slide-up 0.2s ease;
+    pointer-events: all;
+    display: flex; align-items: center; gap: 8px;
+  }
+  @keyframes slide-up {
+    from { transform: translateY(12px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  /* ===== ARCH INFO ===== */
+  .arch-badge {
+    background: var(--bg-3);
+    border: 1px dashed var(--border-light);
+    border-radius: var(--radius-sm);
+    padding: 6px 10px;
+    font-size: 11px;
+    color: var(--text-muted);
+    text-align: center;
+  }
+  .arch-badge strong { color: var(--accent); }
+
+  /* scrollbar globally */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- ===== TOP BAR ===== -->
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-icon">📞</div>
+    PowerDial
+  </div>
+
+  <div id="sessionBadge" class="session-badge">
+    <div id="sessionDot" class="dot"></div>
+    <span id="sessionStatus">Ready</span>
+  </div>
+
+  <div class="stat-pill">Calls <span id="statCalls" class="val">0</span></div>
+  <div class="stat-pill green">Connected <span id="statConnected" class="val">0</span></div>
+  <div class="stat-pill yellow">Left VM <span id="statVM" class="val">0</span></div>
+  <div class="stat-pill accent">Rate <span id="statRate" class="val">0%</span></div>
+  <div class="stat-pill red">Appts <span id="statAppts" class="val">0</span></div>
+
+  <div class="topbar-spacer"></div>
+
+  <div class="session-controls">
+    <button class="btn btn-ghost btn-icon" onclick="showImportModal()" title="Import Contacts">📋</button>
+    <button class="btn btn-ghost btn-icon" onclick="showSettingsModal()" title="Settings">⚙️</button>
+    <button id="btnPause" class="btn btn-pause hidden" onclick="togglePause()">⏸ Pause</button>
+    <button id="btnStop" class="btn btn-danger hidden" onclick="stopSession()">⏹ End Session</button>
+    <button id="btnStart" class="btn btn-primary" onclick="startSession()">▶ Start Session</button>
+  </div>
+</div>
+
+<!-- ===== MAIN ===== -->
+<div class="main">
+
+  <!-- LEFT: Queue -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Contact Queue</span>
+      <span id="queueBadge" class="panel-badge">0</span>
+    </div>
+    <div class="panel-body" id="queueList">
+      <div class="empty-state">
+        <div class="empty-icon">👥</div>
+        <div class="empty-title">No contacts loaded</div>
+        <div class="empty-sub">Import from AgentOS or paste a CSV list to start dialing.</div>
+      </div>
+    </div>
+    <div class="import-bar">
+      <button class="btn btn-ghost" style="font-size:11px" onclick="showImportModal()">📥 Import Contacts</button>
+      <button class="btn btn-ghost btn-icon" title="Clear queue" onclick="clearQueue()">🗑</button>
+    </div>
+  </div>
+
+  <!-- CENTER: Lines + Active Call -->
+  <div class="center-col">
+    <!-- Three Lines -->
+    <div class="lines-area">
+      <div id="line1" class="line-card idle">
+        <div class="line-top">
+          <span class="line-label">Line 1</span>
+          <span id="l1badge" class="line-status-badge status-idle">Idle</span>
+        </div>
+        <div id="l1name" class="line-name" style="color:var(--text-muted)">—</div>
+        <div id="l1num" class="line-number">—</div>
+        <div id="l1meta" class="line-meta"></div>
+        <div class="line-footer">
+          <span id="l1timer" class="line-timer">—</span>
+          <div style="display:flex;gap:6px">
+            <button id="l1mute" class="line-btn line-btn-mute hidden" onclick="toggleMute(1)">🎤 Mute</button>
+            <button id="l1drop" class="line-btn line-btn-drop hidden" onclick="dropLine(1)">✕ Drop</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="line2" class="line-card idle">
+        <div class="line-top">
+          <span class="line-label">Line 2</span>
+          <span id="l2badge" class="line-status-badge status-idle">Idle</span>
+        </div>
+        <div id="l2name" class="line-name" style="color:var(--text-muted)">—</div>
+        <div id="l2num" class="line-number">—</div>
+        <div id="l2meta" class="line-meta"></div>
+        <div class="line-footer">
+          <span id="l2timer" class="line-timer">—</span>
+          <div style="display:flex;gap:6px">
+            <button id="l2mute" class="line-btn line-btn-mute hidden" onclick="toggleMute(2)">🎤 Mute</button>
+            <button id="l2drop" class="line-btn line-btn-drop hidden" onclick="dropLine(2)">✕ Drop</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="line3" class="line-card idle">
+        <div class="line-top">
+          <span class="line-label">Line 3</span>
+          <span id="l3badge" class="line-status-badge status-idle">Idle</span>
+        </div>
+        <div id="l3name" class="line-name" style="color:var(--text-muted)">—</div>
+        <div id="l3num" class="line-number">—</div>
+        <div id="l3meta" class="line-meta"></div>
+        <div class="line-footer">
+          <span id="l3timer" class="line-timer">—</span>
+          <div style="display:flex;gap:6px">
+            <button id="l3mute" class="line-btn line-btn-mute hidden" onclick="toggleMute(3)">🎤 Mute</button>
+            <button id="l3drop" class="line-btn line-btn-drop hidden" onclick="dropLine(3)">✕ Drop</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-bar-wrap">
+      <div class="progress-label">
+        <span id="progressLabel">No active session</span>
+        <span id="progressPct">—</span>
+      </div>
+      <div class="progress-track"><div id="progressFill" class="progress-fill" style="width:0%"></div></div>
+    </div>
+
+    <!-- Active Call Panel -->
+    <div class="active-call-area" id="activeCallArea">
+      <div class="active-call-card" id="activeCallCard" style="display:none">
+        <div class="active-header">
+          <div>
+            <div class="active-contact-name" id="activeName">—</div>
+            <div class="active-contact-sub" id="activeSub">—</div>
+          </div>
+          <div>
+            <div class="active-timer-big" id="activeTimer">0:00</div>
+            <div class="active-timer-label">Connected</div>
+          </div>
+        </div>
+        <div class="active-tags" id="activeTags"></div>
+        <div class="active-controls">
+          <button class="ctrl-btn" id="btnMute" onclick="toggleGlobalMute()">
+            <span class="ctrl-icon">🎤</span><span>Mute</span>
+          </button>
+          <button class="ctrl-btn" id="btnHold" onclick="toggleHold()">
+            <span class="ctrl-icon">⏸</span><span>Hold</span>
+          </button>
+          <button class="ctrl-btn" onclick="transferCall()">
+            <span class="ctrl-icon">↗</span><span>Transfer</span>
+          </button>
+          <button class="ctrl-btn danger" onclick="hangupActive()">
+            <span class="ctrl-icon">📵</span><span>Hang Up</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- No active call state -->
+      <div id="noCallState" class="empty-state" style="flex:1">
+        <div class="empty-icon">☎️</div>
+        <div class="empty-title">No active call</div>
+        <div class="empty-sub">Start a session and lines will begin dialing automatically. First person to answer connects to you.</div>
+        <div class="arch-badge" style="margin-top:12px;max-width:300px">
+          <strong>Demo Mode:</strong> Simulating calls. Connect Twilio backend for live calls.
+        </div>
+      </div>
+
+      <!-- Disposition -->
+      <div class="disp-section" id="dispSection" style="display:none">
+        <div class="disp-label">Disposition</div>
+        <div class="disp-grid">
+          <button class="disp-btn na" onclick="dispose('No Answer')">📵 No Answer</button>
+          <button class="disp-btn vm" onclick="dispose('Left VM')">📬 Left VM</button>
+          <button class="disp-btn callback" onclick="dispose('Callback')">📅 Callback</button>
+          <button class="disp-btn not-int" onclick="dispose('Not Interested')">🚫 Not Interested</button>
+          <button class="disp-btn interested" onclick="dispose('Interested')">🌟 Interested</button>
+          <button class="disp-btn hot" onclick="dispose('Hot Lead')">🔥 Hot Lead</button>
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <div class="notes-area" id="notesSection" style="display:none">
+        <div class="section-label">Call Notes</div>
+        <textarea class="notes-textarea" id="callNotes" placeholder="Type notes during the call...&#10;&#10;• Interested in 3BR under $400K&#10;• Mentioned Hudson Valley..."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Scripts + Log -->
+  <div class="panel right">
+    <div class="panel-header">
+      <span class="panel-title">Scripts & Log</span>
+    </div>
+    <div class="panel-body" style="padding:0">
+
+      <!-- Scripts section -->
+      <div class="right-section" style="padding:10px 10px 0">
+        <div class="section-label">Script Library</div>
+        <select class="script-select" id="scriptSelect" onchange="loadScript()">
+          <option value="">— Select a script —</option>
+          <optgroup label="Opening">
+            <option value="cold_open">Cold Call Opening</option>
+            <option value="expsold_open">Expired Listing Opening</option>
+            <option value="fsbo_open">FSBO Opening</option>
+          </optgroup>
+          <optgroup label="Objections">
+            <option value="obj_agent">Already Have an Agent</option>
+            <option value="obj_timing">Bad Timing</option>
+            <option value="obj_thinking">Need to Think About It</option>
+          </optgroup>
+          <optgroup label="Hudson Valley">
+            <option value="hv_pitch">Hudson Valley Value Pitch</option>
+            <option value="hv_metro">Metro-North Pitch</option>
+          </optgroup>
+          <optgroup label="Closing">
+            <option value="close_appt">Appointment Close</option>
+            <option value="close_vm">Voicemail Script</option>
+          </optgroup>
+        </select>
+        <div class="script-text" id="scriptText">
+          <span style="color:var(--text-muted);font-style:italic">Select a script above to display it here during your call.</span>
+        </div>
+      </div>
+
+      <div style="height:1px;background:var(--border);margin:12px 0"></div>
+
+      <!-- Call Log -->
+      <div class="right-section" style="padding:0 10px 0">
+        <div class="section-label">Recent Calls</div>
+      </div>
+      <div id="callLog" style="padding:0 8px 8px">
+        <div class="empty-state" style="padding:20px 16px">
+          <div class="empty-icon">📋</div>
+          <div class="empty-sub">Completed calls will appear here.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ===== IMPORT MODAL ===== -->
+<div id="importModal" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-title">📥 Import Contacts</div>
+    <div class="modal-sub">Upload your Mojo CSV export, paste a simple CSV, or load from AgentOS. Multiple phone numbers per contact are expanded into separate dial entries.</div>
+
+    <div class="hint-box">
+      <strong>Mojo CSV:</strong> Upload the file exported from Mojo — all phone numbers per contact are automatically included.<br>
+      <strong>Simple CSV:</strong> Name, Phone, Notes (one number per row)<br>
+      <strong>AgentOS JSON:</strong> Paste your AgentOS JSON export directly.
+    </div>
+
+    <!-- File upload zone -->
+    <div id="dropZone" style="border:2px dashed var(--border);border-radius:var(--radius);padding:16px;text-align:center;cursor:pointer;margin-bottom:10px;transition:border-color .2s,background .2s"
+         onclick="document.getElementById('csvFileInput').click()"
+         ondragover="event.preventDefault();this.style.borderColor='var(--accent)';this.style.background='var(--accent-dim)'"
+         ondragleave="this.style.borderColor='var(--border)';this.style.background=''"
+         ondrop="handleFileDrop(event)">
+      <div style="font-size:24px;margin-bottom:4px">📂</div>
+      <div style="color:var(--text-secondary);font-size:12px">Click to upload Mojo CSV <span style="color:var(--text-muted)">or drag & drop</span></div>
+      <div id="dropZoneStatus" style="color:var(--accent);font-size:11px;margin-top:4px"></div>
+    </div>
+    <input type="file" id="csvFileInput" accept=".csv" style="display:none" onchange="handleFileSelect(event)">
+
+    <div style="text-align:center;color:var(--text-muted);font-size:11px;margin-bottom:8px">— or paste below —</div>
+
+    <div class="input-group">
+      <div class="input-label">Paste CSV or AgentOS JSON</div>
+      <textarea class="input-field" id="importData" placeholder="John Smith, (914) 555-0123, Looking for 3BR in Beacon&#10;Maria Garcia, (845) 555-0456, Wants to downsize&#10;...or paste AgentOS JSON export here"></textarea>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <button class="btn btn-ghost" style="flex:1;justify-content:center;font-size:11px" onclick="loadSampleContacts()">📋 Load Sample</button>
+      <button class="btn btn-ghost" style="flex:1;justify-content:center;font-size:11px" onclick="loadFromAgentOS()">🔗 From AgentOS</button>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('importModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="importContacts()">Import & Load Queue</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SETTINGS MODAL ===== -->
+<div id="settingsModal" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-title">⚙️ Dialer Settings</div>
+    <div class="modal-sub">Configure your telephony backend and call behavior.</div>
+
+    <div class="arch-badge" style="margin-bottom:14px;text-align:left;line-height:1.6;padding:12px">
+      <strong>Backend Required for Live Calls:</strong><br>
+      PowerDial uses <strong>Twilio</strong> for actual phone calls. Run the included Node.js server and enter your URL below. In Demo Mode, calls are simulated for UI testing.
+    </div>
+
+    <div class="input-group">
+      <div class="input-label">Backend URL (your Node.js server)</div>
+      <input class="input-field" id="settingBackend" placeholder="http://localhost:3001 or https://your-server.railway.app" type="url">
+    </div>
+    <div class="input-group">
+      <div class="input-label">Your Phone Number (will ring your phone when a lead answers)</div>
+      <input class="input-field" id="settingMyPhone" placeholder="+19145550000" type="tel">
+    </div>
+    <div class="input-group">
+      <div class="input-label">Caller ID (Twilio number shown to leads)</div>
+      <input class="input-field" id="settingCallerId" placeholder="+18455550000" type="tel">
+    </div>
+    <div class="input-group">
+      <div class="input-label">Voicemail Drop Message (URL to .mp3 recording)</div>
+      <input class="input-field" id="settingVMUrl" placeholder="https://your-bucket.com/voicemail.mp3" type="url">
+    </div>
+    <div class="input-group">
+      <div class="input-label">Delay between call sets (seconds)</div>
+      <input class="input-field" id="settingDelay" value="3" type="number" min="1" max="30">
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('settingsModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TOAST ===== -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ============================================================
+//  STATE
+// ============================================================
+const state = {
+  session: false,
+  paused: false,
+  demoMode: true,   // true until backend URL is set
+  contacts: [],
+  queue: [],
+  currentIdx: 0,
+  lines: [
+    { id: 1, status: 'idle', contact: null, callSid: null, muted: false, timerStart: null, timerVal: 0, timerInt: null },
+    { id: 2, status: 'idle', contact: null, callSid: null, muted: false, timerStart: null, timerVal: 0, timerInt: null },
+    { id: 3, status: 'idle', contact: null, callSid: null, muted: false, timerStart: null, timerVal: 0, timerInt: null },
+  ],
+  activeLineId: null,
+  activeTimerInt: null,
+  activeTimerVal: 0,
+  callLog: [],
+  stats: { calls: 0, connected: 0, vm: 0, appts: 0 },
+  settings: {
+    backendUrl: '',
+    myPhone: '',
+    callerId: '',
+    vmUrl: '',
+    delay: 3
+  },
+  disposition: null,
+  callNotes: '',
+  globalMuted: false,
+  onHold: false
+};
+
+// ============================================================
+//  SCRIPTS
+// ============================================================
+const scripts = {
+  cold_open: `<strong>Hi, is this [NAME]?</strong><br><br>
+Great! My name is <em>Jose Cruz</em> with Douglas Elliman — I hope I'm not catching you at a bad time.<br><br>
+I specialize in helping people relocate from Manhattan to the Hudson Valley — places like Beacon, Poughkeepsie — where you can get a <strong>3–4 bedroom home for $350–500K</strong>, about 90 minutes from Grand Central on Metro-North.<br><br>
+<span class="script-tag">[PAUSE]</span><br><br>
+Are you or anyone you know thinking about making that kind of move?`,
+
+  expsold_open: `<strong>Hi [NAME], this is Jose Cruz with Douglas Elliman.</strong><br><br>
+I noticed your listing at <em>[ADDRESS]</em> recently expired — I'm sorry that didn't work out for you.<br><br>
+I have a specific marketing system for homes in this area that's been getting results, and I'd love to share what I think could have made the difference.<br><br>
+<span class="script-tag">[PAUSE]</span><br><br>
+Is the home still something you'd like to sell, or have your plans changed?`,
+
+  fsbo_open: `<strong>Hi [NAME]! I saw your home is For Sale By Owner on [ADDRESS] — congratulations on taking that on yourself.</strong><br><br>
+My name is Jose Cruz with Douglas Elliman. I work with a lot of buyers who specifically look for homes in this area, and I wanted to reach out — not to list your home — but to see if I could <strong>bring you a qualified buyer</strong>.<br><br>
+I only charge a buyer-side commission, so there's no cost to you unless I close it.<br><br>
+<span class="script-tag">[PAUSE — let them respond]</span><br><br>
+Would you be open to me previewing the home?`,
+
+  obj_agent: `<strong>That's totally fine, I respect that.</strong><br><br>
+Can I ask — are they local to this specific area? The reason I ask is my niche is very specific: helping Manhattan and inner-borough buyers find value upstate, and I have a very targeted buyer pool for that.<br><br>
+I'm not looking to take over your listing — I'm wondering if there's a <strong>collaboration opportunity</strong> where I bring you a buyer your agent might not have access to.<br><br>
+Would that be worth a quick 10-minute call?`,
+
+  obj_timing: `<strong>I completely understand — timing is everything in real estate.</strong><br><br>
+Can I ask what would need to change for the timing to work? Sometimes knowing what the trigger is helps me bring you the right thing when it matters.<br><br>
+<span class="script-tag">[LISTEN]</span><br><br>
+What I can do is just keep you on my radar — I find homes in your budget range all the time, and I'd love to be the first call you get when one hits.`,
+
+  obj_thinking: `<strong>Absolutely, this is a big decision and I don't want you to rush it.</strong><br><br>
+Can I ask what the main thing is you need to think through? Is it the location, the commute, the budget...?<br><br>
+<span class="script-tag">[LISTEN]</span><br><br>
+The reason I ask is — if I know what's holding you back, I can either address it now or bring you better information before we talk again. Would a quick follow-up in a week or two work?`,
+
+  hv_pitch: `<strong>Here's the math that changes everything for hybrid workers:</strong><br><br>
+In Beacon, Poughkeepsie, or Newburgh — you're looking at <strong>3–5 bedroom homes for $350–500K</strong>. That's the same money as a small 1BR in Manhattan.<br><br>
+Metro-North gets you to Grand Central in <strong>75–90 minutes</strong>. If you're in the office 2–3 days a week, that commute is totally manageable.<br><br>
+I've helped dozens of clients make this exact move. The ones who did it 2 years ago already have <strong>$80–100K in equity</strong>.<br><br>
+<span class="script-tag">[PAUSE]</span> Is space and value something you've been thinking about?`,
+
+  hv_metro: `<strong>A lot of my clients didn't realize Metro-North could be a lifestyle upgrade.</strong><br><br>
+You board in Beacon, sit down with a coffee, and 90 minutes later you're in Midtown. No parking, no driving, no stress.<br><br>
+For hybrid workers doing 2–3 days in office — they actually say the commute days are their <strong>most productive</strong> because they work on the train.<br><br>
+The financial trade-off is massive: <strong>$450K for a 4BR with a yard</strong> vs. another decade in a 700sqft rental.`,
+
+  close_appt: `<strong>Based on what you've told me, I think I can actually find you exactly what you're looking for.</strong><br><br>
+What I'd love to do is set up a quick 20-minute call — no pressure, no commitment — where I can show you 3–4 properties in your range and walk you through the Metro-North commute times.<br><br>
+I have time <em>Tuesday at 11am or Thursday at 2pm</em> — which works better for you?<br><br>
+<span class="script-tag">[WAIT FOR ANSWER — don't fill the silence]</span>`,
+
+  close_vm: `<strong>Hey [NAME], this is Jose Cruz with Douglas Elliman — I'm a real estate agent specializing in the Hudson Valley corridor.</strong><br><br>
+I was calling because I help Manhattan residents find 3–4 bedroom homes in Beacon and Poughkeepsie for under $500K — about 90 minutes from Grand Central.<br><br>
+If that's something you or anyone you know has thought about, I'd love to connect. My number is <em>[YOUR NUMBER]</em>.<br><br>
+No rush — take care.`
+};
+
+function loadScript() {
+  const key = document.getElementById('scriptSelect').value;
+  const box = document.getElementById('scriptText');
+  if (!key) {
+    box.innerHTML = '<span style="color:var(--text-muted);font-style:italic">Select a script above to display it here during your call.</span>';
+    return;
+  }
+  box.innerHTML = scripts[key] || '<span style="color:var(--text-muted)">Script not found.</span>';
+}
+
+// ============================================================
+//  SETTINGS
+// ============================================================
+function showSettingsModal() {
+  document.getElementById('settingBackend').value = state.settings.backendUrl;
+  document.getElementById('settingMyPhone').value = state.settings.myPhone;
+  document.getElementById('settingCallerId').value = state.settings.callerId;
+  document.getElementById('settingVMUrl').value = state.settings.vmUrl;
+  document.getElementById('settingDelay').value = state.settings.delay;
+  showModal('settingsModal');
+}
+function saveSettings() {
+  state.settings.backendUrl = document.getElementById('settingBackend').value.trim();
+  state.settings.myPhone = document.getElementById('settingMyPhone').value.trim();
+  state.settings.callerId = document.getElementById('settingCallerId').value.trim();
+  state.settings.vmUrl = document.getElementById('settingVMUrl').value.trim();
+  state.settings.delay = parseInt(document.getElementById('settingDelay').value) || 3;
+  state.demoMode = !state.settings.backendUrl;
+  localStorage.setItem('powerdial_settings', JSON.stringify(state.settings));
+  closeModal('settingsModal');
+  toast(state.demoMode ? '⚠️ No backend URL — running in Demo Mode' : '✅ Settings saved — connected to backend', state.demoMode ? 'yellow' : 'green');
+}
+
+// ============================================================
+//  IMPORT
+// ============================================================
+function showImportModal() { showModal('importModal'); }
+
+function loadSampleContacts() {
+  document.getElementById('importData').value = `Sarah Chen, (917) 555-0142, Buyer, Looking for 3BR in Beacon or Poughkeepsie
+Marcus Williams, (646) 555-0287, Buyer, Hybrid worker commuting 3x/week
+Jennifer Rodriguez, (212) 555-0331, Seller, Wants to downsize from Riverdale
+David Kim, (718) 555-0409, Buyer, Budget $425K, prefers Newburgh
+Amanda Foster, (914) 555-0156, Seller, Listing expired March 2026
+Robert & Lisa Patel, (845) 555-0278, Buyer, Growing family needs 4BR+
+Thomas McGrath, (516) 555-0394, Buyer, First-time buyer pre-approved $380K
+Vanessa Torres, (347) 555-0512, Buyer, Relocating from Brooklyn, needs yard
+Carlos Mendez, (914) 555-0623, Seller, FSBO on Yonkers Ave
+Patricia Johnson, (845) 555-0734, Buyer, Retired, wants peace and quiet
+Michael Chang, (212) 555-0845, Buyer, Tech worker, 2 days in office
+Elena Volkov, (718) 555-0956, Buyer, Cash buyer, serious`;
+}
+
+function loadFromAgentOS() {
+  try {
+    const agentOSData = localStorage.getItem('agentOS_leads') || localStorage.getItem('agentOS') || localStorage.getItem('crm_leads');
+    if (!agentOSData) { toast('⚠️ No AgentOS data found in local storage', 'yellow'); return; }
+    const parsed = JSON.parse(agentOSData);
+    const leads = Array.isArray(parsed) ? parsed : parsed.leads || parsed.contacts || [];
+    if (!leads.length) { toast('⚠️ No leads found in AgentOS data', 'yellow'); return; }
+    const csv = leads.map(l => `${l.name || l.fullName || '—'}, ${l.phone || l.phoneNumber || '—'}, ${l.type || l.leadType || 'Buyer'}, ${l.notes || ''}`).join('\n');
+    document.getElementById('importData').value = csv;
+    toast(`✅ Found ${leads.length} leads from AgentOS`, 'green');
+  } catch(e) {
+    toast('❌ Could not parse AgentOS data', 'red');
+  }
+}
+
+// ── CSV helpers ──────────────────────────────────────────────
+function parseCSVRow(row) {
+  // Handles quoted fields with commas inside
+  const result = [];
+  let cur = '', inQuote = false;
+  for (let i = 0; i < row.length; i++) {
+    const ch = row[i];
+    if (ch === '"') { inQuote = !inQuote; }
+    else if (ch === ',' && !inQuote) { result.push(cur.trim()); cur = ''; }
+    else { cur += ch; }
+  }
+  result.push(cur.trim());
+  return result;
+}
+
+function cleanPhone(p) {
+  if (!p) return '';
+  const digits = p.replace(/\D/g, '');
+  // Must have at least 10 digits to be a real US number
+  return digits.length >= 10 ? p.trim() : '';
+}
+
+function isMojoCSV(headers) {
+  const h = headers.map(x => x.toLowerCase());
+  return h.some(x => x === 'full name' || x === 'first or full name' || x === 'phone 1' || x === 'mobile 1');
+}
+
+function parseMojoCSV(raw) {
+  const lines = raw.split('\n').filter(l => l.trim());
+  if (lines.length < 2) return [];
+  const headers = parseCSVRow(lines[0]);
+
+  // Find name column
+  const nameIdx = headers.findIndex(h => /^(full name|first or full name|name)$/i.test(h.trim()));
+  const firstIdx = headers.findIndex(h => /^first name$/i.test(h.trim()));
+  const lastIdx  = headers.findIndex(h => /^last name$/i.test(h.trim()));
+  const addrIdx  = headers.findIndex(h => /^(property address|address)$/i.test(h.trim()));
+
+  // Find ALL phone columns: Phone 1..13, Mobile 1..13
+  const phoneColumns = [];
+  headers.forEach((h, i) => {
+    const m = h.trim().match(/^(phone|mobile)\s*(\d+)$/i);
+    if (m) {
+      const labelCol = headers.findIndex((lh, li) => li > i && /^(phone|mobile)\s*\d+\s*label$/i.test(lh.trim()) && lh.trim().toLowerCase().startsWith(m[1].toLowerCase()));
+      phoneColumns.push({ idx: i, type: m[1], num: parseInt(m[2]), labelIdx: labelCol });
+    }
+  });
+  // Sort by number then type (phone before mobile)
+  phoneColumns.sort((a, b) => a.num - b.num || (a.type.toLowerCase() === 'phone' ? -1 : 1));
+
+  const contacts = [];
+  for (let i = 1; i < lines.length; i++) {
+    const parts = parseCSVRow(lines[i]);
+    const getName = () => {
+      if (nameIdx >= 0 && parts[nameIdx]?.trim()) return parts[nameIdx].trim();
+      const first = firstIdx >= 0 ? parts[firstIdx]?.trim() : '';
+      const last  = lastIdx  >= 0 ? parts[lastIdx]?.trim()  : '';
+      if (first || last) return [first, last].filter(Boolean).join(' ');
+      return addrIdx >= 0 ? parts[addrIdx]?.trim() || 'Unknown' : 'Unknown';
+    };
+    const name = getName();
+    const addr = addrIdx >= 0 ? parts[addrIdx]?.trim() || '' : '';
+
+    let added = 0;
+    for (const col of phoneColumns) {
+      const raw = parts[col.idx] || '';
+      const phone = cleanPhone(raw);
+      if (!phone) continue;
+
+      // Build a label: "Cell", "Home", "Phone 2", etc.
+      let label = col.type === 'mobile' ? 'Cell' : 'Home';
+      if (col.num > 1) label = `${col.type === 'mobile' ? 'Cell' : 'Phone'} ${col.num}`;
+      // Use the label column if it has a value
+      if (col.labelIdx >= 0 && parts[col.labelIdx]?.trim()) label = parts[col.labelIdx].trim();
+
+      contacts.push({
+        name: `${name}`,
+        phone,
+        phoneLabel: label,
+        notes: addr,
+        status: 'pending'
+      });
+      added++;
+    }
+    // If no phone found, skip (don't add blank entries)
+  }
+  return contacts;
+}
+
+function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  readCSVFile(file);
+}
+function handleFileDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropZone').style.borderColor = 'var(--border)';
+  document.getElementById('dropZone').style.background = '';
+  const file = e.dataTransfer.files[0];
+  if (file) readCSVFile(file);
+}
+function readCSVFile(file) {
+  const reader = new FileReader();
+  reader.onload = ev => {
+    document.getElementById('importData').value = ev.target.result;
+    document.getElementById('dropZoneStatus').textContent = `✅ ${file.name} loaded`;
+  };
+  reader.readAsText(file);
+}
+
+function importContacts() {
+  const raw = document.getElementById('importData').value.trim();
+  if (!raw) { toast('⚠️ Paste or upload contacts first', 'yellow'); return; }
+
+  let contacts = [];
+
+  // Try JSON (AgentOS format)
+  if (raw.startsWith('{') || raw.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(raw);
+      const leads = Array.isArray(parsed) ? parsed : parsed.leads || parsed.contacts || [];
+      contacts = leads.map(l => ({
+        name: l.name || l.fullName || 'Unknown',
+        phone: l.phone || l.phoneNumber || '—',
+        notes: l.notes || '',
+        status: 'pending'
+      }));
+    } catch(e) {
+      toast('❌ Invalid JSON format', 'red'); return;
+    }
+  } else {
+    const firstLine = raw.split('\n')[0];
+    const headers = parseCSVRow(firstLine);
+
+    if (isMojoCSV(headers)) {
+      // ── Mojo export: expand multiple phones per contact ──
+      contacts = parseMojoCSV(raw);
+      if (!contacts.length) { toast('⚠️ No contacts with phone numbers found', 'yellow'); return; }
+    } else {
+      // ── Simple CSV: Name, Phone, Notes ──
+      contacts = raw.split('\n').filter(r => r.trim()).map(row => {
+        const parts = parseCSVRow(row);
+        return {
+          name: parts[0] || 'Unknown',
+          phone: parts[1] || '—',
+          notes: parts[2] || '',
+          status: 'pending'
+        };
+      });
+    }
+  }
+
+  if (!contacts.length) { toast('⚠️ No contacts parsed', 'yellow'); return; }
+
+  state.contacts = contacts;
+  state.queue = [...contacts];
+  state.currentIdx = 0;
+  document.getElementById('importData').value = '';
+  document.getElementById('dropZoneStatus').textContent = '';
+  document.getElementById('csvFileInput').value = '';
+  closeModal('importModal');
+  renderQueue();
+
+  const unique = new Set(contacts.map(c => c.name)).size;
+  const phones = contacts.length;
+  toast(`✅ ${phones} dial entries from ${unique} contacts`, 'green');
+}
+
+function clearQueue() {
+  if (!state.contacts.length) return;
+  state.contacts = []; state.queue = []; state.currentIdx = 0;
+  renderQueue();
+  toast('🗑 Queue cleared', 'gray');
+}
+
+// ============================================================
+//  QUEUE RENDER
+// ============================================================
+function renderQueue() {
+  const el = document.getElementById('queueList');
+  const badge = document.getElementById('queueBadge');
+  const pending = state.contacts.filter(c => c.status === 'pending').length;
+  badge.textContent = pending;
+
+  if (!state.contacts.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">No contacts loaded</div><div class="empty-sub">Import from AgentOS or paste a CSV list to start dialing.</div></div>`;
+    return;
+  }
+
+  const pending_c = state.contacts.filter(c => c.status === 'pending');
+  const called_c = state.contacts.filter(c => c.status !== 'pending');
+
+  let html = '';
+  if (pending_c.length) {
+    html += `<div class="queue-section-label">Up Next (${pending_c.length})</div>`;
+    html += pending_c.slice(0, 30).map((c, i) => contactItem(c, i)).join('');
+  }
+  if (called_c.length) {
+    html += `<div class="queue-divider"></div><div class="queue-section-label">Completed (${called_c.length})</div>`;
+    html += called_c.slice(-15).map((c, i) => contactItem(c, i + pending_c.length)).join('');
+  }
+
+  el.innerHTML = html;
+  updateProgress();
+}
+
+function contactItem(c, i) {
+  const initials = c.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
+  const typeClass = c.type.toLowerCase().includes('buyer') ? 'buyer' : 'seller';
+  const statusIcons = { pending: '', connected: '✅', voicemail: '📬', noanswer: '⬜', callback: '📅', hot: '🔥', interested: '⭐', 'not interested': '🚫' };
+  const icon = statusIcons[c.status] || '';
+  let rowClass = 'contact-item';
+  if (c.status !== 'pending') rowClass += ' called';
+  return `<div class="${rowClass}" title="${c.phone}\n${c.notes}">
+    <div class="contact-avatar ${typeClass}">${initials}</div>
+    <div class="contact-info">
+      <div class="contact-name">${c.name}</div>
+      <div class="contact-phone">${formatPhone(c.phone)}${c.phoneLabel ? ` <span style="color:var(--text-muted);font-size:10px;font-weight:500;margin-left:4px">${c.phoneLabel}</span>` : ''}</div>
+    </div>
+    ${icon ? `<span class="contact-status-icon">${icon}</span>` : ''}
+  </div>`;
+}
+
+function formatPhone(p) {
+  if (!p || p === '—') return '—';
+  const d = p.replace(/\D/g,'');
+  if (d.length === 10) return `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`;
+  if (d.length === 11) return `+${d[0]} (${d.slice(1,4)}) ${d.slice(4,7)}-${d.slice(7)}`;
+  return p;
+}
+
+function updateProgress() {
+  const total = state.contacts.length;
+  const done = state.contacts.filter(c => c.status !== 'pending').length;
+  const pct = total ? Math.round(done/total*100) : 0;
+  document.getElementById('progressLabel').textContent = total ? `${done} of ${total} contacted` : 'No active session';
+  document.getElementById('progressPct').textContent = total ? `${pct}%` : '—';
+  document.getElementById('progressFill').style.width = pct + '%';
+}
+
+// ============================================================
+//  SESSION CONTROL
+// ============================================================
+function startSession() {
+  if (!state.contacts.length) { toast('⚠️ Import contacts first', 'yellow'); showImportModal(); return; }
+  state.session = true;
+  state.paused = false;
+  setSessionUI('live');
+  toast(state.demoMode ? '🎬 Demo Mode — Simulating calls' : '📞 Session started — dialing live', state.demoMode ? 'accent' : 'green');
+  dialNextSet();
+}
+
+function togglePause() {
+  state.paused = !state.paused;
+  setSessionUI(state.paused ? 'paused' : 'live');
+  toast(state.paused ? '⏸ Session paused' : '▶ Session resumed', 'yellow');
+}
+
+function stopSession() {
+  state.session = false;
+  state.paused = false;
+  // Drop all lines
+  state.lines.forEach(l => { if (l.status !== 'idle') dropLine(l.id, true); });
+  clearActiveCall();
+  setSessionUI('idle');
+  toast('⏹ Session ended', 'gray');
+}
+
+function setSessionUI(s) {
+  const dot = document.getElementById('sessionDot');
+  const status = document.getElementById('sessionStatus');
+  const btnStart = document.getElementById('btnStart');
+  const btnStop = document.getElementById('btnStop');
+  const btnPause = document.getElementById('btnPause');
+
+  if (s === 'live') {
+    dot.className = 'dot live';
+    status.textContent = 'Live';
+    btnStart.classList.add('hidden');
+    btnStop.classList.remove('hidden');
+    btnPause.classList.remove('hidden');
+    btnPause.textContent = '⏸ Pause';
+  } else if (s === 'paused') {
+    dot.className = 'dot paused';
+    status.textContent = 'Paused';
+    btnPause.textContent = '▶ Resume';
+  } else {
+    dot.className = 'dot';
+    status.textContent = 'Ready';
+    btnStart.classList.remove('hidden');
+    btnStop.classList.add('hidden');
+    btnPause.classList.add('hidden');
+  }
+}
+
+// ============================================================
+//  DIALING ENGINE
+// ============================================================
+async function dialNextSet() {
+  if (!state.session || state.paused) return;
+  if (state.activeLineId !== null) return; // already on a call
+
+  const pending = state.contacts.filter(c => c.status === 'pending');
+  if (!pending.length) {
+    toast('✅ All contacts in queue have been dialed!', 'green');
+    stopSession();
+    return;
+  }
+
+  const toCall = pending.slice(0, 3);
+  toCall.forEach((contact, i) => {
+    const line = state.lines[i];
+    dialContact(line, contact);
+  });
+
+  if (state.demoMode) simulateDemoSession(toCall);
+  else await dialReal(toCall);
+}
+
+function dialContact(line, contact) {
+  contact.status = 'dialing';
+  line.contact = contact;
+  line.status = 'ringing';
+  line.timerStart = Date.now();
+  line.timerVal = 0;
+  if (line.timerInt) clearInterval(line.timerInt);
+  line.timerInt = setInterval(() => {
+    line.timerVal = Math.floor((Date.now() - line.timerStart) / 1000);
+    updateLineUI(line);
+  }, 1000);
+  state.stats.calls++;
+  updateStatsUI();
+  updateLineUI(line);
+  renderQueue();
+}
+
+// ============================================================
+//  DEMO MODE SIMULATION
+// ============================================================
+function simulateDemoSession(contacts) {
+  // Simulate each line with random outcomes
+  const outcomes = ['connected', 'noanswer', 'voicemail', 'noanswer', 'connected', 'busy'];
+  const delays = [2000 + Math.random()*3000, 3000 + Math.random()*4000, 2500 + Math.random()*3500];
+
+  contacts.forEach((contact, i) => {
+    const line = state.lines[i];
+    const outcome = outcomes[Math.floor(Math.random() * outcomes.length)];
+    const delay = delays[i];
+
+    setTimeout(() => {
+      if (!state.session) return;
+      if (line.contact !== contact) return;
+
+      if (outcome === 'connected') {
+        if (state.activeLineId !== null) {
+          // Already connected somewhere, drop this one
+          lineDone(line, 'noanswer');
+        } else {
+          lineConnected(line);
+        }
+      } else if (outcome === 'voicemail') {
+        lineVoicemail(line);
+      } else if (outcome === 'busy') {
+        lineDone(line, 'busy');
+      } else {
+        lineDone(line, 'noanswer');
+      }
+    }, delay);
+  });
+
+  // Safety: if nobody connects in 30s, auto-advance
+  setTimeout(() => {
+    if (!state.session || state.paused) return;
+    if (state.activeLineId !== null) return;
+    const allDone = state.lines.every(l => l.status === 'idle' || l.status === 'noanswer' || l.status === 'voicemail' || l.status === 'busy');
+    if (!allDone) {
+      state.lines.forEach(l => { if (l.status === 'ringing') lineDone(l, 'noanswer'); });
+    }
+  }, 30000);
+}
+
+// ============================================================
+//  LINE STATE TRANSITIONS
+// ============================================================
+function lineConnected(line) {
+  if (line.timerInt) clearInterval(line.timerInt);
+  line.status = 'connected';
+  state.activeLineId = line.id;
+  state.stats.connected++;
+  updateStatsUI();
+
+  // Drop other ringing lines
+  state.lines.forEach(l => {
+    if (l.id !== line.id && l.status === 'ringing') {
+      lineDone(l, 'dropped', true);
+    }
+  });
+
+  // Start connected timer
+  line.timerVal = 0;
+  line.timerStart = Date.now();
+  line.timerInt = setInterval(() => {
+    line.timerVal = Math.floor((Date.now() - line.timerStart) / 1000);
+    updateLineUI(line);
+    document.getElementById('activeTimer').textContent = formatTime(line.timerVal);
+  }, 1000);
+
+  updateLineUI(line);
+  showActiveCall(line);
+  toast(`📞 Connected: ${line.contact.name}`, 'green');
+}
+
+function lineVoicemail(line) {
+  if (line.timerInt) clearInterval(line.timerInt);
+  line.status = 'voicemail';
+  line.contact.status = 'voicemail';
+  state.stats.vm++;
+  updateStatsUI();
+  updateLineUI(line);
+  addToLog(line.contact, 'vm', line.timerVal);
+
+  // Auto-drop voicemail line after 2s
+  setTimeout(() => { if (line.status === 'voicemail') lineDone(line, 'vm_dropped'); }, 2000);
+  toast(`📬 VM dropped: ${line.contact.name}`, 'orange');
+  checkAllDone();
+}
+
+function lineDone(line, outcome, silent = false) {
+  if (line.timerInt) clearInterval(line.timerInt);
+  if (!['vm_dropped','dropped'].includes(outcome)) {
+    const statusMap = { noanswer: 'noanswer', busy: 'noanswer', voicemail: 'voicemail' };
+    if (line.contact) {
+      line.contact.status = outcome === 'noanswer' || outcome === 'busy' ? 'noanswer' : outcome;
+      if (!silent && outcome !== 'dropped') addToLog(line.contact, outcome, line.timerVal);
+    }
+  }
+  line.status = 'noanswer';
+  setTimeout(() => {
+    line.status = 'idle';
+    line.contact = null;
+    line.timerVal = 0;
+    updateLineUI(line);
+  }, 1500);
+  updateLineUI(line);
+  renderQueue();
+  checkAllDone();
+}
+
+function checkAllDone() {
+  if (state.activeLineId !== null) return; // still on a call
+  const allIdle = state.lines.every(l => l.status === 'idle' || l.status === 'noanswer');
+  if (!allIdle) return;
+  if (!state.session || state.paused) return;
+  setTimeout(() => {
+    if (!state.session || state.paused || state.activeLineId !== null) return;
+    renderQueue();
+    dialNextSet();
+  }, state.settings.delay * 1000 || 3000);
+}
+
+// ============================================================
+//  CALL CONTROLS
+// ============================================================
+function dropLine(lineId, silent = false) {
+  const line = state.lines[lineId - 1];
+  if (line.status === 'idle') return;
+  if (line.id === state.activeLineId) { hangupActive(); return; }
+  lineDone(line, 'dropped', silent);
+}
+
+function hangupActive() {
+  if (state.activeLineId === null) return;
+  const line = state.lines[state.activeLineId - 1];
+  if (line.timerInt) clearInterval(line.timerInt);
+  const duration = line.timerVal;
+  const contact = line.contact;
+
+  // Show disposition
+  showDisposition(contact, duration);
+
+  line.status = 'idle';
+  line.contact = null;
+  line.timerVal = 0;
+  state.activeLineId = null;
+  if (state.activeTimerInt) clearInterval(state.activeTimerInt);
+
+  updateLineUI(line);
+  clearActiveCall();
+  renderQueue();
+
+  if (!state.paused) {
+    setTimeout(() => { if (state.session && !state.paused) dialNextSet(); }, state.settings.delay * 1000 || 3000);
+  }
+}
+
+function showDisposition(contact, duration) {
+  document.getElementById('activeCallCard').style.display = 'none';
+  document.getElementById('noCallState').style.display = 'none';
+  document.getElementById('dispSection').style.display = 'block';
+  document.getElementById('notesSection').style.display = 'block';
+
+  document.getElementById('activeName').textContent = contact ? contact.name : '—';
+  document.getElementById('activeSub').textContent = duration ? `Call duration: ${formatTime(duration)}` : 'Call ended';
+}
+
+async function dispose(result) {
+  const contact = state.contacts.find(c => c.status === 'dialing' || c.status === 'connected' || c.status === 'vm');
+
+  // Trigger voicemail drop on backend if live mode
+  if (result === 'Left VM' && !state.demoMode && state.activeLineId !== null) {
+    try {
+      await fetch(`${state.settings.backendUrl}/api/lines/${state.activeLineId}/drop-voicemail`, { method: 'POST' });
+    } catch(e) {}
+  }
+
+  if (contact) {
+    const map = { 'Hot Lead': 'hot', 'Interested': 'interested', 'Callback': 'callback', 'Left VM': 'voicemail', 'No Answer': 'noanswer', 'Not Interested': 'not interested' };
+    contact.status = map[result] || 'noanswer';
+    if (result === 'Hot Lead' || result === 'Interested') state.stats.appts++;
+    addToLog(contact, map[result] || 'noanswer', 0);
+    updateStatsUI();
+  }
+  document.getElementById('callNotes').value = '';
+  clearActiveCall();
+  toast(`✅ Disposed: ${result}`, result.includes('Hot') ? 'green' : 'gray');
+  renderQueue();
+}
+
+function toggleGlobalMute() {
+  state.globalMuted = !state.globalMuted;
+  const btn = document.getElementById('btnMute');
+  btn.classList.toggle('active', state.globalMuted);
+  btn.querySelector('span:last-child').textContent = state.globalMuted ? 'Unmute' : 'Mute';
+  // Real: call Twilio SDK to mute
+}
+
+function toggleHold() {
+  state.onHold = !state.onHold;
+  const btn = document.getElementById('btnHold');
+  btn.classList.toggle('active', state.onHold);
+  toast(state.onHold ? '⏸ Call on hold' : '▶ Call resumed', 'yellow');
+  // Real: PUT /api/calls/:sid/hold
+}
+
+function toggleMute(lineId) {
+  const line = state.lines[lineId - 1];
+  line.muted = !line.muted;
+  const btn = document.getElementById(`l${lineId}mute`);
+  if (btn) btn.classList.toggle('active', line.muted);
+}
+
+function transferCall() {
+  toast('↗ Transfer feature requires live backend', 'accent');
+}
+
+// ============================================================
+//  REAL TWILIO API CALLS (when backend is set)
+// ============================================================
+async function dialReal(contacts) {
+  const base = state.settings.backendUrl;
+  if (!base) return;
+
+  try {
+    const resp = await fetch(`${base}/api/session/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contacts: contacts.map(c => ({ name: c.name, phone: c.phone })),
+        callerId: state.settings.callerId,
+        agentPhone: state.settings.myPhone,
+        vmUrl: state.settings.vmUrl
+      })
+    });
+    const data = await resp.json();
+    // Attach callSids to lines
+    data.calls?.forEach((call, i) => {
+      if (state.lines[i]) state.lines[i].callSid = call.sid;
+    });
+    // From here, Twilio webhooks → backend → this frontend via SSE or polling
+    startEventPolling();
+  } catch(e) {
+    toast('❌ Backend unreachable — switching to Demo Mode', 'red');
+    state.demoMode = true;
+    simulateDemoSession(contacts);
+  }
+}
+
+let pollInterval = null;
+function startEventPolling() {
+  if (pollInterval) clearInterval(pollInterval);
+  pollInterval = setInterval(async () => {
+    if (!state.session || !state.settings.backendUrl) { clearInterval(pollInterval); return; }
+    try {
+      const resp = await fetch(`${state.settings.backendUrl}/api/session/status`);
+      const data = await resp.json();
+      processBackendEvents(data);
+    } catch(e) {}
+  }, 1000);
+}
+
+function processBackendEvents(data) {
+  // Process line status updates from backend
+  data.lines?.forEach(lineData => {
+    const line = state.lines[lineData.lineId - 1];
+    if (!line || line.status === lineData.status) return;
+    if (lineData.status === 'connected') lineConnected(line);
+    else if (lineData.status === 'voicemail') lineVoicemail(line);
+    else if (lineData.status === 'noanswer' || lineData.status === 'busy') lineDone(line, lineData.status);
+  });
+}
+
+// ============================================================
+//  UI UPDATES
+// ============================================================
+function updateLineUI(line) {
+  const card = document.getElementById(`line${line.id}`);
+  const badge = document.getElementById(`l${line.id}badge`);
+  const name = document.getElementById(`l${line.id}name`);
+  const num = document.getElementById(`l${line.id}num`);
+  const meta = document.getElementById(`l${line.id}meta`);
+  const timer = document.getElementById(`l${line.id}timer`);
+  const dropBtn = document.getElementById(`l${line.id}drop`);
+  const muteBtn = document.getElementById(`l${line.id}mute`);
+
+  // Remove old anim elements
+  card.querySelectorAll('.line-ringing-anim,.line-connected-anim').forEach(e=>e.remove());
+
+  card.className = 'line-card ' + (line.status === 'ringing' ? 'ringing' :
+    line.status === 'connected' ? 'connected' :
+    line.status === 'voicemail' ? 'voicemail' :
+    line.status === 'busy' ? 'busy' :
+    line.status === 'noanswer' ? 'noanswer' : 'idle');
+
+  const statusLabels = { idle:'Idle', ringing:'Ringing...', connected:'Connected', noanswer:'No Answer', voicemail:'Voicemail', busy:'Busy', dropped:'Dropped' };
+  badge.textContent = statusLabels[line.status] || line.status;
+  badge.className = `line-status-badge status-${line.status}`;
+
+  if (line.contact) {
+    name.textContent = line.contact.name;
+    name.style.color = '';
+    num.textContent = formatPhone(line.contact.phone);
+    meta.textContent = line.contact.type + (line.contact.notes ? ` · ${line.contact.notes.slice(0,30)}` : '');
+    timer.textContent = formatTime(line.timerVal);
+    timer.className = 'line-timer' + (line.status === 'ringing' ? ' ringing' : '');
+
+    if (line.status === 'connected') {
+      const anim = document.createElement('div'); anim.className = 'line-connected-anim'; card.appendChild(anim);
+      muteBtn.classList.remove('hidden'); dropBtn.classList.remove('hidden');
+    } else if (line.status === 'ringing') {
+      const anim = document.createElement('div'); anim.className = 'line-ringing-anim'; card.appendChild(anim);
+      muteBtn.classList.add('hidden'); dropBtn.classList.remove('hidden');
+    } else {
+      muteBtn.classList.add('hidden'); dropBtn.classList.add('hidden');
+    }
+  } else {
+    name.textContent = '—'; name.style.color = 'var(--text-muted)';
+    num.textContent = '—'; meta.textContent = '';
+    timer.textContent = '—'; timer.className = 'line-timer';
+    muteBtn.classList.add('hidden'); dropBtn.classList.add('hidden');
+  }
+}
+
+function showActiveCall(line) {
+  document.getElementById('noCallState').style.display = 'none';
+  document.getElementById('dispSection').style.display = 'none';
+  document.getElementById('notesSection').style.display = 'flex';
+  document.getElementById('activeCallCard').style.display = 'flex';
+
+  document.getElementById('activeName').textContent = line.contact.name;
+  document.getElementById('activeSub').innerHTML = `${formatPhone(line.contact.phone)} · <span>Line ${line.id}</span>`;
+  document.getElementById('activeTimer').textContent = '0:00';
+
+  const tags = document.getElementById('activeTags');
+  const typeClass = line.contact.type.toLowerCase().includes('buyer') ? 'buyer' : 'seller';
+  tags.innerHTML = `<span class="tag tag-${typeClass}">${line.contact.type}</span><span class="tag tag-line">Line ${line.id}</span>`;
+}
+
+function clearActiveCall() {
+  document.getElementById('activeCallCard').style.display = 'none';
+  document.getElementById('dispSection').style.display = 'none';
+  document.getElementById('notesSection').style.display = 'none';
+  document.getElementById('noCallState').style.display = 'flex';
+  state.globalMuted = false;
+  state.onHold = false;
+}
+
+// ============================================================
+//  CALL LOG
+// ============================================================
+function addToLog(contact, outcome, duration) {
+  state.callLog.unshift({ contact, outcome, duration, time: new Date() });
+  const icons = { connected:'📞', voicemail:'📬', noanswer:'📵', hot:'🔥', interested:'⭐', callback:'📅', 'not interested':'🚫', busy:'📵' };
+  const labels = { connected:'Connected', voicemail:'Left VM', noanswer:'No Answer', hot:'Hot Lead', interested:'Interested', callback:'Callback', 'not interested':'Not Int.', busy:'Busy' };
+  const resClass = { connected:'res-connected', voicemail:'res-vm', noanswer:'res-na', hot:'res-hot', interested:'res-hot', callback:'res-connected' };
+
+  const el = document.getElementById('callLog');
+  const emptyState = el.querySelector('.empty-state');
+  if (emptyState) emptyState.remove();
+
+  const item = document.createElement('div');
+  item.className = 'log-item';
+  item.innerHTML = `<span class="log-icon">${icons[outcome]||'📞'}</span>
+    <span class="log-name">${contact.name}</span>
+    <span class="log-result ${resClass[outcome]||'res-na'}">${labels[outcome]||outcome}</span>
+    ${duration ? `<span class="log-dur">${formatTime(duration)}</span>` : ''}`;
+  el.insertBefore(item, el.firstChild);
+
+  // Keep log manageable
+  while (el.children.length > 20) el.removeChild(el.lastChild);
+}
+
+function updateStatsUI() {
+  document.getElementById('statCalls').textContent = state.stats.calls;
+  document.getElementById('statConnected').textContent = state.stats.connected;
+  document.getElementById('statVM').textContent = state.stats.vm;
+  document.getElementById('statAppts').textContent = state.stats.appts;
+  const rate = state.stats.calls ? Math.round(state.stats.connected/state.stats.calls*100) : 0;
+  document.getElementById('statRate').textContent = rate + '%';
+}
+
+// ============================================================
+//  HELPERS
+// ============================================================
+function formatTime(s) {
+  const m = Math.floor(s/60), sec = s%60;
+  return `${m}:${String(sec).padStart(2,'0')}`;
+}
+
+function showModal(id) { document.getElementById(id).classList.remove('hidden'); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+function toast(msg, color = 'gray') {
+  const colors = { green:'var(--green)', yellow:'var(--yellow)', red:'var(--red)', accent:'var(--accent)', orange:'var(--orange)', gray:'var(--text-secondary)' };
+  const container = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.style.borderLeftColor = colors[color]||'var(--border)';
+  t.style.borderLeftWidth = '3px';
+  t.textContent = msg;
+  container.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.3s'; setTimeout(()=>t.remove(), 300); }, 3000);
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+function init() {
+  // Load saved settings
+  try {
+    const saved = JSON.parse(localStorage.getItem('powerdial_settings') || '{}');
+    Object.assign(state.settings, saved);
+    state.demoMode = !state.settings.backendUrl;
+  } catch(e) {}
+
+  // Close modals on overlay click
+  document.querySelectorAll('.modal-overlay').forEach(m => {
+    m.addEventListener('click', e => { if (e.target === m) m.classList.add('hidden'); });
+  });
+
+  updateStatsUI();
+  updateProgress();
+
+  // Initialize line UIs
+  state.lines.forEach(l => updateLineUI(l));
+
+  setTimeout(() => {
+    toast(state.demoMode ? '🎬 Demo Mode — Set backend URL in ⚙️ Settings for live calls' : '✅ Backend configured — ready for live calls', state.demoMode ? 'accent' : 'green');
+  }, 500);
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
