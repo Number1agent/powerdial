@@ -376,6 +376,24 @@
     margin-top: 2px;
   }
   .active-contact-sub span { color: var(--accent); }
+  .zillow-btn {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: #006aff14;
+    color: #006aff;
+    text-decoration: none;
+    border: 1px solid #006aff30;
+    transition: background 0.15s;
+  }
+  .zillow-btn:hover { background: #006aff25; }
+  .active-address {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
   .active-timer-big {
     font-size: 22px;
     font-weight: 700;
@@ -427,12 +445,12 @@
   .ctrl-btn.danger:hover { background: var(--red-dim); color: var(--red); border-color: rgba(239,68,68,0.3); }
   .ctrl-icon { font-size: 16px; }
 
-  /* ===== DISPOSITION ===== */
+  /* ===== DISPOSITION — MOJO STYLE ===== */
   .disp-section {
-    background: var(--bg-2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 12px;
+    background: var(--bg-1);
+    border-top: 1px solid var(--border);
+    padding: 10px 12px;
+    flex-shrink: 0;
   }
   .disp-label {
     font-size: 10px;
@@ -440,36 +458,38 @@
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: var(--text-muted);
-    margin-bottom: 8px;
+    margin-bottom: 7px;
   }
   .disp-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 6px;
+    gap: 5px;
   }
+  .disp-btn.appt { grid-column: 1 / -1; }
   .disp-btn {
-    padding: 8px 6px;
-    border: 1px solid var(--border);
-    background: var(--bg-3);
-    color: var(--text-secondary);
+    padding: 10px 4px;
+    border: none;
     border-radius: var(--radius-sm);
     font-size: 11px;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
-    transition: all 0.15s;
+    transition: all 0.12s;
     text-align: center;
     line-height: 1.3;
+    opacity: 0.85;
   }
-  .disp-btn:hover { background: var(--bg-4); color: var(--text-primary); }
-  .disp-btn.na:hover { background: var(--bg-4); color: var(--text-muted); }
-  .disp-btn.vm:hover { background: var(--orange-dim); color: var(--orange); border-color: rgba(249,115,22,0.3); }
-  .disp-btn.callback:hover { background: var(--blue-dim); color: var(--blue); border-color: rgba(59,130,246,0.3); }
-  .disp-btn.not-int:hover { background: var(--red-dim); color: var(--red); border-color: rgba(239,68,68,0.3); }
-  .disp-btn.interested:hover { background: var(--yellow-dim); color: var(--yellow); border-color: rgba(245,158,11,0.3); }
-  .disp-btn.hot:hover { background: var(--green-dim); color: var(--green); border-color: rgba(34,197,94,0.3); }
-  .disp-btn.selected-hot { background: var(--green-dim); color: var(--green); border-color: rgba(34,197,94,0.3); }
-  .disp-btn.selected-cb { background: var(--blue-dim); color: var(--blue); border-color: rgba(59,130,246,0.3); }
-  .disp-btn.selected-vm { background: var(--orange-dim); color: var(--orange); border-color: rgba(249,115,22,0.3); }
+  .disp-btn:hover { opacity: 1; transform: translateY(-1px); }
+  .disp-btn:active { transform: translateY(0); }
+  .disp-btn.na       { background: #374151; color: #9ca3af; }
+  .disp-btn.vm       { background: #92400e; color: #fbbf24; }
+  .disp-btn.callback { background: #1e3a5f; color: #60a5fa; }
+  .disp-btn.not-int  { background: #7f1d1d; color: #fca5a5; }
+  .disp-btn.interested { background: #713f12; color: #fde68a; }
+  .disp-btn.hot      { background: #14532d; color: #4ade80; }
+  .disp-btn.appt     { background: #3b0764; color: #c084fc; }
+  .disp-btn.selected-hot { background: #14532d; color: #4ade80; outline: 2px solid #4ade80; }
+  .disp-btn.selected-cb  { background: #1e3a5f; color: #60a5fa; outline: 2px solid #60a5fa; }
+  .disp-btn.selected-vm  { background: #92400e; color: #fbbf24; outline: 2px solid #fbbf24; }
 
   /* ===== NOTES ===== */
   .notes-area {
@@ -494,37 +514,37 @@
   .notes-textarea:focus { border-color: var(--accent); }
   .notes-textarea::placeholder { color: var(--text-muted); }
 
-  /* ===== CONTACT QUEUE (left) ===== */
+  /* ===== CONTACT QUEUE — MOJO STYLE ===== */
   .contact-item {
     display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 9px 10px;
-    border-radius: var(--radius-sm);
+    align-items: flex-start;
+    gap: 9px;
+    padding: 8px 10px;
     cursor: pointer;
-    border: 1px solid transparent;
-    margin-bottom: 3px;
-    transition: all 0.15s;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+    position: relative;
   }
-  .contact-item:hover { background: var(--bg-3); }
-  .contact-item.active-contact { background: var(--accent-dim); border-color: rgba(108,99,255,0.3); }
-  .contact-item.called { opacity: 0.45; }
-  .contact-item.calling { background: var(--yellow-dim); border-color: rgba(245,158,11,0.3); }
+  .contact-item:hover { background: var(--bg-2); }
+  .contact-item.active-contact { background: rgba(34,197,94,0.08); border-left: 3px solid var(--green); }
+  .contact-item.called { opacity: 0.5; }
+  .contact-item.calling { background: rgba(245,158,11,0.08); border-left: 3px solid var(--yellow); }
 
   .contact-avatar {
-    width: 32px; height: 32px;
-    border-radius: 50%;
+    width: 34px; height: 34px;
+    border-radius: 6px;
     display: flex; align-items: center; justify-content: center;
     font-size: 12px;
     font-weight: 700;
     flex-shrink: 0;
+    margin-top: 1px;
     background: var(--bg-4);
     color: var(--text-secondary);
   }
-  .contact-avatar.buyer { background: var(--blue-dim); color: var(--blue); }
-  .contact-avatar.seller { background: var(--orange-dim); color: var(--orange); }
+  .contact-avatar.buyer { background: #1e3a5f; color: #60a5fa; }
+  .contact-avatar.seller { background: #3b1a00; color: #fb923c; }
 
-  .contact-info { flex: 1; overflow: hidden; }
+  .contact-info { flex: 1; overflow: hidden; min-width: 0; }
   .contact-name {
     font-size: 13px;
     font-weight: 600;
@@ -533,13 +553,33 @@
   }
   .contact-phone {
     font-size: 11px;
-    color: var(--text-muted);
+    color: var(--text-secondary);
     font-family: monospace;
+    margin-top: 1px;
   }
-  .contact-status-icon {
-    font-size: 14px;
+  .contact-address {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .contact-status-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
     flex-shrink: 0;
+    margin-top: 2px;
+    align-self: flex-start;
   }
+  .badge-pending   { background: var(--bg-4); color: var(--text-muted); display: none; }
+  .badge-voicemail { background: #92400e; color: #fbbf24; }
+  .badge-noanswer  { background: #1f2937; color: #6b7280; }
+  .badge-callback  { background: #1e3a5f; color: #60a5fa; }
+  .badge-hot       { background: #14532d; color: #4ade80; }
+  .badge-interested { background: #713f12; color: #fde68a; }
+  .badge-connected { background: #14532d; color: #4ade80; }
+  .badge-not.interested { background: #7f1d1d; color: #fca5a5; }
 
   .queue-section-label {
     font-size: 10px;
@@ -554,6 +594,155 @@
     background: var(--border);
     margin: 6px 4px;
   }
+
+  /* ===== CONTACT DETAIL DRAWER ===== */
+  .contact-drawer {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 500;
+    display: flex;
+    pointer-events: none;
+  }
+  .contact-drawer.open { pointer-events: all; }
+  .drawer-backdrop {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.55);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .contact-drawer.open .drawer-backdrop { opacity: 1; }
+  .drawer-panel {
+    position: absolute;
+    top: 0; left: 0;
+    width: 300px;
+    height: 100%;
+    background: var(--bg-1);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    transform: translateX(-100%);
+    transition: transform 0.22s cubic-bezier(0.4,0,0.2,1);
+    z-index: 1;
+  }
+  .contact-drawer.open .drawer-panel { transform: translateX(0); }
+
+  .drawer-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .drawer-avatar {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; font-weight: 700;
+    flex-shrink: 0;
+    background: var(--bg-4); color: var(--text-secondary);
+  }
+  .drawer-avatar.buyer { background: var(--blue-dim); color: var(--blue); }
+  .drawer-avatar.seller { background: var(--orange-dim); color: var(--orange); }
+  .drawer-name { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+  .drawer-type { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .drawer-close {
+    margin-left: auto;
+    background: none; border: none;
+    color: var(--text-muted); font-size: 18px;
+    cursor: pointer; padding: 4px;
+  }
+  .drawer-close:hover { color: var(--text-primary); }
+
+  .drawer-body {
+    flex: 1; overflow-y: auto;
+    padding: 14px 16px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .drawer-field label {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--text-muted);
+    display: block; margin-bottom: 4px;
+  }
+  .drawer-field .field-val {
+    font-size: 13px; color: var(--text-primary);
+    background: var(--bg-3); border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    word-break: break-word;
+  }
+  .drawer-field textarea.field-val {
+    width: 100%; resize: vertical; min-height: 70px;
+    font-family: inherit; font-size: 12px;
+    outline: none; color: var(--text-primary);
+  }
+  .drawer-field textarea.field-val:focus { border-color: var(--accent); }
+
+  .drawer-status-row {
+    display: flex; flex-wrap: wrap; gap: 5px;
+  }
+  .status-chip {
+    padding: 4px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 600;
+    cursor: pointer; border: 1px solid var(--border);
+    color: var(--text-muted); background: var(--bg-3);
+    transition: all 0.12s;
+  }
+  .status-chip:hover { border-color: var(--accent); color: var(--accent); }
+  .status-chip.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+  .drawer-actions {
+    padding: 14px 16px;
+    border-top: 1px solid var(--border);
+    display: flex; gap: 8px;
+  }
+  .drawer-actions .btn { flex: 1; justify-content: center; font-size: 12px; }
+
+  /* ===== LIST TABS ===== */
+  .list-tabs-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 8px 0;
+    overflow-x: auto;
+    flex-shrink: 0;
+    scrollbar-width: none;
+  }
+  .list-tabs-row::-webkit-scrollbar { display: none; }
+  .list-tab {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--bg-3);
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .list-tab:hover { border-color: var(--border-light); color: var(--text-primary); }
+  .list-tab.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(108,99,255,0.35); }
+  .list-tab .list-count { font-size: 10px; opacity: 0.7; }
+  .list-tab .list-del { margin-left: 3px; opacity: 0; font-size: 12px; line-height: 1; }
+  .list-tab:hover .list-del { opacity: 0.5; }
+  .list-tab .list-del:hover { opacity: 1; color: var(--red); }
+  .list-tab-add {
+    padding: 3px 8px;
+    border-radius: 20px;
+    border: 1px dashed var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 14px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.15s;
+  }
+  .list-tab-add:hover { border-color: var(--accent); color: var(--accent); }
 
   /* ===== QUEUE TOOLBAR ===== */
   .queue-toolbar {
@@ -855,6 +1044,72 @@
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
   .hidden { display: none !important; }
+
+  /* ===== DNC + TEMPERATURE + CALLBACK CHIPS ===== */
+  .badge-dnc { background: #7f1d1d; color: #fca5a5; border: 1px solid rgba(239,68,68,0.4); }
+  .badge-callback-date { background: #1e3a5f; color: #93c5fd; border: 1px solid rgba(59,130,246,0.3); font-size:9px; padding:1px 5px; border-radius:4px; white-space:nowrap; }
+  .temp-dot {
+    width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; margin-top:5px;
+  }
+  .temp-hot { background: #ef4444; box-shadow: 0 0 4px rgba(239,68,68,0.7); }
+  .temp-warm { background: #f59e0b; box-shadow: 0 0 4px rgba(245,158,11,0.5); }
+  .temp-cold { background: #3b82f6; }
+  .temp-none { background: var(--bg-4); }
+
+  /* ===== SESSION TIMER ===== */
+  .session-timer-pill {
+    display: flex; align-items: center; gap: 5px;
+    background: var(--bg-3); border: 1px solid var(--border);
+    border-radius: 20px; padding: 4px 10px; font-size: 12px;
+    color: var(--text-secondary); font-family: 'SF Mono', monospace;
+  }
+  .session-timer-pill .val { font-weight: 700; color: var(--text-primary); font-size: 13px; }
+  .session-timer-pill.live .val { color: var(--green); }
+
+  /* ===== CALLBACKS SECTION (right panel) ===== */
+  .callback-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 8px; border-radius: var(--radius-sm);
+    margin-bottom: 4px; background: var(--bg-2);
+    border: 1px solid var(--border); cursor: pointer;
+    transition: background 0.1s;
+  }
+  .callback-item:hover { background: var(--bg-3); }
+  .callback-date-badge {
+    background: #1e3a5f; color: #93c5fd;
+    border-radius: 4px; padding: 2px 6px;
+    font-size: 10px; font-weight: 700; flex-shrink: 0;
+  }
+  .callback-overdue { background: #7f1d1d; color: #fca5a5; }
+  .callback-today { background: #14532d; color: #86efac; }
+
+  /* ===== CALLBACK PICKER MODAL ===== */
+  .cb-picker-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 300; backdrop-filter: blur(3px);
+  }
+  .cb-picker-box {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: 14px; padding: 20px; width: 320px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  }
+  .cb-picker-title { font-size: 14px; font-weight: 700; margin-bottom: 14px; color: var(--text-primary); }
+  .cb-quick-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .cb-quick-btn {
+    padding: 5px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;
+    border: 1px solid var(--border); background: var(--bg-3);
+    color: var(--text-secondary); cursor: pointer; transition: all 0.12s;
+  }
+  .cb-quick-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+  .cb-datetime { width: 100%; background: var(--bg-3); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 13px; padding: 8px 10px; outline: none; margin-bottom: 12px; }
+  .cb-datetime:focus { border-color: var(--accent); }
+  .cb-actions { display: flex; gap: 8px; }
+  .cb-actions .btn { flex: 1; justify-content: center; font-size: 12px; }
+
+  /* ===== ETA in progress ===== */
+  .progress-eta { font-size: 10px; color: var(--accent); }
 </style>
 </head>
 <body>
@@ -876,6 +1131,10 @@
   <div class="stat-pill yellow">Left VM <span id="statVM" class="val">0</span></div>
   <div class="stat-pill accent">Rate <span id="statRate" class="val">0%</span></div>
   <div class="stat-pill red">Appts <span id="statAppts" class="val">0</span></div>
+  <div class="session-timer-pill" id="sessionTimerPill" style="display:none">
+    <span>⏱</span><span class="val" id="sessionTimerVal">0:00:00</span>
+  </div>
+  <div class="stat-pill" id="callsPerHourPill" style="display:none">⚡ <span id="statCPH" class="val">0</span>/hr</div>
 
   <div class="topbar-spacer"></div>
 
@@ -888,6 +1147,52 @@
   </div>
 </div>
 
+<!-- ===== CONTACT DETAIL DRAWER ===== -->
+<div class="contact-drawer" id="contactDrawer" onclick="handleDrawerClick(event)">
+  <div class="drawer-backdrop"></div>
+  <div class="drawer-panel">
+    <div class="drawer-header">
+      <div class="drawer-avatar" id="drawerAvatar"></div>
+      <div>
+        <div class="drawer-name" id="drawerName"></div>
+        <div class="drawer-type" id="drawerType"></div>
+      </div>
+      <button class="drawer-close" onclick="closeContactDrawer()">✕</button>
+    </div>
+    <div class="drawer-body">
+      <div class="drawer-field">
+        <label>Phone</label>
+        <div class="field-val" id="drawerPhone"></div>
+      </div>
+      <div class="drawer-field" id="drawerAddressWrap">
+        <label style="display:flex;align-items:center;gap:8px">Address / Notes <a id="drawerZillowBtn" href="#" target="_blank" rel="noopener" class="zillow-btn" onclick="event.stopPropagation()" style="display:none">🏠 Zillow</a></label>
+        <div class="field-val" id="drawerAddress"></div>
+      </div>
+      <div class="drawer-field">
+        <label>Status</label>
+        <div class="drawer-status-row" id="drawerStatusRow"></div>
+      </div>
+      <div class="drawer-field">
+        <label>Call Notes</label>
+        <textarea class="field-val" id="drawerNotes" placeholder="Add notes about this contact..." rows="4" oninput="saveDrawerNotes()"></textarea>
+      </div>
+      <div class="drawer-field" id="drawerHistoryWrap" style="display:none">
+        <label>Call History</label>
+        <div id="drawerHistory" style="font-size:12px;color:var(--text-secondary);display:flex;flex-direction:column;gap:4px;"></div>
+      </div>
+    </div>
+    <div class="drawer-actions">
+      <button class="btn btn-primary" onclick="callNowFromDrawer()" style="flex:1;justify-content:center">📞 Call Now</button>
+    </div>
+    <div class="drawer-actions" style="border-top:none;padding-top:0">
+      <button class="btn btn-ghost" onclick="moveContactToTop()" title="Move to top of queue">⬆ Priority</button>
+      <button class="btn btn-ghost" onclick="skipContact()" title="Skip this contact">⏭ Skip</button>
+      <button class="btn btn-ghost" id="dncDrawerBtn" onclick="toggleDNC()" title="Do Not Call — remove from all future dialing" style="color:var(--red)">🚫 DNC</button>
+      <button class="btn btn-ghost" style="color:var(--red);font-size:11px" onclick="removeDrawerContact()" title="Remove from list">✕ Remove</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== MAIN ===== -->
 <div class="main">
 
@@ -896,6 +1201,10 @@
     <div class="panel-header">
       <span class="panel-title">Contact Queue</span>
       <span id="queueBadge" class="panel-badge">0</span>
+    </div>
+    <div class="list-tabs-row" id="listTabsRow">
+      <button class="list-tab active" id="listtab-all" onclick="setActiveList(null)">📋 All</button>
+      <button class="list-tab-add" onclick="promptNewList()" title="New List">＋</button>
     </div>
     <div class="queue-toolbar">
       <div class="queue-search">
@@ -983,7 +1292,10 @@
     <div class="progress-bar-wrap">
       <div class="progress-label">
         <span id="progressLabel">No active session</span>
-        <span id="progressPct">—</span>
+        <span style="display:flex;align-items:center;gap:8px">
+          <span id="progressEta" class="progress-eta" style="display:none"></span>
+          <span id="progressPct">—</span>
+        </span>
       </div>
       <div class="progress-track"><div id="progressFill" class="progress-fill" style="width:0%"></div></div>
     </div>
@@ -992,11 +1304,12 @@
     <div class="active-call-area" id="activeCallArea">
       <div class="active-call-card" id="activeCallCard" style="display:none">
         <div class="active-header">
-          <div>
+          <div style="flex:1;min-width:0">
             <div class="active-contact-name" id="activeName">—</div>
             <div class="active-contact-sub" id="activeSub">—</div>
+            <div id="activeAddress" class="active-address" style="display:none"></div>
           </div>
-          <div>
+          <div style="text-align:right;flex-shrink:0;margin-left:10px">
             <div class="active-timer-big" id="activeTimer">0:00</div>
             <div class="active-timer-label">Connected</div>
           </div>
@@ -1038,6 +1351,7 @@
           <button class="disp-btn not-int" onclick="dispose('Not Interested')">🚫 Not Interested</button>
           <button class="disp-btn interested" onclick="dispose('Interested')">🌟 Interested</button>
           <button class="disp-btn hot" onclick="dispose('Hot Lead')">🔥 Hot Lead</button>
+          <button class="disp-btn appt" onclick="dispose('Appointment')">📆 Appt Set</button>
         </div>
       </div>
 
@@ -1086,6 +1400,19 @@
       </div>
 
       <div style="height:1px;background:var(--border);margin:12px 0"></div>
+
+      <!-- Scheduled Callbacks -->
+      <div class="right-section" style="padding:0 10px 0">
+        <div class="section-label" style="display:flex;align-items:center;justify-content:space-between">
+          <span>📅 Scheduled Callbacks</span>
+          <span id="callbackCount" style="font-size:10px;color:var(--accent);font-weight:700"></span>
+        </div>
+      </div>
+      <div id="callbackList" style="padding:0 8px 4px">
+        <div style="font-size:11px;color:var(--text-muted);padding:8px 4px;text-align:center">No callbacks scheduled</div>
+      </div>
+
+      <div style="height:1px;background:var(--border);margin:8px 0"></div>
 
       <!-- Call Log -->
       <div class="right-section" style="padding:0 10px 0">
@@ -1138,6 +1465,11 @@
       <button class="btn btn-ghost" style="flex:1;justify-content:center;font-size:11px" onclick="loadFromAgentOS()">🔗 From AgentOS</button>
     </div>
 
+    <div class="input-group" style="margin-bottom:8px">
+      <div class="input-label">Save to List (optional — organizes by city or campaign)</div>
+      <input class="input-field" id="importListName" placeholder="e.g. Beacon, Yonkers, Manhattan Expireds, FSBOs..." />
+    </div>
+
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('importModal')">Cancel</button>
       <button class="btn btn-primary" onclick="importContacts()">Import & Load Queue</button>
@@ -1184,6 +1516,25 @@
   </div>
 </div>
 
+<!-- ===== CALLBACK PICKER ===== -->
+<div id="cbPickerOverlay" class="cb-picker-overlay" style="display:none">
+  <div class="cb-picker-box">
+    <div class="cb-picker-title">📅 Schedule Callback</div>
+    <div class="cb-quick-btns">
+      <button class="cb-quick-btn" onclick="setCbQuick(1,'hour')">In 1 hour</button>
+      <button class="cb-quick-btn" onclick="setCbQuick(2,'hour')">In 2 hours</button>
+      <button class="cb-quick-btn" onclick="setCbQuick(1,'day')">Tomorrow</button>
+      <button class="cb-quick-btn" onclick="setCbQuick(2,'day')">In 2 days</button>
+      <button class="cb-quick-btn" onclick="setCbQuick(7,'day')">Next week</button>
+    </div>
+    <input type="datetime-local" class="cb-datetime" id="cbDatetimeInput" />
+    <div class="cb-actions">
+      <button class="btn btn-ghost" onclick="closeCbPicker()">Skip</button>
+      <button class="btn btn-primary" onclick="confirmCbPicker()">📅 Save Callback</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== TOAST ===== -->
 <div class="toast-container" id="toastContainer"></div>
 
@@ -1221,6 +1572,11 @@ const state = {
   onHold: false,
   queueTab: 'all',       // all | pending | callback | called
   queueSort: 'default',  // default | az | za | status
+  lists: [],             // [{ id, name }] — named call lists
+  activeListId: null,    // null = show all lists
+  sessionStartTime: null,
+  sessionTimerInt: null,
+  pendingCbContact: null, // contact waiting for callback date assignment
 };
 
 // ============================================================
@@ -1385,10 +1741,14 @@ function parseMojoCSV(raw) {
   const headers = parseCSVRow(lines[0]);
 
   // Find name column
-  const nameIdx = headers.findIndex(h => /^(full name|first or full name|name)$/i.test(h.trim()));
+  const nameIdx  = headers.findIndex(h => /^(full name|first or full name|name)$/i.test(h.trim()));
   const firstIdx = headers.findIndex(h => /^first name$/i.test(h.trim()));
   const lastIdx  = headers.findIndex(h => /^last name$/i.test(h.trim()));
-  const addrIdx  = headers.findIndex(h => /^(property address|address)$/i.test(h.trim()));
+  const addrIdx  = headers.findIndex(h => /^(property address|street address|address|street)$/i.test(h.trim()));
+  const cityIdx  = headers.findIndex(h => /^city$/i.test(h.trim()));
+  const stateIdx = headers.findIndex(h => /^(state|st)$/i.test(h.trim()));
+  const zipIdx   = headers.findIndex(h => /^(zip|zip code|postal code)$/i.test(h.trim()));
+  const typeIdx  = headers.findIndex(h => /^(type|lead type|contact type|prospect type)$/i.test(h.trim()));
 
   // Find ALL phone columns: Phone 1..13, Mobile 1..13
   const phoneColumns = [];
@@ -1412,13 +1772,23 @@ function parseMojoCSV(raw) {
       if (first || last) return [first, last].filter(Boolean).join(' ');
       return addrIdx >= 0 ? parts[addrIdx]?.trim() || 'Unknown' : 'Unknown';
     };
-    const name = getName();
-    const addr = addrIdx >= 0 ? parts[addrIdx]?.trim() || '' : '';
+    const name  = getName();
+    const addr  = addrIdx  >= 0 ? (parts[addrIdx]?.trim()  || '') : '';
+    const city  = cityIdx  >= 0 ? (parts[cityIdx]?.trim()  || '') : '';
+    const state = stateIdx >= 0 ? (parts[stateIdx]?.trim() || '') : '';
+    const zip   = zipIdx   >= 0 ? (parts[zipIdx]?.trim()   || '') : '';
+    const type  = typeIdx  >= 0 ? (parts[typeIdx]?.trim()  || '') : '';
+
+    // Build full location: "123 Main St, Beacon, NY 12508" — use whatever fields exist
+    const cityStateParts = [city, state ? (zip ? `${state} ${zip}` : state) : zip].filter(Boolean);
+    const cityStateStr = cityStateParts.join(', ');
+    const locationParts = [addr, cityStateStr].filter(Boolean);
+    const fullLocation = locationParts.join(', ');
 
     let added = 0;
     for (const col of phoneColumns) {
-      const raw = parts[col.idx] || '';
-      const phone = cleanPhone(raw);
+      const rawPhone = parts[col.idx] || '';
+      const phone = cleanPhone(rawPhone);
       if (!phone) continue;
 
       // Build a label: "Cell", "Home", "Phone 2", etc.
@@ -1428,10 +1798,14 @@ function parseMojoCSV(raw) {
       if (col.labelIdx >= 0 && parts[col.labelIdx]?.trim()) label = parts[col.labelIdx].trim();
 
       contacts.push({
-        name: `${name}`,
+        name,
         phone,
         phoneLabel: label,
-        notes: addr,
+        notes: fullLocation,   // full address with city+state+zip
+        city,
+        state,
+        zip,
+        type,
         status: 'pending'
       });
       added++;
@@ -1506,20 +1880,39 @@ function importContacts() {
 
   if (!contacts.length) { toast('⚠️ No contacts parsed', 'yellow'); return; }
 
-  state.contacts = contacts;
-  state.queue = [...contacts];
+  // Handle list assignment
+  const listNameInput = (document.getElementById('importListName')?.value || '').trim();
+  let listId = null;
+  if (listNameInput) {
+    let existing = state.lists.find(l => l.name.toLowerCase() === listNameInput.toLowerCase());
+    if (!existing) existing = createList(listNameInput);
+    listId = existing.id;
+  }
+  contacts = contacts.map(c => ({ ...c, listId }));
+
+  // Append to existing contacts (or replace if same list)
+  if (listId) {
+    // Remove old contacts from this list, then append new
+    state.contacts = state.contacts.filter(c => c.listId !== listId);
+    state.contacts = [...state.contacts, ...contacts];
+  } else {
+    state.contacts = contacts;
+  }
+  state.queue = [...state.contacts];
   state.currentIdx = 0;
   document.getElementById('importData').value = '';
   document.getElementById('dropZoneStatus').textContent = '';
   document.getElementById('csvFileInput').value = '';
+  document.getElementById('importListName').value = '';
   closeModal('importModal');
-  // Persist contacts so they survive a page refresh
-  try { localStorage.setItem('powerdial_contacts', JSON.stringify(contacts)); } catch(e) {}
-  renderQueue();
+  saveContacts();
+  if (listId) setActiveList(listId);
+  else renderQueue();
 
   const unique = new Set(contacts.map(c => c.name)).size;
   const phones = contacts.length;
-  toast(`✅ ${phones} dial entries from ${unique} contacts`, 'green');
+  const listMsg = listNameInput ? ` → "${listNameInput}"` : '';
+  toast(`✅ ${phones} dial entries from ${unique} contacts${listMsg}`, 'green');
 }
 
 function clearQueue() {
@@ -1564,8 +1957,9 @@ function renderQueue() {
   // Search filter
   const q = (document.getElementById('queueSearch')?.value || '').toLowerCase().trim();
 
-  // Tab filter
+  // List filter + Tab filter
   let filtered = state.contacts.filter(c => {
+    if (state.activeListId !== null && c.listId !== state.activeListId) return false;
     if (state.queueTab === 'pending')  return c.status === 'pending';
     if (state.queueTab === 'callback') return c.status === 'callback';
     if (state.queueTab === 'called')   return c.status !== 'pending' && c.status !== 'callback';
@@ -1616,19 +2010,353 @@ function renderQueue() {
 function contactItem(c, i) {
   const initials = c.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
   const typeClass = (c.type || '').toLowerCase().includes('buyer') ? 'buyer' : 'seller';
-  const statusIcons = { pending: '', connected: '✅', voicemail: '📬', noanswer: '⬜', callback: '📅', hot: '🔥', interested: '⭐', 'not interested': '🚫' };
-  const icon = statusIcons[c.status] || '';
+  const statusLabels = { pending: '', connected: 'Connected', voicemail: 'VM', noanswer: 'No Ans', callback: 'Callback', hot: 'Hot', interested: 'Interested', 'not interested': 'Not Int.' };
+  const badgeLabel = c.isDNC ? 'DNC' : (statusLabels[c.status] || c.status || '');
+  const badgeKey = c.isDNC ? 'dnc' : (c.status || 'pending').replace(/\s+/g, '');
   let rowClass = 'contact-item';
-  if (c.status !== 'pending') rowClass += ' called';
-  return `<div class="${rowClass}" title="${c.phone}\n${c.notes}">
-    <div class="contact-avatar ${typeClass}">${initials}</div>
+  if (c.isDNC) rowClass += ' called';
+  else if (c.status !== 'pending') rowClass += ' called';
+  const realIdx = state.contacts.indexOf(c);
+  const addr = (c.notes || c.address || '').trim();
+  const zillowHref = addr ? `https://www.zillow.com/homes/${encodeURIComponent(addr)}_rb/` : '';
+  const tempClass = c.temperature ? `temp-${c.temperature}` : 'temp-none';
+
+  // Callback date chip
+  let cbChip = '';
+  if (c.callbackDate && c.status === 'callback') {
+    const cbDate = new Date(c.callbackDate);
+    const now = new Date();
+    const isToday = cbDate.toDateString() === now.toDateString();
+    const isOverdue = cbDate < now;
+    const dateStr = isToday ? `Today ${cbDate.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}` :
+                   cbDate.toLocaleDateString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    cbChip = `<span class="badge-callback-date">${isOverdue ? '⚠' : '📅'} ${dateStr}</span>`;
+  }
+
+  return `<div class="${rowClass}" onclick="openContactDrawer(${realIdx})" style="align-items:flex-start">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:1px">
+      <div class="contact-avatar ${typeClass}">${initials}</div>
+      <span class="temp-dot ${tempClass}"></span>
+    </div>
     <div class="contact-info">
       <div class="contact-name">${c.name}</div>
-      <div class="contact-phone">${formatPhone(c.phone)}${c.phoneLabel ? ` <span style="color:var(--text-muted);font-size:10px;font-weight:500;margin-left:4px">${c.phoneLabel}</span>` : ''}</div>
-      ${c.notes ? `<div style="font-size:10px;color:var(--text-muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px">${c.notes}</div>` : ''}
+      <div class="contact-phone">${formatPhone(c.phone)}${c.phoneLabel ? ` <span style="opacity:0.6;font-size:10px;margin-left:4px">${c.phoneLabel}</span>` : ''}</div>
+      ${addr ? `<div class="contact-address">${addr}${zillowHref ? ` <a href="${zillowHref}" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="zillow-btn" style="margin-left:5px;font-size:9px;padding:1px 5px">🏠</a>` : ''}</div>` : ''}
+      ${cbChip ? `<div style="margin-top:3px">${cbChip}</div>` : ''}
+      ${c.callNotes ? `<div class="contact-address" style="color:var(--yellow);opacity:0.8">📝 ${c.callNotes}</div>` : ''}
     </div>
-    ${icon ? `<span class="contact-status-icon">${icon}</span>` : ''}
+    ${badgeLabel ? `<span class="contact-status-badge badge-${badgeKey}">${badgeLabel}</span>` : ''}
   </div>`;
+}
+
+// ============================================================
+//  CALL LISTS
+// ============================================================
+function createList(name) {
+  const id = 'list_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+  const list = { id, name };
+  state.lists.push(list);
+  saveListsDB();
+  renderListTabs();
+  return list;
+}
+
+function deleteList(id, e) {
+  if (e) e.stopPropagation();
+  state.lists = state.lists.filter(l => l.id !== id);
+  // Unassign contacts from this list
+  state.contacts.forEach(c => { if (c.listId === id) c.listId = null; });
+  if (state.activeListId === id) state.activeListId = null;
+  saveListsDB();
+  saveContacts();
+  renderListTabs();
+  renderQueue();
+}
+
+function setActiveList(id) {
+  state.activeListId = id;
+  renderListTabs();
+  renderQueue();
+}
+
+function renderListTabs() {
+  const row = document.getElementById('listTabsRow');
+  if (!row) return;
+  const allActive = state.activeListId === null;
+  let html = `<button class="list-tab${allActive ? ' active' : ''}" onclick="setActiveList(null)">📋 All <span class="list-count">${state.contacts.length}</span></button>`;
+  state.lists.forEach(l => {
+    const count = state.contacts.filter(c => c.listId === l.id).length;
+    const active = state.activeListId === l.id;
+    html += `<button class="list-tab${active ? ' active' : ''}" onclick="setActiveList('${l.id}')">
+      📁 ${l.name} <span class="list-count">${count}</span>
+      <span class="list-del" onclick="deleteList('${l.id}',event)" title="Delete list">✕</span>
+    </button>`;
+  });
+  html += `<button class="list-tab-add" onclick="promptNewList()" title="New list">＋</button>`;
+  row.innerHTML = html;
+}
+
+function promptNewList() {
+  const name = prompt('List name (e.g. Beacon, Yonkers, Manhattan FSBOs):');
+  if (name && name.trim()) createList(name.trim());
+}
+
+// ============================================================
+//  CONTACT DETAIL DRAWER
+// ============================================================
+let drawerContactIdx = null;
+
+function openContactDrawer(idx) {
+  const c = state.contacts[idx];
+  if (!c) return;
+  drawerContactIdx = idx;
+
+  const initials = c.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
+  const typeClass = (c.type || '').toLowerCase().includes('buyer') ? 'buyer' : 'seller';
+  const typeLabel = c.type || (typeClass === 'buyer' ? 'Buyer' : 'Seller');
+
+  document.getElementById('drawerAvatar').textContent = initials;
+  document.getElementById('drawerAvatar').className = `drawer-avatar ${typeClass}`;
+  document.getElementById('drawerName').textContent = c.name;
+  // Show temperature + DNC in type line
+  const tempEmoji = { hot:'🔥', warm:'🌟', cold:'❄️' };
+  const tempStr = c.temperature ? ` ${tempEmoji[c.temperature] || ''} ${c.temperature.charAt(0).toUpperCase() + c.temperature.slice(1)}` : '';
+  const dncStr = c.isDNC ? ' 🚫 DNC' : '';
+  document.getElementById('drawerType').textContent = typeLabel + tempStr + dncStr;
+  // Update DNC button label
+  const dncBtn = document.getElementById('dncDrawerBtn');
+  if (dncBtn) {
+    dncBtn.textContent = c.isDNC ? '✅ Remove DNC' : '🚫 DNC';
+    dncBtn.style.color = c.isDNC ? 'var(--green)' : 'var(--red)';
+  }
+  document.getElementById('drawerPhone').textContent = formatPhone(c.phone);
+
+  const addrEl = document.getElementById('drawerAddress');
+  const addrWrap = document.getElementById('drawerAddressWrap');
+  const zillowBtn = document.getElementById('drawerZillowBtn');
+  const addr = (c.notes || c.address || '').trim();
+  if (addr) {
+    addrEl.textContent = addr;
+    addrWrap.style.display = '';
+    // Zillow search: use full address for best match
+    zillowBtn.href = `https://www.zillow.com/homes/${encodeURIComponent(addr)}_rb/`;
+    zillowBtn.style.display = '';
+  } else if (c.city || c.state) {
+    // No street address but we have city/state — show that
+    const loc = [c.city, c.state, c.zip].filter(Boolean).join(', ');
+    addrEl.textContent = loc;
+    addrWrap.style.display = '';
+    zillowBtn.href = `https://www.zillow.com/homes/${encodeURIComponent(loc)}_rb/`;
+    zillowBtn.style.display = '';
+  } else {
+    addrWrap.style.display = 'none';
+    zillowBtn.style.display = 'none';
+  }
+
+  // Status chips
+  const statuses = [
+    { key: 'pending', label: '🔵 Pending' },
+    { key: 'connected', label: '✅ Connected' },
+    { key: 'voicemail', label: '📬 Voicemail' },
+    { key: 'noanswer', label: '⬜ No Answer' },
+    { key: 'callback', label: '📅 Callback' },
+    { key: 'hot', label: '🔥 Hot Lead' },
+    { key: 'interested', label: '⭐ Interested' },
+    { key: 'not interested', label: '🚫 Not Interested' },
+  ];
+  document.getElementById('drawerStatusRow').innerHTML = statuses.map(s =>
+    `<div class="status-chip${c.status === s.key ? ' active' : ''}" onclick="setDrawerStatus('${s.key}')">${s.label}</div>`
+  ).join('');
+
+  // Call notes
+  document.getElementById('drawerNotes').value = c.callNotes || '';
+
+  // Call history
+  const hist = state.callLog.filter(l => l.phone === c.phone);
+  const histWrap = document.getElementById('drawerHistoryWrap');
+  const histEl = document.getElementById('drawerHistory');
+  if (hist.length) {
+    histWrap.style.display = '';
+    histEl.innerHTML = hist.slice(-5).reverse().map(l =>
+      `<div style="padding:6px 8px;background:var(--bg-3);border-radius:var(--radius-sm);border:1px solid var(--border)">
+        <span style="font-weight:600">${l.result}</span>
+        <span style="color:var(--text-muted);margin-left:8px;font-size:11px">${new Date(l.time).toLocaleString()}</span>
+        ${l.notes ? `<div style="color:var(--text-muted);margin-top:3px;font-size:11px">${l.notes}</div>` : ''}
+      </div>`
+    ).join('');
+  } else histWrap.style.display = 'none';
+
+  document.getElementById('contactDrawer').classList.add('open');
+}
+
+function closeContactDrawer() {
+  document.getElementById('contactDrawer').classList.remove('open');
+  drawerContactIdx = null;
+}
+
+function handleDrawerClick(e) {
+  if (e.target.classList.contains('drawer-backdrop')) closeContactDrawer();
+}
+
+function setDrawerStatus(status) {
+  if (drawerContactIdx === null) return;
+  const c = state.contacts[drawerContactIdx];
+  c.status = status;
+  // Auto-set temperature
+  const tempMap = { hot:'hot', interested:'warm', callback:'warm', voicemail:'cold', noanswer:'cold', 'not interested':'cold', connected:'warm' };
+  if (tempMap[status]) c.temperature = tempMap[status];
+  // Refresh chips
+  document.querySelectorAll('.status-chip').forEach(el => el.classList.remove('active'));
+  event.target.classList.add('active');
+  // If setting to callback and no date yet, show picker
+  if (status === 'callback' && !c.callbackDate) {
+    state.pendingCbContact = c;
+    openCbPicker();
+  }
+  saveContacts();
+  renderQueue();
+  renderCallbacks();
+}
+
+function saveDrawerNotes() {
+  if (drawerContactIdx === null) return;
+  state.contacts[drawerContactIdx].callNotes = document.getElementById('drawerNotes').value;
+  saveContacts();
+}
+
+function moveContactToTop() {
+  if (drawerContactIdx === null) return;
+  const c = state.contacts.splice(drawerContactIdx, 1)[0];
+  const firstPending = state.contacts.findIndex(x => x.status === 'pending');
+  state.contacts.splice(firstPending >= 0 ? firstPending : 0, 0, c);
+  drawerContactIdx = firstPending >= 0 ? firstPending : 0;
+  saveContacts();
+  renderQueue();
+  toast('⬆ Moved to top of queue', 'green');
+  closeContactDrawer();
+}
+
+function skipContact() {
+  if (drawerContactIdx === null) return;
+  const c = state.contacts[drawerContactIdx];
+  c.status = 'noanswer';
+  saveContacts();
+  renderQueue();
+  toast('⏭ Contact skipped', 'accent');
+  closeContactDrawer();
+}
+
+function removeDrawerContact() {
+  if (drawerContactIdx === null) return;
+  state.contacts.splice(drawerContactIdx, 1);
+  drawerContactIdx = null;
+  saveContacts();
+  renderQueue();
+  toast('✕ Contact removed', 'red');
+  closeContactDrawer();
+}
+
+function callNowFromDrawer() {
+  if (drawerContactIdx === null) return;
+  const c = state.contacts[drawerContactIdx];
+  // Move contact to front of pending queue
+  state.contacts.splice(drawerContactIdx, 1);
+  c.status = 'pending';
+  const firstPending = state.contacts.findIndex(x => x.status === 'pending');
+  state.contacts.splice(firstPending >= 0 ? firstPending : 0, 0, c);
+  saveContacts();
+  closeContactDrawer();
+  renderQueue();
+
+  if (state.session && !state.paused) {
+    const idleLine = state.lines.find(l => l.status === 'idle');
+    if (idleLine) {
+      dialContact(idleLine, c);
+      if (state.demoMode) simulateDemoSession([{ line: idleLine, contact: c }]);
+      toast(`📞 Calling ${c.name}...`, 'green');
+    } else {
+      toast(`⬆ ${c.name} queued first — will dial next`, 'accent');
+    }
+  } else {
+    toast(`⬆ ${c.name} moved to top — press Start to dial`, 'accent');
+  }
+}
+
+// ============================================================
+//  INDEXEDDB — unlimited contact storage
+// ============================================================
+const DB_NAME = 'powerdial_db', DB_VER = 2, STORE = 'contacts';
+
+function openDB() {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: '_idx' });
+      if (!db.objectStoreNames.contains('lists')) db.createObjectStore('lists', { keyPath: 'id' });
+    };
+    req.onsuccess = e => res(e.target.result);
+    req.onerror = () => rej(req.error);
+  });
+}
+
+async function saveListsDB() {
+  try {
+    const db = await openDB();
+    const tx = db.transaction('lists', 'readwrite');
+    const store = tx.objectStore('lists');
+    store.clear();
+    state.lists.forEach(l => store.put(l));
+    await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
+    db.close();
+  } catch(e) {
+    try { localStorage.setItem('powerdial_lists', JSON.stringify(state.lists)); } catch(_) {}
+  }
+}
+
+async function loadListsDB() {
+  try {
+    const db = await openDB();
+    const tx = db.transaction('lists', 'readonly');
+    const req = tx.objectStore('lists').getAll();
+    const rows = await new Promise((res, rej) => { req.onsuccess = () => res(req.result); req.onerror = rej; });
+    db.close();
+    if (rows.length) return rows;
+  } catch(e) {}
+  try { return JSON.parse(localStorage.getItem('powerdial_lists') || '[]'); } catch(_) { return []; }
+}
+
+async function saveContacts() {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE, 'readwrite');
+    const store = tx.objectStore(STORE);
+    store.clear();
+    state.contacts.forEach((c, i) => store.put({ ...c, _idx: i }));
+    await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
+    db.close();
+  } catch(e) {
+    // fallback: localStorage (will fail silently if over quota)
+    try { localStorage.setItem('powerdial_contacts', JSON.stringify(state.contacts)); } catch(_) {}
+  }
+}
+
+async function loadContactsDB() {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE, 'readonly');
+    const store = tx.objectStore(STORE);
+    const req = store.getAll();
+    const rows = await new Promise((res, rej) => { req.onsuccess = () => res(req.result); req.onerror = rej; });
+    db.close();
+    if (rows.length) return rows.map(r => { const c = { ...r }; delete c._idx; return c; });
+  } catch(e) {}
+  // fallback: localStorage
+  try {
+    const saved = JSON.parse(localStorage.getItem('powerdial_contacts') || '[]');
+    if (saved.length) return saved;
+  } catch(_) {}
+  return [];
 }
 
 function formatPhone(p) {
@@ -1640,12 +2368,29 @@ function formatPhone(p) {
 }
 
 function updateProgress() {
-  const total = state.contacts.length;
-  const done = state.contacts.filter(c => c.status !== 'pending').length;
+  const total = state.contacts.filter(c => !c.isDNC).length;
+  const done = state.contacts.filter(c => !c.isDNC && c.status !== 'pending').length;
   const pct = total ? Math.round(done/total*100) : 0;
   document.getElementById('progressLabel').textContent = total ? `${done} of ${total} contacted` : 'No active session';
   document.getElementById('progressPct').textContent = total ? `${pct}%` : '—';
   document.getElementById('progressFill').style.width = pct + '%';
+
+  // ETA estimation
+  const etaEl = document.getElementById('progressEta');
+  if (etaEl) {
+    const remaining = total - done;
+    if (state.session && state.sessionStartTime && state.stats.calls > 0 && remaining > 0) {
+      const elapsedHrs = (Date.now() - state.sessionStartTime) / 3600000;
+      const cph = elapsedHrs > 0 ? state.stats.calls / elapsedHrs : 0;
+      if (cph > 0) {
+        const etaHrs = remaining / cph;
+        const etaMin = Math.round(etaHrs * 60);
+        const etaStr = etaMin < 60 ? `~${etaMin}m remaining` : `~${Math.round(etaHrs * 10) / 10}h remaining`;
+        etaEl.textContent = etaStr;
+        etaEl.style.display = '';
+      } else etaEl.style.display = 'none';
+    } else etaEl.style.display = 'none';
+  }
 }
 
 // ============================================================
@@ -1655,6 +2400,14 @@ function startSession() {
   if (!state.contacts.length) { toast('⚠️ Import contacts first', 'yellow'); showImportModal(); return; }
   state.session = true;
   state.paused = false;
+  state.sessionStartTime = Date.now();
+  // Start session timer
+  if (state.sessionTimerInt) clearInterval(state.sessionTimerInt);
+  state.sessionTimerInt = setInterval(updateSessionTimer, 1000);
+  const pill = document.getElementById('sessionTimerPill');
+  const cphPill = document.getElementById('callsPerHourPill');
+  if (pill) { pill.style.display = ''; pill.classList.add('live'); }
+  if (cphPill) cphPill.style.display = '';
   setSessionUI('live');
   toast(state.demoMode ? '🎬 Demo Mode — Simulating calls' : '📞 Session started — dialing live', state.demoMode ? 'accent' : 'green');
   dialNextSet();
@@ -1669,6 +2422,13 @@ function togglePause() {
 function stopSession() {
   state.session = false;
   state.paused = false;
+  // Stop session timer
+  if (state.sessionTimerInt) { clearInterval(state.sessionTimerInt); state.sessionTimerInt = null; }
+  const pill = document.getElementById('sessionTimerPill');
+  const cphPill = document.getElementById('callsPerHourPill');
+  if (pill) { pill.style.display = 'none'; pill.classList.remove('live'); }
+  if (cphPill) cphPill.style.display = 'none';
+  state.sessionStartTime = null;
   // Drop all lines
   state.lines.forEach(l => { if (l.status !== 'idle') dropLine(l.id, true); });
   clearActiveCall();
@@ -1710,7 +2470,7 @@ async function dialNextSet() {
   if (!state.session || state.paused) return;
   if (state.activeLineId !== null) return; // already on a call
 
-  const pending = state.contacts.filter(c => c.status === 'pending');
+  const pending = state.contacts.filter(c => c.status === 'pending' && !c.isDNC);
   if (!pending.length) {
     toast('✅ All contacts in queue have been dialed!', 'green');
     stopSession();
@@ -1924,16 +2684,33 @@ async function dispose(result) {
   }
 
   if (contact) {
-    const map = { 'Hot Lead': 'hot', 'Interested': 'interested', 'Callback': 'callback', 'Left VM': 'voicemail', 'No Answer': 'noanswer', 'Not Interested': 'not interested' };
+    const map = { 'Hot Lead': 'hot', 'Interested': 'interested', 'Callback': 'callback', 'Left VM': 'voicemail', 'No Answer': 'noanswer', 'Not Interested': 'not interested', 'Appointment': 'hot' };
     contact.status = map[result] || 'noanswer';
-    if (result === 'Hot Lead' || result === 'Interested') state.stats.appts++;
+    // Auto-set lead temperature by disposition
+    const tempMap = { 'Hot Lead': 'hot', 'Appointment': 'hot', 'Interested': 'warm', 'Callback': 'warm', 'Left VM': 'cold', 'No Answer': 'cold', 'Not Interested': 'cold' };
+    contact.temperature = tempMap[result] || contact.temperature || 'cold';
+
+    if (result === 'Hot Lead' || result === 'Interested' || result === 'Appointment') state.stats.appts++;
     addToLog(contact, map[result] || 'noanswer', 0);
     updateStatsUI();
+    // Save notes from active call panel
+    const notesEl = document.getElementById('callNotes');
+    if (notesEl && notesEl.value.trim()) contact.callNotes = notesEl.value.trim();
+
+    // Callback: show date/time picker
+    if (result === 'Callback') {
+      state.pendingCbContact = contact;
+      openCbPicker();
+    } else {
+      saveContacts();
+    }
   }
   document.getElementById('callNotes').value = '';
   clearActiveCall();
-  toast(`✅ Disposed: ${result}`, result.includes('Hot') ? 'green' : 'gray');
+  const toastColors = { 'Hot Lead': 'green', 'Appointment': 'green', 'Interested': 'yellow', 'Callback': 'accent', 'Left VM': 'orange' };
+  toast(`✅ Disposed: ${result}`, toastColors[result] || 'gray');
   renderQueue();
+  renderCallbacks();
 }
 
 function toggleGlobalMute() {
@@ -2074,19 +2851,35 @@ function showActiveCall(line) {
   document.getElementById('noCallState').style.display = 'none';
   document.getElementById('dispSection').style.display = 'none';
   document.getElementById('notesSection').style.display = 'flex';
-  document.getElementById('activeCallCard').style.display = 'flex';
+  const card = document.getElementById('activeCallCard');
+  card.style.display = 'flex';
+  card.style.borderColor = 'rgba(34,197,94,0.4)';
+  card.style.background = 'rgba(34,197,94,0.05)';
 
   document.getElementById('activeName').textContent = line.contact.name;
   document.getElementById('activeSub').innerHTML = `${formatPhone(line.contact.phone)} · <span>Line ${line.id}</span>`;
   document.getElementById('activeTimer').textContent = '0:00';
 
+  // Show address/notes under name (Mojo style)
+  const addrEl = document.getElementById('activeAddress');
+  const addr = line.contact.notes || line.contact.address || '';
+  if (addr) { addrEl.textContent = addr; addrEl.style.display = ''; }
+  else { addrEl.style.display = 'none'; }
+
   const tags = document.getElementById('activeTags');
-  const typeClass = line.contact.type.toLowerCase().includes('buyer') ? 'buyer' : 'seller';
-  tags.innerHTML = `<span class="tag tag-${typeClass}">${line.contact.type}</span><span class="tag tag-line">Line ${line.id}</span>`;
+  const typeClass = (line.contact.type || '').toLowerCase().includes('buyer') ? 'buyer' : 'seller';
+  const typeLbl = line.contact.type || (typeClass === 'buyer' ? 'Buyer' : 'Seller');
+  const temp = line.contact.temperature;
+  const tempTag = temp ? `<span class="tag tag-${temp}">${{hot:'🔥 Hot', warm:'🌟 Warm', cold:'❄️ Cold'}[temp]||temp}</span>` : '';
+  const cbTag = line.contact.callbackDate ? `<span class="tag" style="background:var(--accent-dim);color:var(--accent)">📅 Callback</span>` : '';
+  tags.innerHTML = `<span class="tag tag-${typeClass}">${typeLbl}</span><span class="tag tag-line">Line ${line.id}</span>${tempTag}${cbTag}`;
 }
 
 function clearActiveCall() {
-  document.getElementById('activeCallCard').style.display = 'none';
+  const card = document.getElementById('activeCallCard');
+  card.style.display = 'none';
+  card.style.borderColor = '';
+  card.style.background = '';
   document.getElementById('dispSection').style.display = 'none';
   document.getElementById('notesSection').style.display = 'none';
   document.getElementById('noCallState').style.display = 'flex';
@@ -2099,8 +2892,8 @@ function clearActiveCall() {
 // ============================================================
 function addToLog(contact, outcome, duration) {
   state.callLog.unshift({ contact, outcome, duration, time: new Date() });
-  const icons = { connected:'📞', voicemail:'📬', noanswer:'📵', hot:'🔥', interested:'⭐', callback:'📅', 'not interested':'🚫', busy:'📵' };
-  const labels = { connected:'Connected', voicemail:'Left VM', noanswer:'No Answer', hot:'Hot Lead', interested:'Interested', callback:'Callback', 'not interested':'Not Int.', busy:'Busy' };
+  const icons = { connected:'📞', voicemail:'📬', noanswer:'📵', hot:'🔥', interested:'⭐', callback:'📅', 'not interested':'🚫', busy:'📵', appointment:'📆' };
+  const labels = { connected:'Connected', voicemail:'Left VM', noanswer:'No Answer', hot:'Hot Lead', interested:'Interested', callback:'Callback', 'not interested':'Not Int.', busy:'Busy', appointment:'Appt Set' };
   const resClass = { connected:'res-connected', voicemail:'res-vm', noanswer:'res-na', hot:'res-hot', interested:'res-hot', callback:'res-connected' };
 
   const el = document.getElementById('callLog');
@@ -2129,6 +2922,132 @@ function updateStatsUI() {
 }
 
 // ============================================================
+//  SESSION TIMER
+// ============================================================
+function updateSessionTimer() {
+  if (!state.sessionStartTime) return;
+  const secs = Math.floor((Date.now() - state.sessionStartTime) / 1000);
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = secs % 60;
+  const str = h > 0 ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}` : `${m}:${String(s).padStart(2,'0')}`;
+  const el = document.getElementById('sessionTimerVal');
+  if (el) el.textContent = str;
+  // Calls per hour
+  const hrs = secs / 3600;
+  const cph = hrs > 0.001 ? Math.round(state.stats.calls / hrs) : 0;
+  const cphEl = document.getElementById('statCPH');
+  if (cphEl) cphEl.textContent = cph;
+  // Update ETA periodically
+  updateProgress();
+}
+
+// ============================================================
+//  DNC
+// ============================================================
+function toggleDNC() {
+  if (drawerContactIdx === null) return;
+  const c = state.contacts[drawerContactIdx];
+  c.isDNC = !c.isDNC;
+  if (c.isDNC) { c.status = 'noanswer'; toast(`🚫 ${c.name} added to DNC`, 'red'); }
+  else { toast(`✅ ${c.name} removed from DNC`, 'green'); }
+  // Update button
+  const dncBtn = document.getElementById('dncDrawerBtn');
+  if (dncBtn) { dncBtn.textContent = c.isDNC ? '✅ Remove DNC' : '🚫 DNC'; dncBtn.style.color = c.isDNC ? 'var(--green)' : 'var(--red)'; }
+  // Update drawer type line
+  const tempEmoji = { hot:'🔥', warm:'🌟', cold:'❄️' };
+  const tempStr = c.temperature ? ` ${tempEmoji[c.temperature] || ''} ${c.temperature.charAt(0).toUpperCase() + c.temperature.slice(1)}` : '';
+  const dncStr = c.isDNC ? ' 🚫 DNC' : '';
+  const typeLabel = c.type || ((c.type || '').toLowerCase().includes('buyer') ? 'Buyer' : 'Seller');
+  document.getElementById('drawerType').textContent = typeLabel + tempStr + dncStr;
+  saveContacts();
+  renderQueue();
+}
+
+// ============================================================
+//  CALLBACK PICKER
+// ============================================================
+function openCbPicker() {
+  const now = new Date();
+  now.setMinutes(now.getMinutes() + 60);
+  const localISO = new Date(now.getTime() - now.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  document.getElementById('cbDatetimeInput').value = localISO;
+  document.getElementById('cbPickerOverlay').style.display = 'flex';
+}
+
+function closeCbPicker() {
+  document.getElementById('cbPickerOverlay').style.display = 'none';
+  state.pendingCbContact = null;
+  saveContacts();
+  renderCallbacks();
+}
+
+function confirmCbPicker() {
+  const val = document.getElementById('cbDatetimeInput').value;
+  if (state.pendingCbContact) {
+    state.pendingCbContact.callbackDate = val ? new Date(val).toISOString() : null;
+    if (val) toast(`📅 Callback set: ${new Date(val).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}`, 'accent');
+  }
+  document.getElementById('cbPickerOverlay').style.display = 'none';
+  state.pendingCbContact = null;
+  saveContacts();
+  renderQueue();
+  renderCallbacks();
+}
+
+function setCbQuick(amount, unit) {
+  const d = new Date();
+  if (unit === 'hour') d.setHours(d.getHours() + amount);
+  else if (unit === 'day') { d.setDate(d.getDate() + amount); d.setHours(9, 0, 0, 0); }
+  const localISO = new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  document.getElementById('cbDatetimeInput').value = localISO;
+}
+
+function renderCallbacks() {
+  const el = document.getElementById('callbackList');
+  const countEl = document.getElementById('callbackCount');
+  if (!el) return;
+
+  const callbacks = state.contacts
+    .filter(c => c.status === 'callback')
+    .map(c => ({ contact: c, date: c.callbackDate ? new Date(c.callbackDate) : null }))
+    .sort((a, b) => {
+      if (!a.date && !b.date) return 0;
+      if (!a.date) return 1;
+      if (!b.date) return -1;
+      return a.date - b.date;
+    });
+
+  if (countEl) countEl.textContent = callbacks.length ? `${callbacks.length}` : '';
+
+  if (!callbacks.length) {
+    el.innerHTML = `<div style="font-size:11px;color:var(--text-muted);padding:8px 4px;text-align:center">No callbacks scheduled</div>`;
+    return;
+  }
+
+  const now = new Date();
+  el.innerHTML = callbacks.slice(0, 10).map(({ contact: c, date }) => {
+    const realIdx = state.contacts.indexOf(c);
+    let dateStr = 'No date set';
+    let dateClass = '';
+    if (date) {
+      const isOverdue = date < now;
+      const isToday = date.toDateString() === now.toDateString();
+      dateStr = isToday ? `Today ${date.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}` :
+               date.toLocaleDateString([], {month:'short',day:'numeric'}) + ' ' + date.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+      dateClass = isOverdue ? 'callback-overdue' : (isToday ? 'callback-today' : '');
+    }
+    const tempEmoji = { hot:'🔥', warm:'🌟', cold:'❄️' };
+    const tempIco = c.temperature ? tempEmoji[c.temperature] : '';
+    return `<div class="callback-item" onclick="openContactDrawer(${realIdx})">
+      <span class="callback-date-badge ${dateClass}">${dateStr}</span>
+      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:600">${c.name}</span>
+      <span style="font-size:12px">${tempIco}</span>
+    </div>`;
+  }).join('');
+}
+
+// ============================================================
 //  HELPERS
 // ============================================================
 function formatTime(s) {
@@ -2154,7 +3073,7 @@ function toast(msg, color = 'gray') {
 // ============================================================
 //  INIT
 // ============================================================
-function init() {
+async function init() {
   // Load saved settings
   try {
     const saved = JSON.parse(localStorage.getItem('powerdial_settings') || '{}');
@@ -2162,14 +3081,15 @@ function init() {
     state.demoMode = !state.settings.backendUrl;
   } catch(e) {}
 
-  // Restore contacts from last session
-  try {
-    const savedContacts = JSON.parse(localStorage.getItem('powerdial_contacts') || '[]');
-    if (savedContacts.length) {
-      state.contacts = savedContacts;
-      state.queue = [...savedContacts];
-    }
-  } catch(e) {}
+  // Restore lists and contacts from last session (IndexedDB)
+  const savedLists = await loadListsDB();
+  if (savedLists.length) state.lists = savedLists;
+  const savedContacts = await loadContactsDB();
+  if (savedContacts.length) {
+    state.contacts = savedContacts;
+    state.queue = [...savedContacts];
+  }
+  renderListTabs();
 
   // Close modals on overlay click
   document.querySelectorAll('.modal-overlay').forEach(m => {
@@ -2178,6 +3098,7 @@ function init() {
 
   updateStatsUI();
   updateProgress();
+  renderCallbacks();
 
   // Initialize line UIs
   state.lines.forEach(l => updateLineUI(l));
