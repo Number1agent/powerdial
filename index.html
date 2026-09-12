@@ -397,6 +397,80 @@
     margin-top: 4px;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
+
+  /* Property info panel */
+  .prop-panel {
+    background: #f7f8fc;
+    border: 1px solid #dde0ee;
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .prop-address-main {
+    font-size: 16px;
+    font-weight: 700;
+    color: #111122;
+    line-height: 1.3;
+  }
+  .prop-address-city {
+    font-size: 13px;
+    color: #444466;
+    margin-top: 1px;
+  }
+  .prop-links {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 2px;
+  }
+  .prop-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+    text-decoration: none;
+    border: 1px solid;
+    transition: opacity 0.15s;
+    white-space: nowrap;
+  }
+  .prop-link:hover { opacity: 0.75; }
+  .prop-link-zillow  { background: #006aff12; color: #006aff; border-color: #006aff35; }
+  .prop-link-maps    { background: #34a85312; color: #1a7a40; border-color: #34a85335; }
+  .prop-link-street  { background: #f9ab0012; color: #b07800; border-color: #f9ab0035; }
+  .prop-link-records { background: #7c3aed12; color: #6d28d9; border-color: #7c3aed35; }
+  .prop-meta-row {
+    display: flex;
+    gap: 14px;
+    font-size: 11px;
+    color: #666688;
+    flex-wrap: wrap;
+  }
+  .prop-meta-row strong { color: #222244; }
+  /* Property data grid (Mojo-style 2-col) */
+  .prop-data-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 16px;
+    margin-top: 2px;
+  }
+  .prop-data-item {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    font-size: 11px;
+    color: #444466;
+    line-height: 1.5;
+  }
+  .prop-data-item .pdl { color: #888899; min-width: 62px; flex-shrink: 0; }
+  .prop-data-item .pdv { font-weight: 600; color: #111133; }
+  .prop-data-item.avm-item .pdl { color: #1a7a40; }
+  .prop-data-item.avm-item .pdv { color: #15803d; font-size: 13px; font-weight: 700; }
+  .prop-data-item.units-item .pdv { color: #7c3aed; font-weight: 700; }
   .active-timer-big {
     font-size: 28px;
     font-weight: 800;
@@ -1331,6 +1405,35 @@
         <label>Notes</label>
         <div id="drawerNotesLog" style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;"></div>
       </div>
+      <div class="drawer-field" id="drawerPropWrap" style="display:none">
+        <label>Property Info</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px" id="drawerPropGrid">
+          <div>
+            <div style="font-size:10px;color:var(--text-muted);font-weight:600;margin-bottom:2px">AVM</div>
+            <input id="drawerAvm" class="field-val" style="font-size:12px;padding:4px 7px;width:100%;background:var(--bg-3);border:1px solid var(--border);border-radius:5px;color:var(--text-primary)" placeholder="$0" oninput="saveDrawerPropField('avm',this.value)">
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text-muted);font-weight:600;margin-bottom:2px">Units</div>
+            <input id="drawerUnits" class="field-val" style="font-size:12px;padding:4px 7px;width:100%;background:var(--bg-3);border:1px solid var(--border);border-radius:5px;color:var(--text-primary)" placeholder="1" oninput="saveDrawerPropField('units',this.value)">
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text-muted);font-weight:600;margin-bottom:2px">Tax Value</div>
+            <input id="drawerTaxValue" class="field-val" style="font-size:12px;padding:4px 7px;width:100%;background:var(--bg-3);border:1px solid var(--border);border-radius:5px;color:var(--text-primary)" placeholder="$0" oninput="saveDrawerPropField('taxValue',this.value)">
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text-muted);font-weight:600;margin-bottom:2px">Prop Type</div>
+            <input id="drawerPropType" class="field-val" style="font-size:12px;padding:4px 7px;width:100%;background:var(--bg-3);border:1px solid var(--border);border-radius:5px;color:var(--text-primary)" placeholder="Condo, Co-op…" oninput="saveDrawerPropField('propertyType',this.value)">
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text-muted);font-weight:600;margin-bottom:2px">Baths</div>
+            <input id="drawerBaths" class="field-val" style="font-size:12px;padding:4px 7px;width:100%;background:var(--bg-3);border:1px solid var(--border);border-radius:5px;color:var(--text-primary)" placeholder="2" oninput="saveDrawerPropField('baths',this.value)">
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text-muted);font-weight:600;margin-bottom:2px">Sq Ft</div>
+            <input id="drawerSqft" class="field-val" style="font-size:12px;padding:4px 7px;width:100%;background:var(--bg-3);border:1px solid var(--border);border-radius:5px;color:var(--text-primary)" placeholder="1200" oninput="saveDrawerPropField('sqft',this.value)">
+          </div>
+        </div>
+      </div>
       <div class="drawer-field" id="drawerGroupWrap">
         <label>Groups</label>
         <div class="drawer-group-row" id="drawerGroupRow"></div>
@@ -1492,13 +1595,24 @@
           <div style="flex:1;min-width:0">
             <div class="active-contact-name" id="activeName">—</div>
             <div class="active-contact-sub" id="activeSub">—</div>
-            <div id="activeAddress" class="active-address" style="display:none;display:flex;align-items:center;gap:6px"><span id="activeAddressText"></span><a id="activeZillowBtn" href="#" target="_blank" rel="noopener" class="zillow-btn" style="display:none;font-size:9px;padding:1px 6px;flex-shrink:0">🏠 Zillow</a></div>
           </div>
           <div style="text-align:right;flex-shrink:0;margin-left:10px">
             <div class="active-timer-big" id="activeTimer">0:00</div>
             <div class="active-timer-label">Connected</div>
           </div>
         </div>
+
+        <!-- Property Info Panel (Mojo-style) -->
+        <div class="prop-panel" id="propPanel" style="display:none">
+          <div>
+            <div class="prop-address-main" id="propAddrMain"></div>
+            <div class="prop-address-city" id="propAddrCity"></div>
+          </div>
+          <div class="prop-data-grid" id="propDataGrid" style="display:none"></div>
+          <div class="prop-meta-row" id="propMeta"></div>
+          <div class="prop-links" id="propLinks"></div>
+        </div>
+
         <div class="active-tags" id="activeTags"></div>
         <div class="active-controls">
           <button class="ctrl-btn" id="btnMute" onclick="toggleGlobalMute()">
@@ -1936,7 +2050,15 @@ function parseMojoCSV(raw) {
   const cityIdx  = headers.findIndex(h => /^city$/i.test(h.trim()));
   const stateIdx = headers.findIndex(h => /^(state|st)$/i.test(h.trim()));
   const zipIdx   = headers.findIndex(h => /^(zip|zip code|postal code)$/i.test(h.trim()));
-  const typeIdx  = headers.findIndex(h => /^(type|lead type|contact type|prospect type)$/i.test(h.trim()));
+  const typeIdx        = headers.findIndex(h => /^(type|lead type|contact type|prospect type)$/i.test(h.trim()));
+  const avmIdx         = headers.findIndex(h => /^(avm|avm value|estimated value|est\.? value)$/i.test(h.trim()));
+  const unitsIdx       = headers.findIndex(h => /^(units|unit count|number of units|# units)$/i.test(h.trim()));
+  const taxValueIdx    = headers.findIndex(h => /^(tax value|assessed value|taxable value|tax assessment)$/i.test(h.trim()));
+  const propTypeIdx    = headers.findIndex(h => /^(property type|prop type|building type)$/i.test(h.trim()));
+  const occupancyIdx   = headers.findIndex(h => /^(occupancy|occupancy type|owner occupied)$/i.test(h.trim()));
+  const bathsIdx       = headers.findIndex(h => /^(baths|bathrooms|bath count|full baths)$/i.test(h.trim()));
+  const sqftIdx        = headers.findIndex(h => /^(sq ?ft|square feet|square footage|sqft|living area)$/i.test(h.trim()));
+  const acresIdx       = headers.findIndex(h => /^(acres|lot size|lot acres)$/i.test(h.trim()));
 
   // Find ALL phone columns: Phone 1..13, Mobile 1..13
   const phoneColumns = [];
@@ -1994,7 +2116,15 @@ function parseMojoCSV(raw) {
         state,
         zip,
         type,
-        status: 'pending'
+        status: 'pending',
+        ...(avmIdx       >= 0 && parts[avmIdx]?.trim()       ? { avm:          parts[avmIdx].trim()       } : {}),
+        ...(unitsIdx     >= 0 && parts[unitsIdx]?.trim()     ? { units:        parts[unitsIdx].trim()     } : {}),
+        ...(taxValueIdx  >= 0 && parts[taxValueIdx]?.trim()  ? { taxValue:     parts[taxValueIdx].trim()  } : {}),
+        ...(propTypeIdx  >= 0 && parts[propTypeIdx]?.trim()  ? { propertyType: parts[propTypeIdx].trim()  } : {}),
+        ...(occupancyIdx >= 0 && parts[occupancyIdx]?.trim() ? { occupancy:    parts[occupancyIdx].trim() } : {}),
+        ...(bathsIdx     >= 0 && parts[bathsIdx]?.trim()     ? { baths:        parts[bathsIdx].trim()     } : {}),
+        ...(sqftIdx      >= 0 && parts[sqftIdx]?.trim()      ? { sqft:         parts[sqftIdx].trim()      } : {}),
+        ...(acresIdx     >= 0 && parts[acresIdx]?.trim()     ? { acres:        parts[acresIdx].trim()     } : {}),
       });
       added++;
     }
@@ -2660,6 +2790,23 @@ function openContactDrawer(idx) {
     ).join('');
   } else histWrap.style.display = 'none';
 
+  // Property fields
+  const propWrap = document.getElementById('drawerPropWrap');
+  const hasPropData = c.avm || c.units || c.taxValue || c.propertyType || c.baths || c.sqft;
+  // Always show if address exists so agents can fill in manually
+  const hasAddr = !!(c.notes || c.address || c.city);
+  if (hasAddr) {
+    propWrap.style.display = '';
+    document.getElementById('drawerAvm').value      = c.avm          || '';
+    document.getElementById('drawerUnits').value    = c.units        || '';
+    document.getElementById('drawerTaxValue').value = c.taxValue     || '';
+    document.getElementById('drawerPropType').value = c.propertyType || '';
+    document.getElementById('drawerBaths').value    = c.baths        || '';
+    document.getElementById('drawerSqft').value     = c.sqft         || '';
+  } else {
+    propWrap.style.display = hasPropData ? '' : 'none';
+  }
+
   // Groups + Notes log
   renderDrawerGroups();
   renderDrawerNotesLog();
@@ -2733,6 +2880,17 @@ function setDrawerStatus(status) {
   saveContacts();
   renderQueue();
   renderCallbacks();
+}
+
+function saveDrawerPropField(field, value) {
+  if (drawerContactIdx === null) return;
+  const c = state.contacts[drawerContactIdx];
+  if (value.trim()) {
+    c[field] = value.trim();
+  } else {
+    delete c[field];
+  }
+  saveContacts();
 }
 
 function saveDrawerNotes() {
@@ -3425,27 +3583,69 @@ function showActiveCall(line) {
   document.getElementById('notesSection').style.display = 'flex';
   const card = document.getElementById('activeCallCard');
   card.style.display = 'flex';
-  card.style.borderColor = 'rgba(34,197,94,0.4)';
-  card.style.background = 'rgba(34,197,94,0.05)';
+  card.style.borderColor = '';
+  card.style.background = '';
 
   document.getElementById('activeName').textContent = line.contact.name;
   document.getElementById('activeSub').innerHTML = `${formatPhone(line.contact.phone)} · <span>Line ${line.id}</span>`;
   document.getElementById('activeTimer').textContent = '0:00';
 
-  // Show address/notes + Zillow link under name (Mojo style)
-  const addrEl = document.getElementById('activeAddress');
-  const addrText = document.getElementById('activeAddressText');
-  const zillowBtn = document.getElementById('activeZillowBtn');
-  const addr = (line.contact.notes || line.contact.address || '').trim();
-  const loc = addr || [line.contact.city, line.contact.state, line.contact.zip].filter(Boolean).join(', ');
-  if (loc) {
-    addrText.textContent = loc;
-    zillowBtn.href = `https://www.zillow.com/homes/${encodeURIComponent(loc)}_rb/`;
-    zillowBtn.style.display = '';
-    addrEl.style.display = 'flex';
+  // ── Property info panel (Mojo-style) ──────────────────────
+  const c = line.contact;
+  const streetAddr = (c.address || c.notes || '').trim();
+  const cityLine   = [c.city, c.state, c.zip].filter(Boolean).join(', ');
+  const fullAddr   = [streetAddr, cityLine].filter(Boolean).join(', ');
+  const propPanel  = document.getElementById('propPanel');
+
+  if (streetAddr || cityLine) {
+    document.getElementById('propAddrMain').textContent = streetAddr || cityLine;
+    document.getElementById('propAddrCity').textContent = streetAddr ? cityLine : '';
+
+    // Property data grid — AVM, Units, Tax Value, Type, Occupancy, Baths, Sq Ft, Acres
+    const gridEl = document.getElementById('propDataGrid');
+    const gridRows = [];
+    const fmtMoney = v => v ? (v.toString().startsWith('$') ? v : '$' + Number(v.toString().replace(/[^0-9.]/g,'')).toLocaleString()) : '';
+    if (c.avm)          gridRows.push(`<div class="prop-data-item avm-item"><span class="pdl">AVM:</span><span class="pdv">${fmtMoney(c.avm)}</span></div>`);
+    if (c.units && parseInt(c.units) > 1)
+                        gridRows.push(`<div class="prop-data-item units-item"><span class="pdl">Units:</span><span class="pdv">${c.units} Units</span></div>`);
+    if (c.taxValue)     gridRows.push(`<div class="prop-data-item"><span class="pdl">Tax Value:</span><span class="pdv">${fmtMoney(c.taxValue)}</span></div>`);
+    if (c.propertyType) gridRows.push(`<div class="prop-data-item"><span class="pdl">Prop Type:</span><span class="pdv">${c.propertyType}</span></div>`);
+    if (c.occupancy)    gridRows.push(`<div class="prop-data-item"><span class="pdl">Occupancy:</span><span class="pdv">${c.occupancy}</span></div>`);
+    if (c.baths)        gridRows.push(`<div class="prop-data-item"><span class="pdl">Baths:</span><span class="pdv">${c.baths}</span></div>`);
+    if (c.sqft)         gridRows.push(`<div class="prop-data-item"><span class="pdl">Sq Ft:</span><span class="pdv">${Number(c.sqft).toLocaleString()}</span></div>`);
+    if (c.acres)        gridRows.push(`<div class="prop-data-item"><span class="pdl">Acres:</span><span class="pdv">${c.acres}</span></div>`);
+    if (gridRows.length) {
+      gridEl.innerHTML = gridRows.join('');
+      gridEl.style.display = '';
+    } else {
+      gridEl.style.display = 'none';
+    }
+
+    // Meta row — type, disposition, list
+    const metaParts = [];
+    if (c.type)        metaParts.push(`<span><strong>Type:</strong> ${c.type}</span>`);
+    if (c.disposition) metaParts.push(`<span><strong>Status:</strong> ${c.disposition}</span>`);
+    if (c.listId) {
+      const list = state.lists.find(l => l.id === c.listId);
+      if (list) metaParts.push(`<span><strong>List:</strong> ${list.name}</span>`);
+    }
+    document.getElementById('propMeta').innerHTML = metaParts.join('');
+
+    // Quick-link buttons
+    const enc = encodeURIComponent(fullAddr || streetAddr || cityLine);
+    const links = [
+      { cls:'prop-link-zillow',  href:`https://www.zillow.com/homes/${enc}_rb/`,             label:'🏠 Zillow' },
+      { cls:'prop-link-maps',    href:`https://maps.google.com/?q=${enc}`,                    label:'📍 Maps' },
+      { cls:'prop-link-street',  href:`https://maps.google.com/?q=${enc}&layer=c`,            label:'🚗 Street View' },
+      { cls:'prop-link-records', href:`https://www.google.com/search?q=${enc}+property+records+owner`, label:'📋 Records' },
+    ];
+    document.getElementById('propLinks').innerHTML = links.map(l =>
+      `<a class="prop-link ${l.cls}" href="${l.href}" target="_blank" rel="noopener">${l.label}</a>`
+    ).join('');
+
+    propPanel.style.display = '';
   } else {
-    addrEl.style.display = 'none';
-    zillowBtn.style.display = 'none';
+    propPanel.style.display = 'none';
   }
 
   const tags = document.getElementById('activeTags');
