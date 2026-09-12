@@ -6,30 +6,30 @@
 <title>PowerDial — Triple Line Dialer</title>
 <style>
   :root {
-    --bg-0: #070709;
-    --bg-1: #0f0f12;
-    --bg-2: #16161c;
-    --bg-3: #1e1e27;
-    --bg-4: #272733;
-    --border: #2e2e3e;
-    --border-light: #3a3a4e;
-    --text-primary: #e8e8f0;
-    --text-secondary: #9090a8;
-    --text-muted: #5a5a72;
-    --accent: #6c63ff;
-    --accent-hover: #7c74ff;
-    --accent-dim: rgba(108,99,255,0.15);
-    --green: #22c55e;
-    --green-dim: rgba(34,197,94,0.12);
-    --red: #ef4444;
-    --red-dim: rgba(239,68,68,0.12);
-    --yellow: #f59e0b;
-    --yellow-dim: rgba(245,158,11,0.12);
-    --orange: #f97316;
-    --orange-dim: rgba(249,115,22,0.12);
-    --blue: #3b82f6;
-    --blue-dim: rgba(59,130,246,0.12);
-    --cyan: #06b6d4;
+    --bg-0: #13131f;
+    --bg-1: #1a1a2e;
+    --bg-2: #202038;
+    --bg-3: #282845;
+    --bg-4: #32325a;
+    --border: #35355a;
+    --border-light: #46467a;
+    --text-primary: #f0f0ff;
+    --text-secondary: #a0a0c8;
+    --text-muted: #6868a0;
+    --accent: #7c6fff;
+    --accent-hover: #9288ff;
+    --accent-dim: rgba(124,111,255,0.18);
+    --green: #2ecc71;
+    --green-dim: rgba(46,204,113,0.14);
+    --red: #ff5470;
+    --red-dim: rgba(255,84,112,0.14);
+    --yellow: #fbbf24;
+    --yellow-dim: rgba(251,191,36,0.14);
+    --orange: #fb923c;
+    --orange-dim: rgba(251,146,60,0.14);
+    --blue: #60a5fa;
+    --blue-dim: rgba(96,165,250,0.14);
+    --cyan: #22d3ee;
     --radius: 10px;
     --radius-sm: 6px;
   }
@@ -698,6 +698,33 @@
   }
   .drawer-actions .btn { flex: 1; justify-content: center; font-size: 12px; }
 
+  /* Notes log entries */
+  .note-entry {
+    background: var(--bg-3); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 8px 10px;
+    font-size: 12px; color: var(--text-secondary); position: relative;
+  }
+  .note-entry-text { color: var(--text-primary); margin-bottom: 4px; line-height: 1.5; white-space: pre-wrap; }
+  .note-entry-meta { font-size: 10px; color: var(--text-muted); display: flex; align-items: center; justify-content: space-between; }
+  .note-entry-del { cursor: pointer; opacity: 0.4; font-size: 11px; }
+  .note-entry-del:hover { opacity: 1; color: var(--red); }
+
+  /* Group pills in drawer */
+  .drawer-group-row {
+    display: flex; flex-wrap: wrap; gap: 5px;
+  }
+  .group-pill {
+    padding: 4px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 600;
+    cursor: pointer; border: 1px solid var(--border);
+    color: var(--text-muted); background: var(--bg-3);
+    transition: all 0.12s;
+  }
+  .group-pill:hover { border-color: var(--cyan); color: var(--cyan); }
+  .group-pill.active { background: rgba(6,182,212,0.15); border-color: var(--cyan); color: var(--cyan); }
+  .group-pill-del { margin-left: 3px; opacity: 0.5; font-size: 10px; }
+  .group-pill-del:hover { opacity: 1; color: var(--red) !important; }
+
   /* ===== LIST TABS ===== */
   .list-tabs-row {
     display: flex;
@@ -816,6 +843,7 @@
   .sidebar-item .si-del { opacity: 0; font-size: 11px; flex-shrink: 0; color: var(--text-muted); margin-left: 2px; }
   .sidebar-item:hover .si-del { opacity: 0.5; }
   .sidebar-item .si-del:hover { opacity: 1; color: var(--red); }
+  .sidebar-item.drop-target { background: var(--accent-dim); border-left-color: var(--accent); color: var(--accent); }
   .sidebar-new-list {
     display: flex;
     align-items: center;
@@ -1286,8 +1314,20 @@
         <div class="drawer-status-row" id="drawerStatusRow"></div>
       </div>
       <div class="drawer-field">
-        <label>Call Notes</label>
-        <textarea class="field-val" id="drawerNotes" placeholder="Add notes about this contact..." rows="4" oninput="saveDrawerNotes()"></textarea>
+        <label>Add Note</label>
+        <textarea class="field-val" id="drawerNotes" placeholder="Type a note and save..." rows="3"></textarea>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+          <button class="btn btn-primary" style="font-size:11px;padding:5px 14px" onclick="saveDrawerNotes()">💾 Save Note</button>
+          <span id="notesSavedMsg" style="font-size:11px;color:var(--green);opacity:0;transition:opacity 0.4s">✓ Saved</span>
+        </div>
+      </div>
+      <div class="drawer-field" id="drawerNotesLogWrap" style="display:none">
+        <label>Notes</label>
+        <div id="drawerNotesLog" style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;"></div>
+      </div>
+      <div class="drawer-field" id="drawerGroupWrap">
+        <label>Groups</label>
+        <div class="drawer-group-row" id="drawerGroupRow"></div>
       </div>
       <div class="drawer-field" id="drawerHistoryWrap" style="display:none">
         <label>Call History</label>
@@ -1330,6 +1370,7 @@
 
         <div class="sidebar-section-label">GROUPS</div>
         <div id="sidebarGroups"></div>
+        <div class="sidebar-new-list" onclick="promptNewGroup()">＋ New group</div>
       </div>
 
       <!-- Queue area -->
@@ -1347,6 +1388,11 @@
           </div>
           <div class="city-filter-row" id="cityFilterRow" style="display:none">
             <span class="city-filter-label">📍</span>
+          </div>
+          <div id="bulkBar" style="display:none;padding:5px 8px;border-top:1px solid var(--border);background:var(--bg-3);display:none;align-items:center;gap:6px;flex-wrap:wrap">
+            <span id="bulkCount" style="font-size:11px;color:var(--text-secondary);flex:1"></span>
+            <button class="btn btn-ghost" style="font-size:11px;padding:3px 10px" onclick="bulkAssignToList()">📁 Move to List</button>
+            <button class="btn btn-ghost" style="font-size:11px;padding:3px 10px" onclick="bulkAssignToGroup()">🏷️ Add to Group</button>
           </div>
         </div>
         <div class="panel-body" id="queueList">
@@ -1706,8 +1752,9 @@ const state = {
   queueTab: 'all',       // all | pending | called
   queueSort: 'default',  // default | az | za | status
   activeCity: null,      // city filter (null = all cities)
-  activeGroup: null,     // sidebar group key (null = all)
+  activeGroup: null,     // sidebar group id (null = all)
   lists: [],             // [{ id, name }] — named call lists
+  groups: [],            // [{ id, name }] — user-created groups
   activeListId: null,    // null = show all lists
   sessionStartTime: null,
   sessionTimerInt: null,
@@ -2060,15 +2107,40 @@ function clearQueue() {
 // ============================================================
 //  SIDEBAR
 // ============================================================
-const SIDEBAR_GROUPS = [
-  { key: 'hot',       label: '🔥 Hot Lead',       match: c => c.disposition === 'Hot Lead' || c.disposition === 'Appointment' },
-  { key: 'appt',      label: '📆 Appointment Set', match: c => c.disposition === 'Appointment' },
-  { key: 'interested',label: '🌟 Interested',      match: c => c.disposition === 'Interested' },
-  { key: 'callback',  label: '📅 Callback',         match: c => c.status === 'callback' },
-  { key: 'leftvm',    label: '📬 Left VM',          match: c => c.disposition === 'Left VM' },
-  { key: 'notint',    label: '👎 Not Interested',   match: c => c.disposition === 'Not Interested' },
-  { key: 'dnc',       label: '🚫 DNC',              match: c => c.isDNC },
-];
+
+// Group persistence
+function saveGroups() {
+  try { localStorage.setItem('powerdial_groups', JSON.stringify(state.groups)); } catch(_) {}
+}
+function loadGroups() {
+  try { return JSON.parse(localStorage.getItem('powerdial_groups') || '[]'); } catch(_) { return []; }
+}
+
+function promptNewGroup() {
+  const name = prompt('Group name (e.g. Hot Lead, 2 Years Out, Door Knocker):');
+  if (!name || !name.trim()) return;
+  const id = 'grp_' + Date.now();
+  state.groups.push({ id, name: name.trim() });
+  saveGroups();
+  renderSidebar();
+  toast(`🏷️ Group "${name.trim()}" created`, 'accent');
+}
+
+function deleteGroup(id, event) {
+  event.stopPropagation();
+  const g = state.groups.find(g => g.id === id);
+  if (!g) return;
+  if (!confirm(`Delete group "${g.name}"? Contacts will be unassigned.`)) return;
+  state.contacts.forEach(c => { if (c.groupId === id) delete c.groupId; });
+  state.groups = state.groups.filter(g => g.id !== id);
+  if (state.activeGroup === id) state.activeGroup = null;
+  saveGroups();
+  saveContacts();
+  renderSidebar();
+  renderQueue();
+  // Refresh drawer if open
+  if (drawerContactIdx !== null) renderDrawerGroups();
+}
 
 function renderSidebar() {
   const allBtn = document.getElementById('sidebarAllBtn');
@@ -2084,7 +2156,10 @@ function renderSidebar() {
     state.lists.forEach(l => {
       const count = state.contacts.filter(c => c.listId === l.id).length;
       const active = state.activeListId === l.id && state.activeGroup === null;
-      html += `<div class="sidebar-item${active ? ' active' : ''}" onclick="setActiveList('${l.id}')">
+      html += `<div class="sidebar-item${active ? ' active' : ''}" onclick="setActiveList('${l.id}')"
+        ondragover="event.preventDefault();this.classList.add('drop-target')"
+        ondragleave="this.classList.remove('drop-target')"
+        ondrop="dropContactToList(event,'${l.id}');this.classList.remove('drop-target')">
         <span class="si-label">📁 ${l.name}</span>
         <span class="si-count">${count}</span>
         <span class="si-del" onclick="deleteList('${l.id}',event)" title="Delete">✕</span>
@@ -2093,42 +2168,87 @@ function renderSidebar() {
     listsEl.innerHTML = html;
   }
 
-  // Groups
+  // Groups — dynamic user-created
   const groupsEl = document.getElementById('sidebarGroups');
   if (groupsEl) {
-    let html = '';
-    SIDEBAR_GROUPS.forEach(g => {
-      const count = state.contacts.filter(g.match).length;
-      if (!count && state.activeGroup !== g.key) return; // hide empty groups
-      const active = state.activeGroup === g.key;
-      html += `<div class="sidebar-item${active ? ' active' : ''}" onclick="setActiveGroup('${g.key}')">
-        <span class="si-label">${g.label}</span>
-        <span class="si-count">${count}</span>
-      </div>`;
-    });
-    groupsEl.innerHTML = html || '<div style="padding:4px 10px;font-size:10px;color:var(--text-muted)">No dispositions yet</div>';
+    if (!state.groups.length) {
+      groupsEl.innerHTML = '<div style="padding:4px 10px;font-size:10px;color:var(--text-muted)">No groups yet</div>';
+    } else {
+      let html = '';
+      state.groups.forEach(g => {
+        const count = state.contacts.filter(c => c.groupId === g.id).length;
+        if (!count && state.activeGroup !== g.id) return; // hide empty unless active
+        const active = state.activeGroup === g.id;
+        html += `<div class="sidebar-item${active ? ' active' : ''}" onclick="setActiveGroup('${g.id}')"
+          ondragover="event.preventDefault();this.classList.add('drop-target')"
+          ondragleave="this.classList.remove('drop-target')"
+          ondrop="dropContactToGroup(event,'${g.id}');this.classList.remove('drop-target')">
+          <span class="si-label">🏷️ ${g.name}</span>
+          <span class="si-count">${count}</span>
+          <span class="si-del" onclick="deleteGroup('${g.id}',event)" title="Delete">✕</span>
+        </div>`;
+      });
+      groupsEl.innerHTML = html || '<div style="padding:4px 10px;font-size:10px;color:var(--text-muted)">No contacts in groups yet</div>';
+    }
   }
 }
 
-function setActiveGroup(key) {
-  state.activeGroup = state.activeGroup === key ? null : key;
+function setActiveGroup(id) {
+  state.activeGroup = state.activeGroup === id ? null : id;
   if (state.activeGroup !== null) state.activeListId = null;
   renderSidebar();
   renderQueue();
 }
 
+// Drop contact onto a group in the sidebar
+function dropContactToGroup(event, groupId) {
+  event.preventDefault();
+  const idx = parseInt(event.dataTransfer.getData('contactIdx'));
+  const c = state.contacts[idx];
+  if (!c) return;
+  const g = state.groups.find(g => g.id === groupId);
+  if (!g) return;
+  c.groupId = groupId;
+  saveContacts();
+  renderSidebar();
+  renderQueue();
+  if (drawerContactIdx === idx) renderDrawerGroups();
+  toast(`🏷️ ${c.name} → ${g.name}`, 'accent');
+}
+
 // ============================================================
 //  QUEUE RENDER
 // ============================================================
+// Normalize city from contact — handles "Bronx, NY", notes-embedded city, etc.
+function getContactCity(c) {
+  // 1. Try dedicated city field, strip trailing "ST 12345" accidentally included
+  let city = (c.city || '').trim().replace(/,?\s+[A-Z]{2}\s*\d{0,5}\s*$/, '').trim();
+  if (city) return city;
+
+  // 2. Try to parse from notes string like "123 Main St, Bronx, NY 10458"
+  const notes = (c.notes || '').trim();
+  if (notes) {
+    const parts = notes.split(',').map(p => p.trim()).filter(Boolean);
+    if (parts.length >= 2) {
+      // city is typically the second-to-last segment before "State Zip"
+      const candidate = parts.length >= 3 ? parts[parts.length - 2] : parts[1];
+      if (candidate && candidate.length > 2 && !/^\d+$/.test(candidate) && !/^[A-Z]{2}(\s+\d+)?$/.test(candidate)) {
+        return candidate.replace(/,?\s+[A-Z]{2}\s*\d*$/, '').trim();
+      }
+    }
+  }
+  return '';
+}
+
 function renderCityChips() {
   const row = document.getElementById('cityFilterRow');
   if (!row) return;
 
-  // Collect unique cities from current list filter
+  // Collect unique cities using the normalizer
   const cities = {};
   state.contacts.forEach(c => {
     if (state.activeListId !== null && c.listId !== state.activeListId) return;
-    const city = (c.city || '').trim();
+    const city = getContactCity(c);
     if (!city) return;
     const key = city.toLowerCase();
     if (!cities[key]) cities[key] = { label: city, count: 0 };
@@ -2136,7 +2256,7 @@ function renderCityChips() {
   });
 
   const keys = Object.keys(cities).sort();
-  if (keys.length < 2) { row.style.display = 'none'; return; } // hide if only one city or none
+  if (!keys.length) { row.style.display = 'none'; return; }
 
   row.style.display = 'flex';
   row.innerHTML = `<span class="city-filter-label">📍</span>` +
@@ -2148,6 +2268,96 @@ function renderCityChips() {
 
 function setCityFilter(key) {
   state.activeCity = state.activeCity === key ? null : key;
+  renderQueue();
+}
+
+// ── Bulk actions ─────────────────────────────────────────────
+function getBulkContacts() {
+  // Returns all contacts matching the current active filters (list, group, city, tab, search)
+  const q = (document.getElementById('queueSearch')?.value || '').toLowerCase().trim();
+  return state.contacts.filter(c => {
+    if (state.activeListId !== null && c.listId !== state.activeListId) return false;
+    if (state.activeGroup !== null && c.groupId !== state.activeGroup) return false;
+    if (state.activeCity && getContactCity(c).toLowerCase() !== state.activeCity) return false;
+    if (state.queueTab === 'pending' && c.status !== 'pending') return false;
+    if (state.queueTab === 'called'  && c.status === 'pending') return false;
+    if (q && ![c.name,c.phone,c.city,c.state,c.zip,c.notes,c.address,c.type,c.disposition,c.callNotes]
+      .some(v => (v||'').toLowerCase().includes(q))) return false;
+    return true;
+  });
+}
+
+function updateBulkBar(filteredCount) {
+  const bar = document.getElementById('bulkBar');
+  const cnt = document.getElementById('bulkCount');
+  const isFiltered = state.activeListId !== null || state.activeGroup !== null ||
+    state.activeCity !== null || state.queueTab !== 'all' ||
+    (document.getElementById('queueSearch')?.value || '').trim().length > 0;
+  if (bar) {
+    bar.style.display = isFiltered && filteredCount > 0 ? 'flex' : 'none';
+    if (cnt) cnt.textContent = `${filteredCount} contacts selected by filter`;
+  }
+}
+
+function bulkAssignToList() {
+  const contacts = getBulkContacts();
+  if (!contacts.length) return;
+  if (!state.lists.length) {
+    const name = prompt(`No lists yet. Enter a name for a new list to move ${contacts.length} contacts into:`);
+    if (!name || !name.trim()) return;
+    const newList = createList(name.trim());
+    contacts.forEach(c => c.listId = newList.id);
+  } else {
+    const opts = state.lists.map((l,i) => `${i+1}. ${l.name}`).join('\n');
+    const newName = `\n\nOr type a NEW list name to create one.`;
+    const ans = prompt(`Move ${contacts.length} contacts to which list?\n\n${opts}${newName}\n\nEnter number or new name:`);
+    if (!ans || !ans.trim()) return;
+    const num = parseInt(ans.trim());
+    let list;
+    if (!isNaN(num) && num >= 1 && num <= state.lists.length) {
+      list = state.lists[num - 1];
+    } else {
+      list = createList(ans.trim());
+    }
+    contacts.forEach(c => c.listId = list.id);
+    toast(`📁 ${contacts.length} contacts → ${list.name}`, 'green');
+  }
+  saveContacts();
+  saveListsDB();
+  renderSidebar();
+  renderQueue();
+}
+
+function bulkAssignToGroup() {
+  const contacts = getBulkContacts();
+  if (!contacts.length) return;
+  if (!state.groups.length) {
+    const name = prompt(`No groups yet. Enter a name for a new group to add ${contacts.length} contacts to:`);
+    if (!name || !name.trim()) return;
+    const id = 'grp_' + Date.now();
+    state.groups.push({ id, name: name.trim() });
+    saveGroups();
+    contacts.forEach(c => c.groupId = id);
+    toast(`🏷️ ${contacts.length} contacts → ${name.trim()}`, 'accent');
+  } else {
+    const opts = state.groups.map((g,i) => `${i+1}. ${g.name}`).join('\n');
+    const ans = prompt(`Add ${contacts.length} contacts to which group?\n\n${opts}\n\nOr type a NEW group name.\n\nEnter number or new name:`);
+    if (!ans || !ans.trim()) return;
+    const num = parseInt(ans.trim());
+    let group;
+    if (!isNaN(num) && num >= 1 && num <= state.groups.length) {
+      group = state.groups[num - 1];
+    } else {
+      const id = 'grp_' + Date.now();
+      group = { id, name: ans.trim() };
+      state.groups.push(group);
+      saveGroups();
+    }
+    contacts.forEach(c => c.groupId = group.id);
+    toast(`🏷️ ${contacts.length} contacts → ${group.name}`, 'accent');
+  }
+  saveContacts();
+  renderSidebar();
   renderQueue();
 }
 
@@ -2199,11 +2409,10 @@ function renderQueue() {
   renderCityChips();
 
   // List + Group + Tab + City filter
-  const activeGroupDef = SIDEBAR_GROUPS.find(g => g.key === state.activeGroup);
   let filtered = state.contacts.filter(c => {
     if (state.activeListId !== null && c.listId !== state.activeListId) return false;
-    if (activeGroupDef && !activeGroupDef.match(c)) return false;
-    if (state.activeCity && (c.city || '').trim().toLowerCase() !== state.activeCity) return false;
+    if (state.activeGroup !== null && c.groupId !== state.activeGroup) return false;
+    if (state.activeCity && getContactCity(c).toLowerCase() !== state.activeCity) return false;
     if (state.queueTab === 'pending') return c.status === 'pending';
     if (state.queueTab === 'called')  return c.status !== 'pending';
     return true; // 'all'
@@ -2219,6 +2428,8 @@ function renderQueue() {
   if (state.queueSort === 'az') filtered = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
   else if (state.queueSort === 'za') filtered = [...filtered].sort((a, b) => b.name.localeCompare(a.name));
   else if (state.queueSort === 'status') filtered = [...filtered].sort((a, b) => a.status.localeCompare(b.status));
+
+  updateBulkBar(filtered.length);
 
   if (!filtered.length) {
     el.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">No matches</div><div class="empty-sub">Try a different search or filter.</div></div>`;
@@ -2279,7 +2490,7 @@ function contactItem(c, i) {
     cbChip = `<span class="badge-callback-date">${isOverdue ? '⚠' : '📅'} ${dateStr}</span>`;
   }
 
-  return `<div class="${rowClass}" onclick="openContactDrawer(${realIdx})" style="align-items:flex-start">
+  return `<div class="${rowClass}" onclick="openContactDrawer(${realIdx})" style="align-items:flex-start" draggable="true" ondragstart="dragContact(event,${realIdx})" ondragend="this.style.opacity=''"  >
     <div style="display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:1px">
       <div class="contact-avatar ${typeClass}">${initials}</div>
       <span class="temp-dot ${tempClass}"></span>
@@ -2293,6 +2504,29 @@ function contactItem(c, i) {
     </div>
     ${badgeLabel ? `<span class="contact-status-badge badge-${badgeKey}">${badgeLabel}</span>` : ''}
   </div>`;
+}
+
+// ============================================================
+//  DRAG & DROP CONTACTS TO LISTS
+// ============================================================
+function dragContact(event, idx) {
+  event.dataTransfer.setData('contactIdx', idx);
+  event.dataTransfer.effectAllowed = 'move';
+  event.target.closest('.contact-item').style.opacity = '0.4';
+}
+
+function dropContactToList(event, listId) {
+  event.preventDefault();
+  const idx = parseInt(event.dataTransfer.getData('contactIdx'));
+  const c = state.contacts[idx];
+  if (!c) return;
+  const list = state.lists.find(l => l.id === listId);
+  if (!list) return;
+  c.listId = listId;
+  saveContacts();
+  renderSidebar();
+  renderQueue();
+  toast(`📁 ${c.name} → ${list.name}`, 'accent');
 }
 
 // ============================================================
@@ -2402,8 +2636,8 @@ function openContactDrawer(idx) {
     `<div class="status-chip${c.status === s.key ? ' active' : ''}" onclick="setDrawerStatus('${s.key}')">${s.label}</div>`
   ).join('');
 
-  // Call notes
-  document.getElementById('drawerNotes').value = c.callNotes || '';
+  // Clear the new-note input
+  document.getElementById('drawerNotes').value = '';
 
   // Call history
   const hist = state.callLog.filter(l => l.phone === c.phone);
@@ -2420,6 +2654,10 @@ function openContactDrawer(idx) {
     ).join('');
   } else histWrap.style.display = 'none';
 
+  // Groups + Notes log
+  renderDrawerGroups();
+  renderDrawerNotesLog();
+
   document.getElementById('contactDrawer').classList.add('open');
 }
 
@@ -2430,6 +2668,45 @@ function closeContactDrawer() {
 
 function handleDrawerClick(e) {
   if (e.target.classList.contains('drawer-backdrop')) closeContactDrawer();
+}
+
+// Render group pills in the open contact drawer
+function renderDrawerGroups() {
+  const row = document.getElementById('drawerGroupRow');
+  const wrap = document.getElementById('drawerGroupWrap');
+  if (!row || !wrap) return;
+  const c = drawerContactIdx !== null ? state.contacts[drawerContactIdx] : null;
+  if (!c) return;
+
+  if (!state.groups.length) {
+    row.innerHTML = `<span style="font-size:11px;color:var(--text-muted)">No groups yet — create one in the sidebar</span>`;
+    wrap.style.display = '';
+    return;
+  }
+
+  wrap.style.display = '';
+  row.innerHTML = state.groups.map(g => {
+    const active = c.groupId === g.id;
+    return `<span class="group-pill${active ? ' active' : ''}" onclick="assignGroup('${g.id}')">${g.name}</span>`;
+  }).join('') +
+  (c.groupId ? ` <span class="group-pill" onclick="assignGroup(null)" style="color:var(--text-muted);border-style:dashed">✕ None</span>` : '');
+}
+
+function assignGroup(groupId) {
+  if (drawerContactIdx === null) return;
+  const c = state.contacts[drawerContactIdx];
+  // Toggle: clicking the active group removes it
+  c.groupId = (groupId && c.groupId !== groupId) ? groupId : undefined;
+  saveContacts();
+  renderDrawerGroups();
+  renderSidebar();
+  renderQueue();
+  if (groupId && c.groupId) {
+    const g = state.groups.find(g => g.id === groupId);
+    if (g) toast(`🏷️ ${c.name} → ${g.name}`, 'accent');
+  } else {
+    toast('Group removed', 'accent');
+  }
 }
 
 function setDrawerStatus(status) {
@@ -2454,8 +2731,59 @@ function setDrawerStatus(status) {
 
 function saveDrawerNotes() {
   if (drawerContactIdx === null) return;
-  state.contacts[drawerContactIdx].callNotes = document.getElementById('drawerNotes').value;
+  const ta = document.getElementById('drawerNotes');
+  const text = (ta.value || '').trim();
+  if (!text) return;
+  const c = state.contacts[drawerContactIdx];
+  if (!c.noteHistory) c.noteHistory = [];
+  // Migrate legacy single callNotes string on first save
+  if (c.callNotes && !c.noteHistory.length) {
+    c.noteHistory.push({ text: c.callNotes, time: Date.now() - 1000 });
+  }
+  c.noteHistory.unshift({ text, time: Date.now() }); // newest first
+  c.callNotes = text; // keep latest for queue card snippet
+  ta.value = '';
   saveContacts();
+  renderDrawerNotesLog();
+  renderQueue();
+  const msg = document.getElementById('notesSavedMsg');
+  if (msg) {
+    msg.style.opacity = '1';
+    clearTimeout(msg._t);
+    msg._t = setTimeout(() => { msg.style.opacity = '0'; }, 1800);
+  }
+}
+
+function deleteNote(contactIdx, noteIdx) {
+  const c = state.contacts[contactIdx];
+  if (!c || !c.noteHistory) return;
+  c.noteHistory.splice(noteIdx, 1);
+  c.callNotes = c.noteHistory.length ? c.noteHistory[0].text : '';
+  saveContacts();
+  renderDrawerNotesLog();
+  renderQueue();
+}
+
+function renderDrawerNotesLog() {
+  const wrap = document.getElementById('drawerNotesLogWrap');
+  const log = document.getElementById('drawerNotesLog');
+  if (!wrap || !log || drawerContactIdx === null) return;
+  const c = state.contacts[drawerContactIdx];
+  const entries = c.noteHistory || [];
+  if (!entries.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+  log.innerHTML = entries.map((n, i) => {
+    const d = new Date(n.time);
+    const dateStr = d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+    const timeStr = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    return `<div class="note-entry">
+      <div class="note-entry-text">${n.text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+      <div class="note-entry-meta">
+        <span>${dateStr} · ${timeStr}</span>
+        <span class="note-entry-del" onclick="deleteNote(${drawerContactIdx},${i})" title="Delete note">✕</span>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function moveContactToTop() {
@@ -2704,11 +3032,10 @@ async function dialNextSet() {
   if (!state.session || state.paused) return;
   if (state.activeLineId !== null) return; // already on a call
 
-  const activeGroupDef = SIDEBAR_GROUPS.find(g => g.key === state.activeGroup);
   const pending = state.contacts.filter(c => c.status === 'pending' && !c.isDNC &&
     (!state.activeListId || c.listId === state.activeListId) &&
-    (!activeGroupDef || activeGroupDef.match(c)) &&
-    (!state.activeCity || (c.city || '').trim().toLowerCase() === state.activeCity));
+    (state.activeGroup === null || c.groupId === state.activeGroup) &&
+    (!state.activeCity || getContactCity(c).toLowerCase() === state.activeCity));
   if (!pending.length) {
     toast('✅ All contacts in queue have been dialed!', 'green');
     stopSession();
@@ -3330,9 +3657,11 @@ async function init() {
     state.demoMode = !state.settings.backendUrl;
   } catch(e) {}
 
-  // Restore lists and contacts from last session (IndexedDB)
+  // Restore lists, groups, and contacts from last session
   const savedLists = await loadListsDB();
   if (savedLists.length) state.lists = savedLists;
+  const savedGroups = loadGroups();
+  if (savedGroups.length) state.groups = savedGroups;
   const savedContacts = await loadContactsDB();
   if (savedContacts.length) {
     state.contacts = savedContacts;
