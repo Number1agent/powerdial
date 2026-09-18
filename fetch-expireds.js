@@ -54,53 +54,75 @@ async function fetchExpiredsFromMLS() {
   const page = await browser.newPage();
 
   try {
-    // Login
-    log('🔐 Logging into OneKey MLS...');
-    await page.goto('https://www.onekeymls.com/login', { waitUntil: 'networkidle' });
-    await page.fill('input[name="username"], input[type="email"], #username', MLS_USER);
+    // ── 1a. Login via OneKey SSO ─────────────────────────────────────────────
+    log('🔐 Logging into OneKey SSO...');
+    await page.goto('https://onekey.clareityiam.net/idp/login', { waitUntil: 'networkidle', timeout: 30000 });
+    await sleep(2000);
+
+    await page.fill('input[name="username"], input[type="text"], input[type="email"], #username, #user', MLS_USER);
     await page.fill('input[name="password"], input[type="password"], #password', MLS_PASS);
-    await page.click('button[type="submit"], input[type="submit"], .login-btn');
-    await page.waitForNavigation({ waitUntil: 'networkidle', timeout: 15000 });
-    log('✅ Logged in');
+    await page.click('button[type="submit"], input[type="submit"], button:has-text("Login"), button:has-text("Sign In"), .btn-primary');
+    await page.waitForLoadState('networkidle', { timeout: 20000 });
+    log('✅ Logged in via SSO');
+    await sleep(3000);
 
-    // Navigate to Matrix search
-    await page.goto('https://matrix.onekeymls.com', { waitUntil: 'networkidle' });
-    await sleep(2000);
-
-    // Open residential search
-    log('🔍 Searching for today\'s expireds...');
-    await page.click('a[href*="search"], .search-link, #searchLink').catch(() => {});
-    await sleep(1000);
-
-    // Set status to Expired
-    const today = new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
-
-    // Try to find status field and set to Expired
-    await page.selectOption('select[id*="Status"], select[name*="Status"]', { label: 'Expired' }).catch(() => {});
-
-    // Set expiration date to today
-    await page.fill('input[id*="ExpirationDate"], input[name*="ExpirationDate"]', `${today}-${today}`).catch(() => {});
-
-    // Set county
-    for (const county of TARGET_COUNTIES) {
-      await page.check(`input[value="${county}"], label:has-text("${county}") input`).catch(() => {});
+    // ── 1b. Navigate to Matrix MyMatrix ─────────────────────────────────────
+    if (!page.url().includes('matrix-new.onekeymlsny.com')) {
+      log('🖱️ Navigating to Matrix...');
+      await page.goto('https://matrix-new.onekeymlsny.com/Matrix/MyMatrix', { waitUntil: 'networkidle', timeout: 30000 });
+      await sleep(3000);
     }
+    log(`📍 Matrix URL: ${page.url()}`);
 
-    // Run search
-    await page.click('button:has-text("Search"), input[value="Search"], #searchButton');
-    await page.waitForLoadState('networkidle');
+    // ── 1c. Click "Expired" link in Market Watch ─────────────────────────────
+    log('🔍 Clicking Expired in Market Watch...');
+    const clicked = await page.evaluate(() => {
+      const links = Array.from(document.querySelectorAll('a'));
+      // Prefer a Market Watch link (ID contains 'm_lv') whose text is "Expired (N)"
+      const mwLink = links.find(a =>
+        /^Expired(\s*\(\d+\))?$/.test(a.textContent.trim()) && a.id.includes('m_lv')
+      );
+      if (mwLink) { mwLink.click(); return mwLink.id; }
+      // Fallback: any link matching "Expired (N)"
+      const fallback = links.find(a => /^Expired(\s*\(\d+\))?$/.test(a.textContent.trim()));
+      if (fallback) { fallback.click(); return 'fallback:' + fallback.id; }
+      return null;
+    });
+    if (!clicked) throw new Error('Could not find Expired Market Watch link on MyMatrix page');
+    log(`✅ Clicked: ${clicked}`);
+
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
     await sleep(2000);
+    log(`📍 Results URL: ${page.url()}`);
 
-    // Export results to CSV
-    log('📥 Exporting results...');
-    await page.click('button:has-text("Export"), a:has-text("Export"), .export-btn').catch(() => {});
+    // ── 1d. Select all results ───────────────────────────────────────────────
+    log('☑️  Selecting all results...');
+    await page.evaluate(() => {
+      const btn = document.getElementById('m_lnkCheckAllLink');
+      if (btn) btn.click();
+    });
     await sleep(1000);
-    await page.click('option:has-text("CSV"), button:has-text("CSV")').catch(() => {});
 
-    // Wait for download
-    const [download] = await Promise.all([
+    const exportEnabled = await page.evaluate(() => {
+      const td = document.getElementById('m_tdExport');
+      return td && !td.className.includes('disabled');
+    });
+    if (!exportEnabled) throw new Error('Export button still disabled after selecting all — no results?');
+
+    // ── 1e. Open Export page ─────────────────────────────────────────────────
+    log('📥 Opening export page...');
+    await page.evaluate(() => document.getElementById('m_lbExport').click());
+    await page.waitForLoadState('networkidle', { timeout: 20000 });
+    await sleep(1500);
+    log(`📍 Export URL: ${page.url()}`);
+
+    // ── 1f. Choose "Single Line Data Only" (CSV) and download ────────────────
+    log('📄 Selecting CSV format and downloading...');
+    await page.selectOption('#m_ddExport', 'sd8');  // Single Line Data Only
+
+    const [ download ] = await Promise.all([
       page.waitForEvent('download', { timeout: 30000 }),
-      page.click('button:has-text("Download"), button:has-text("Export"), #exportBtn').catch(() => {})
+      page.evaluate(() => document.getElementById('m_btnExport').click())
     ]);
 
     const csvPath = `/tmp/expireds_${Date.now()}.csv`;
@@ -118,57 +140,14 @@ async function fetchExpiredsFromMLS() {
 
   } catch (err) {
     log(`❌ MLS fetch error: ${err.message}`);
+    try {
+      const screenshotPath = `/tmp/mls-error-${Date.now()}.png`;
+      await page.screenshot({ path: screenshotPath, fullPage: true });
+      log(`📸 Screenshot saved to ${screenshotPath}`);
+    } catch(_) {}
     await browser.close();
     return [];
   }
-}
-
-function parseMLSCSV(csv) {
-  const lines = csv.split('\n').filter(l => l.trim());
-  if (lines.length < 2) return [];
-
-  const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, '').toLowerCase());
-  const listings = [];
-
-  for (let i = 1; i < lines.length; i++) {
-    const cols = parseCSVRow(lines[i]);
-    const row = {};
-    headers.forEach((h, idx) => row[h] = (cols[idx] || '').trim().replace(/"/g, ''));
-
-    // Map common MLS column names
-    const address   = row['address'] || row['street address'] || row['property address'] || '';
-    const city      = row['city'] || row['town'] || '';
-    const state     = row['state'] || 'NY';
-    const zip       = row['zip'] || row['zip code'] || row['postal code'] || '';
-    const county    = row['county'] || '';
-    const status    = (row['status'] || '').toLowerCase();
-    const listPrice = row['list price'] || row['price'] || '';
-    const beds      = row['beds'] || row['bedrooms'] || '';
-    const baths     = row['baths'] || row['bathrooms'] || '';
-    const mlsNum    = row['mls#'] || row['mls number'] || row['listing id'] || '';
-
-    if (!address) continue;
-
-    // Filter out anything that's not truly expired
-    if (status && status !== 'expired' && status !== 'exp') continue;
-
-    listings.push({ address, city, state, zip, county, listPrice, beds, baths, mlsNum, status });
-  }
-
-  return listings;
-}
-
-function parseCSVRow(row) {
-  const result = [];
-  let current = '';
-  let inQuotes = false;
-  for (const char of row) {
-    if (char === '"') { inQuotes = !inQuotes; }
-    else if (char === ',' && !inQuotes) { result.push(current); current = ''; }
-    else { current += char; }
-  }
-  result.push(current);
-  return result;
 }
 
 // ─── Step 2: Filter out relisted / sold / pending ────────────────────────────
