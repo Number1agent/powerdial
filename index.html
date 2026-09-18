@@ -2539,6 +2539,7 @@ const state = {
   lists: [],             // [{ id, name }] — named call lists
   groups: [],            // [{ id, name }] — user-created groups
   activeListId: null,    // null = show all lists
+  showingExpireds: false,  // true when Expireds tab is active
   sessionStartTime: null,
   sessionTimerInt: null,
   pendingCbContact: null, // contact waiting for callback date assignment
@@ -3996,6 +3997,7 @@ function renderSidebar() {
 }
 
 function setActiveGroup(id) {
+  state.showingExpireds = false;
   state.activeGroup = state.activeGroup === id ? null : id;
   if (state.activeGroup !== null) state.activeListId = null;
   renderSidebar();
@@ -4185,6 +4187,7 @@ function cycleSort() {
 }
 
 function renderQueue() {
+  if (state.showingExpireds) return;  // Expireds tab is active — don't overwrite
   const el = document.getElementById('queueList');
   const badge = document.getElementById('queueBadge');
   const pending = state.contacts.filter(c => c.status === 'pending').length;
@@ -4372,6 +4375,7 @@ function deleteList(id, e) {
 }
 
 function setActiveList(id) {
+  state.showingExpireds = false;
   state.activeListId = id;
   state.activeGroup = null;
   state.activeCity = null;
@@ -6719,6 +6723,7 @@ async function loadExpiredsTab() {
   if (btn) btn.classList.add('active');
   state.activeListId = null;
   state.activeGroup = null;
+  state.showingExpireds = true;
 
   const backendUrl = (state.settings?.backendUrl || '').replace(/\/$/, '');
   if (!backendUrl) { toast('\u26a0\ufe0f Set backend URL in Settings first', 'red'); return; }
