@@ -6765,21 +6765,31 @@ async function loadExpiredsTab() {
   }
 }
 
+function getOrCreateExpiredsList() {
+  const name = "Today's Expireds";
+  let list = state.lists.find(l => l.name === name);
+  if (!list) list = createList(name);
+  return list;
+}
+
 function loadExpiredToQueue(i) {
   const c = expiredsContacts[i];
   if (!c) return;
-  contacts.push(c);
+  const list = getOrCreateExpiredsList();
+  state.contacts.push({ ...c, listId: list.id });
   saveContacts();
-  renderQueue();
-  toast('\u2705 ' + c.name + ' added to queue', 'green');
+  renderSidebar();
+  toast('\u2705 ' + c.name + " added to Today's Expireds folder", 'green');
 }
 
 function loadAllExpiredsToQueue() {
-  contacts.push(...expiredsContacts);
+  const list = getOrCreateExpiredsList();
+  const tagged = expiredsContacts.map(c => ({ ...c, listId: list.id }));
+  state.contacts.push(...tagged);
   saveContacts();
-  setActiveGroup(null);
-  setActiveList(null);
-  toast('\u2705 ' + expiredsContacts.length + ' expireds added to main queue', 'green');
+  state.showingExpireds = false;
+  setActiveList(list.id);
+  toast('\u2705 ' + expiredsContacts.length + " expireds loaded into Today's Expireds folder", 'green');
 }
 
 async function refreshExpiredsCount() {
