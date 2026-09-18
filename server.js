@@ -487,7 +487,18 @@ app.get('/api/expireds/pending', (req, res) => {
 app.get('/api/expireds/status', (req, res) => {
   res.json({ pending: expiredQueue.length });
 });
-
+// ─── Auth State Check ─────────────────────────────────────────────────────────
+app.get('/api/expireds/auth-check', (req, res) => {
+  const envState = process.env.MLS_AUTH_STATE;
+  if (!envState) return res.json({ ok: false, error: 'MLS_AUTH_STATE not set' });
+  try {
+    const decoded = Buffer.from(envState, 'base64').toString('utf8');
+    const state = JSON.parse(decoded);
+    res.json({ ok: true, cookies: state.cookies?.length || 0 });
+  } catch(e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
 // ─── Health Check ─────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
   res.json({
