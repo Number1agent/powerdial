@@ -48,54 +48,105 @@ function sleep(ms) {
 }
 
 // ─── Step 1: Pull expireds from OneKey MLS ───────────────────────────────────
+
+/**
+ * Load Playwright storage state from env var (Railway) or local file (dev).
+ * MLS_AUTH_STATE env var = base64-encoded JSON written by encode-auth.js
+ * mls-auth.json = local file written by setup-auth.js
+ */
+function loadAuthState() {
+  const envState = process.env.MLS_AUTH_STATE;
+  if (envState) {
+    try {
+      const json = Buffer.from(envState, 'base64').toString('utf8');
+      const state = JSON.parse(json);
+      log(`🔑 Auth state loaded from MLS_AUTH_STATE env var (${state.cookies.length} cookies)`);
+      return state;
+    } catch(e) {
+      log(`⚠️  Failed to parse MLS_AUTH_STATE: ${e.message}`);
+    }
+  }
+
+  const fs = require('fs');
+  const path = require('path');
+  const localFile = path.join(__dirname, 'mls-auth.json');
+  if (fs.existsSync(localFile)) {
+    try {
+      const state = JSON.parse(fs.readFileSync(localFile, 'utf8'));
+      log(`🔑 Auth state loaded from mls-auth.json (${state.cookies.length} cookies)`);
+      return state;
+    } catch(e) {
+      log(`⚠️  Failed to parse mls-auth.json: ${e.message}`);
+    }
+  }
+
+  return null;
+}
+
 async function fetchExpiredsFromMLS() {
-  log('🌐 Launching browser for OneKey MLS...');
-  const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage();
+  const authState = loadAuthState();
+  if (!authState) {
+    log('❌ No auth state found. Run setup-auth.js + encode-auth.js and set MLS_AUTH_STATE in Railway.');
+    return [];
+  }
+
+  log('🌐 Launching browser with saved session (bypassing SSO)...');
+  const browser = await chromium.launch({
+    headless: true,
+    args: ['--disable-blink-features=AutomationControlled', '--no-sandbox']
+  });
+
+  // Inject saved cookies — bypasses PingOne SSO entirely
+  const context = await browser.newContext({
+    storageState: authState,
+    userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+  });
+  const page = await context.newPage();
 
   try {
-    // ── 1a. Login via OneKey SSO ─────────────────────────────────────────────
-    log('🔐 Logging into OneKey SSO...');
-    await page.goto('https://onekey.clareityiam.net/idp/login', { waitUntil: 'networkidle', timeout: 30000 });
+    // ── 1a. Navigate to Matrix MyMatrix — session already active, no SSO redirect
+    log('🌐 Navigating to Matrix MyMatrix...');
+    await page.goto('https://matrix-new.onekeymlsny.com/Matrix/MyMatrix', {
+      waitUntil: 'networkidle',
+      timeout: 30000
+    });
     await sleep(2000);
+    log(`📍 URL: ${page.url()}`);
 
-    await page.fill('input[name="username"], input[type="text"], input[type="email"], #username, #user', MLS_USER);
-    await page.fill('input[name="password"], input[type="password"], #password', MLS_PASS);
-    await page.click('button[type="submit"], input[type="submit"], button:has-text("Login"), button:has-text("Sign In"), .btn-primary');
-    await page.waitForLoadState('networkidle', { timeout: 20000 });
-    log('✅ Logged in via SSO');
-    await sleep(3000);
-
-    // ── 1b. Navigate to Matrix MyMatrix ─────────────────────────────────────
+    // ── 1b. Detect expired session (got redirected to SSO)
     if (!page.url().includes('matrix-new.onekeymlsny.com')) {
-      log('🖱️ Navigating to Matrix...');
-      await page.goto('https://matrix-new.onekeymlsny.com/Matrix/MyMatrix', { waitUntil: 'networkidle', timeout: 30000 });
-      await sleep(3000);
+      log('❌ Session expired — need to refresh auth state.');
+      log('   Run setup-auth.js → encode-auth.js → update MLS_AUTH_STATE in Railway.');
+      await browser.close();
+      return [];
     }
-    log(`📍 Matrix URL: ${page.url()}`);
+    log('✅ Reached Matrix (session valid)');
 
-    // ── 1c. Click "Expired" link in Market Watch ─────────────────────────────
+    // ── 1c. Click "Expired" in Market Watch widget (already preset by user)
     log('🔍 Clicking Expired in Market Watch...');
-    const clicked = await page.evaluate(() => {
+    const clickedId = await page.evaluate(() => {
       const links = Array.from(document.querySelectorAll('a'));
-      // Prefer a Market Watch link (ID contains 'm_lv') whose text is "Expired (N)"
       const mwLink = links.find(a =>
         /^Expired(\s*\(\d+\))?$/.test(a.textContent.trim()) && a.id.includes('m_lv')
       );
       if (mwLink) { mwLink.click(); return mwLink.id; }
-      // Fallback: any link matching "Expired (N)"
       const fallback = links.find(a => /^Expired(\s*\(\d+\))?$/.test(a.textContent.trim()));
       if (fallback) { fallback.click(); return 'fallback:' + fallback.id; }
       return null;
     });
-    if (!clicked) throw new Error('Could not find Expired Market Watch link on MyMatrix page');
-    log(`✅ Clicked: ${clicked}`);
+
+    if (!clickedId) {
+      log(`❌ Could not find Expired Market Watch link. Title: "${await page.title()}"`);
+      await browser.close();
+      return [];
+    }
+    log(`✅ Clicked: ${clickedId}`);
 
     await page.waitForLoadState('networkidle', { timeout: 30000 });
     await sleep(2000);
     log(`📍 Results URL: ${page.url()}`);
 
-    // ── 1d. Select all results ───────────────────────────────────────────────
+    // ── 1d. Select all results
     log('☑️  Selecting all results...');
     await page.evaluate(() => {
       const btn = document.getElementById('m_lnkCheckAllLink');
@@ -107,31 +158,33 @@ async function fetchExpiredsFromMLS() {
       const td = document.getElementById('m_tdExport');
       return td && !td.className.includes('disabled');
     });
-    if (!exportEnabled) throw new Error('Export button still disabled after selecting all — no results?');
+    if (!exportEnabled) {
+      log('⚠️  Export disabled — zero expired listings today or nothing selected.');
+      await browser.close();
+      return [];
+    }
 
-    // ── 1e. Open Export page ─────────────────────────────────────────────────
-    log('📥 Opening export page...');
+    // ── 1e. Open Export page
+    log('📥 Opening export...');
     await page.evaluate(() => document.getElementById('m_lbExport').click());
     await page.waitForLoadState('networkidle', { timeout: 20000 });
     await sleep(1500);
-    log(`📍 Export URL: ${page.url()}`);
 
-    // ── 1f. Choose "Single Line Data Only" (CSV) and download ────────────────
+    // ── 1f. Select "Single Line Data Only" (sd8 = CSV) and download
     log('📄 Selecting CSV format and downloading...');
-    await page.selectOption('#m_ddExport', 'sd8');  // Single Line Data Only
+    await page.selectOption('#m_ddExport', 'sd8');
 
-    const [ download ] = await Promise.all([
+    const [download] = await Promise.all([
       page.waitForEvent('download', { timeout: 30000 }),
       page.evaluate(() => document.getElementById('m_btnExport').click())
     ]);
 
     const csvPath = `/tmp/expireds_${Date.now()}.csv`;
     await download.saveAs(csvPath);
-    log(`✅ Downloaded expireds CSV to ${csvPath}`);
+    log(`✅ Downloaded CSV to ${csvPath}`);
 
     await browser.close();
 
-    // Parse CSV
     const fs = require('fs');
     const csv = fs.readFileSync(csvPath, 'utf8');
     const listings = parseMLSCSV(csv);
@@ -267,9 +320,8 @@ async function pushToPowerDial(contacts) {
 async function main() {
   log('🚀 Starting daily expireds automation...');
   log(`📅 Date: ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}`);
-  log(`🗺️  Counties: ${TARGET_COUNTIES.join(', ')}`);
 
-  if (!MLS_USER || !MLS_PASS) { log('❌ Missing OneKey MLS credentials'); process.exit(1); }
+  // Auth handled via MLS_AUTH_STATE env var (see loadAuthState)
   if (!DATASKIP_KEY)           { log('❌ Missing DATASKIP_API_KEY');        process.exit(1); }
   if (!BACKEND_URL)            { log('❌ Missing PUBLIC_URL');              process.exit(1); }
 
