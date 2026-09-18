@@ -386,9 +386,116 @@ app.get('/api/recordings', async (req, res) => {
   }
 });
 
+// ─── Test: Run Skip Trace from Railway ───────────────────────────────────────
+// POST /api/expireds/test-run
+// Body: { listings: [{address, city, state, zip, county, listPrice, beds, baths}], apiKey }
+// Skip traces the provided addresses using DATASKIP_API_KEY already on Railway
+app.post('/api/expireds/test-run', async (req, res) => {
+  const { listings, apiKey } = req.body;
+  const expectedKey = process.env.EXPIREDS_API_KEY;
+  if (expectedKey && apiKey !== expectedKey) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  if (!Array.isArray(listings) || !listings.length) {
+    return res.status(400).json({ error: 'No listings provided' });
+  }
+
+  const DATASKIP_KEY = process.env.DATASKIP_API_KEY;
+  if (!DATASKIP_KEY) return res.status(500).json({ error: 'DATASKIP_API_KEY not set on server' });
+
+  console.log(`[Expireds] Test run: skip tracing ${listings.length} listings...`);
+  const contacts = [];
+  let hits = 0, misses = 0;
+
+  for (const listing of listings) {
+    try {
+      const skipRes = await fetch('https://app.dataskip.io/api/v1/skip-trace', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${DATASKIP_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: listing.address, city: listing.city, state: listing.state || 'NY', zip: listing.zip })
+      });
+      const data = await skipRes.json();
+
+      if (!data.found || !data.phones?.length) { misses++; continue; }
+
+      const cleanPhones = data.phones
+        .filter(p => !p.dnc)
+        .map(p => ({ phone: p.number, label: p.type === 'mobile' ? 'Cell' : 'Home', status: 'pending' }));
+
+      if (!cleanPhones.length) { misses++; continue; }
+
+      hits++;
+      contacts.push({
+        name:      data.fullName || 'Property Owner',
+        phones:    cleanPhones,
+        address:   listing.address,
+        city:      listing.city,
+        state:     listing.state || 'NY',
+        zip:       listing.zip,
+        county:    listing.county || '',
+        listPrice: listing.listPrice || '',
+        beds:      listing.beds || '',
+        baths:     listing.baths || '',
+        status:    'pending'
+      });
+
+      await new Promise(r => setTimeout(r, 200));
+    } catch(err) {
+      console.error(`[Expireds] Skip trace error for ${listing.address}:`, err.message);
+      misses++;
+    }
+  }
+
+  // Push to queue so PowerDial picks them up
+  expiredQueue = [...expiredQueue, ...contacts];
+  console.log(`[Expireds] Test run complete: ${hits} hits, ${misses} misses. Queue: ${expiredQueue.length}`);
+  res.json({ success: true, hits, misses, queued: contacts.length });
+});
+
+// ─── Expireds Queue ───────────────────────────────────────────────────────────
+// In-memory queue — survives between requests, cleared after PowerDial fetches
+let expiredQueue = [];
+
+// POST /api/expireds/queue
+// Called by the automation script each morning after skip tracing
+// Body: { contacts: [{name, phones, notes, city, county, listPrice, beds, baths, address}], apiKey }
+app.post('/api/expireds/queue', (req, res) => {
+  const { contacts, apiKey } = req.body;
+  const expectedKey = process.env.EXPIREDS_API_KEY;
+  if (expectedKey && apiKey !== expectedKey) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  if (!Array.isArray(contacts) || !contacts.length) {
+    return res.status(400).json({ error: 'No contacts provided' });
+  }
+  expiredQueue = [...expiredQueue, ...contacts];
+  console.log(`[Expireds] Queued ${contacts.length} contacts. Total pending: ${expiredQueue.length}`);
+  res.json({ success: true, queued: contacts.length, total: expiredQueue.length });
+});
+
+// GET /api/expireds/pending
+// Called by PowerDial on startup — returns all queued contacts and clears the queue
+app.get('/api/expireds/pending', (req, res) => {
+  const contacts = [...expiredQueue];
+  expiredQueue = [];
+  console.log(`[Expireds] Delivered ${contacts.length} pending contacts to PowerDial`);
+  res.json({ contacts, count: contacts.length });
+});
+
+// GET /api/expireds/status
+// Check queue without clearing it
+app.get('/api/expireds/status', (req, res) => {
+  res.json({ pending: expiredQueue.length });
+});
+
 // ─── Health Check ─────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', demoMode: false, twilioConfigured: !!process.env.TWILIO_ACCOUNT_SID });
+  res.json({
+    status: 'ok',
+    demoMode: false,
+    twilioConfigured: !!process.env.TWILIO_ACCOUNT_SID,
+    expiredsPending: expiredQueue.length
+  });
 });
 
 // ─── Serve Frontend ───────────────────────────────────────────────────────────
