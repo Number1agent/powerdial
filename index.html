@@ -6720,7 +6720,7 @@ async function loadExpiredsTab() {
   state.activeListId = null;
   state.activeGroup = null;
 
-  const backendUrl = (state.backendUrl || localStorage.getItem('pd_backend_url') || '').replace(/\/$/, '');
+  const backendUrl = (state.settings?.backendUrl || '').replace(/\/$/, '');
   if (!backendUrl) { toast('\u26a0\ufe0f Set backend URL in Settings first', 'red'); return; }
 
   try {
@@ -6778,7 +6778,7 @@ function loadAllExpiredsToQueue() {
 }
 
 async function refreshExpiredsCount() {
-  const backendUrl = (state.backendUrl || localStorage.getItem('pd_backend_url') || '').replace(/\/$/, '');
+  const backendUrl = (state.settings?.backendUrl || '').replace(/\/$/, '');
   if (!backendUrl) return;
   try {
     const r = await fetch(backendUrl + '/api/expireds/pending');
