@@ -327,6 +327,17 @@ async function fetchExpiredsFromMLS() {
   });
   const page = await context.newPage();
 
+  // Block any navigation to the old/wrong Matrix domain and redirect to correct one
+  await page.route('**://matrix.onekeymls.com/**', async (route) => {
+    const wrongUrl = route.request().url();
+    const correctedUrl = wrongUrl.replace('matrix.onekeymls.com', 'matrix-new.onekeymlsny.com');
+    log(`🔀 Intercepted wrong domain redirect → correcting to ${correctedUrl}`);
+    await route.fulfill({
+      status: 302,
+      headers: { location: correctedUrl }
+    });
+  });
+
   try {
     // ── 1a. Navigate to Matrix
     log('🌐 Navigating to Matrix MyMatrix...');
@@ -336,17 +347,6 @@ async function fetchExpiredsFromMLS() {
     });
     await sleep(2000);
     log(`📍 URL: ${page.url()}`);
-
-    // If SSO redirected us to wrong Matrix domain, force navigate to the correct one
-    if (page.url().includes('onekeymls.com') && !page.url().includes('onekeymlsny.com')) {
-      log('⚠️  SSO landed on wrong Matrix domain — forcing correct URL...');
-      await page.goto('https://matrix-new.onekeymlsny.com/Matrix/MyMatrix', {
-        waitUntil: 'networkidle',
-        timeout: 30000
-      });
-      await sleep(2000);
-      log(`📍 URL after redirect fix: ${page.url()}`);
-    }
 
     // ── 1b. Handle expired session — auto-login with credentials
     if (!page.url().includes('matrix-new.onekeymlsny.com')) {
