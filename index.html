@@ -6796,10 +6796,10 @@ async function refreshExpiredsCount() {
   const backendUrl = (state.settings?.backendUrl || '').replace(/\/$/, '');
   if (!backendUrl) return;
   try {
-    const r = await fetch(backendUrl + '/api/expireds/pending');
+    const r = await fetch(backendUrl + '/api/expireds/status');
     const data = await r.json();
     const el = document.getElementById('expiredsCount');
-    if (el) el.textContent = (data.contacts || []).length;
+    if (el) el.textContent = data.pending || 0;
   } catch(e) {}
 }
 setTimeout(refreshExpiredsCount, 2000);

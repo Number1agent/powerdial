@@ -410,25 +410,10 @@ async function fetchExpiredsFromMLS() {
     await page.waitForLoadState('networkidle', { timeout: 20000 });
     await sleep(1500);
 
-    // ── 1f. Select "power" custom export template and download
-    log('📄 Selecting "power" export template and downloading...');
-
-    // Log all available export options to debug label mismatches
-    const exportOptions = await page.evaluate(() => {
-      const sel = document.getElementById('m_ddExport');
-      return Array.from(sel?.options || []).map(o => `[${o.value}] ${o.text.trim()}`);
-    });
-    log(`📋 Export options: ${exportOptions.join(' | ')}`);
-
-    // Try "power" (case-insensitive), fall back to sd8 if not found
-    const powerOption = exportOptions.find(o => o.toLowerCase().includes('power'));
-    if (powerOption) {
-      const powerValue = powerOption.match(/^\[([^\]]+)\]/)?.[1];
-      await page.selectOption('#m_ddExport', powerValue || { label: /power/i });
-    } else {
-      log('\u26a0\ufe0f  "power" template not found in dropdown — falling back to sd8');
-      await page.selectOption('#m_ddExport', 'sd8');
-    }
+    // ── 1f. Select "Single Line Data Only" (sd8) and download
+    // Zip codes are geocoded automatically after CSV parse via Census Bureau API
+    log('📄 Selecting CSV format and downloading...');
+    await page.selectOption('#m_ddExport', 'sd8');
 
     const [download] = await Promise.all([
       page.waitForEvent('download', { timeout: 30000 }),
@@ -532,11 +517,6 @@ async function skipTrace(listings) {
       });
 
       const data = await res.json();
-
-      // Log first 3 responses so we can debug DataSkip issues
-      if (results.length + misses < 3) {
-        log(`🔍 DataSkip [${listing.address}, ${listing.city}] → HTTP ${res.status} | found:${data.found} phones:${data.phones?.length ?? 0} raw:${JSON.stringify(data).substring(0, 200)}`);
-      }
 
       const contact = data.contact || data; // support both response shapes
       const phones  = contact.phones || data.phones || [];
