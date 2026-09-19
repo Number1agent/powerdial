@@ -412,7 +412,23 @@ async function fetchExpiredsFromMLS() {
 
     // ── 1f. Select "power" custom export template and download
     log('📄 Selecting "power" export template and downloading...');
-    await page.selectOption('#m_ddExport', { label: 'power' });
+
+    // Log all available export options to debug label mismatches
+    const exportOptions = await page.evaluate(() => {
+      const sel = document.getElementById('m_ddExport');
+      return Array.from(sel?.options || []).map(o => `[${o.value}] ${o.text.trim()}`);
+    });
+    log(`📋 Export options: ${exportOptions.join(' | ')}`);
+
+    // Try "power" (case-insensitive), fall back to sd8 if not found
+    const powerOption = exportOptions.find(o => o.toLowerCase().includes('power'));
+    if (powerOption) {
+      const powerValue = powerOption.match(/^\[([^\]]+)\]/)?.[1];
+      await page.selectOption('#m_ddExport', powerValue || { label: /power/i });
+    } else {
+      log('\u26a0\ufe0f  "power" template not found in dropdown — falling back to sd8');
+      await page.selectOption('#m_ddExport', 'sd8');
+    }
 
     const [download] = await Promise.all([
       page.waitForEvent('download', { timeout: 30000 }),
