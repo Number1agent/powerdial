@@ -7,7 +7,7 @@
  * 3. Deduplicates against what's already in PowerDial
  * 4. Skip traces clean contacts via DataSkip API
  * 5. Pushes verified contacts to PowerDial backend queue
- *
+ 
  * Environment variables required:
  *   ONEKEYMLS_USERNAME, ONEKEYMLS_PASSWORD
  *   DATASKIP_API_KEY
@@ -93,7 +93,7 @@ async function fetchExpiredsFromMLS() {
   log('🌐 Launching browser with saved session (bypassing SSO)...');
   const browser = await chromium.launch({
     headless: true,
-    args: ['--disable-blink-features=AutomationControlled', '--no-sandbox']
+    args: ['--disable-blink-features=AutomationControlled', '--no-sandbox', '--disable-dev-shm-usage']
   });
 
   // Inject saved cookies — bypasses PingOne SSO entirely
