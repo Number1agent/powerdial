@@ -219,69 +219,68 @@ async function loginWithCredentials(page) {
     }
     if (!filledUser) throw new Error('Could not find username field');
 
-    await sleep(600);
+    await sleep(800);
 
-    // ── Step 2: Click Next/Continue (some SSO flows split username & password)
-    // First try clicking a visible submit button; fall back to pressing Enter
-    const submitSelectors = [
-      'button[type="submit"]',
-      'input[type="submit"]',
-      '#submit-button',
-      '.ping-button',
-      'button:has-text("Next")',
-      'button:has-text("Continue")',
-      'button:has-text("Sign in")',
-      'button:has-text("Sign On")',
-      'input[name="pf.ok"]',
-    ];
-    let clickedNext = false;
-    for (const sel of submitSelectors) {
-      try {
-        const el = await page.$(sel);
-        if (el && await el.isVisible()) {
-          await el.click();
-          log(`   Clicked submit: ${sel}`);
-          clickedNext = true;
-          break;
-        }
-      } catch(_) {}
-    }
-    if (!clickedNext) {
-      log('   No submit button found — pressing Enter on username field');
-      await page.keyboard.press('Enter');
-    }
+    // ── Step 2: Log the page HTML for debugging, then submit via JS (bypasses visibility issues)
+    const pageSource = await page.content();
+    const formInfo = pageSource.match(/<form[^>]*>[\s\S]*?<\/form>/i)?.[0]?.substring(0, 800) || 'no form found';
+    log(`   Form HTML preview: ${formInfo.replace(/\s+/g, ' ')}`);
+
+    // Use JS click — bypasses Playwright's isVisible() checks which can fail in headless mode
+    const clickResult = await page.evaluate(() => {
+      const selectors = [
+        'input[name="pf.ok"]',
+        'input[type="submit"]',
+        'button[type="submit"]',
+        '#submit-button',
+        '.ping-button',
+      ];
+      for (const sel of selectors) {
+        const el = document.querySelector(sel);
+        if (el) { el.click(); return `js-clicked: ${sel}`; }
+      }
+      // Last resort: submit the form directly
+      const form = document.querySelector('form');
+      if (form) { form.submit(); return 'js-form-submit'; }
+      return 'no-submit-found';
+    });
+    log(`   Submit attempt: ${clickResult}`);
 
     await sleep(2000);
 
-    // ── Step 3: Fill password (may now be visible after clicking Next)
-    // Check if password field appeared (split form) or was already there (single form)
-    const pwVisible = await page.$('input[type="password"]');
-    if (pwVisible) {
-      await page.fill('input[type="password"]', MLS_PASS);
+    // ── Step 3: Fill password (may now be visible after clicking Next on split forms)
+    const pwField = await page.$('input[type="password"]');
+    if (pwField) {
+      await pwField.fill(MLS_PASS);
       log('   Filled password');
     } else {
       await page.waitForSelector('input[type="password"]', { timeout: 12000 });
       await page.fill('input[type="password"]', MLS_PASS);
-      log('   Filled password (after waiting)');
+      log('   Filled password (after waiting for split form)');
     }
 
     await sleep(600);
 
-    // ── Step 4: Submit login (click button or press Enter)
-    let submitted = false;
-    for (const sel of submitSelectors) {
-      try {
-        const el = await page.$(sel);
-        if (el && await el.isVisible()) {
-          await el.click();
-          log(`   Submitted login: ${sel}`);
-          submitted = true;
-          break;
-        }
-      } catch(_) {}
-    }
-    if (!submitted) {
-      log('   No submit button found — pressing Enter on password field');
+    // ── Step 4: Submit login via JS click, then Enter as final fallback
+    const submitResult = await page.evaluate(() => {
+      const selectors = [
+        'input[name="pf.ok"]',
+        'input[type="submit"]',
+        'button[type="submit"]',
+        '#submit-button',
+        '.ping-button',
+      ];
+      for (const sel of selectors) {
+        const el = document.querySelector(sel);
+        if (el) { el.click(); return `js-clicked: ${sel}`; }
+      }
+      const form = document.querySelector('form');
+      if (form) { form.submit(); return 'js-form-submit'; }
+      return 'no-submit-found';
+    });
+    log(`   Submit result: ${submitResult}`);
+    if (submitResult === 'no-submit-found') {
+      log('   Pressing Enter as final fallback');
       await page.keyboard.press('Enter');
     }
 
