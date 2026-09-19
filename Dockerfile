@@ -1,7 +1,6 @@
-FROM node:20-bookworm
-
+FROM node:20-alpine
 WORKDIR /app
 COPY package.json .
-RUN npm install && npx playwright install chromium --with-deps
+RUN npm install
 COPY . .
 CMD ["node", "fetch-expireds.js"]
