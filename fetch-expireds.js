@@ -410,9 +410,9 @@ async function fetchExpiredsFromMLS() {
     await page.waitForLoadState('networkidle', { timeout: 20000 });
     await sleep(1500);
 
-    // ── 1f. Select "Single Line Data Only" (sd8 = CSV) and download
-    log('📄 Selecting CSV format and downloading...');
-    await page.selectOption('#m_ddExport', 'sd8');
+    // ── 1f. Select "power" custom export template and download
+    log('📄 Selecting "power" export template and downloading...');
+    await page.selectOption('#m_ddExport', { label: 'power' });
 
     const [download] = await Promise.all([
       page.waitForEvent('download', { timeout: 30000 }),
@@ -460,6 +460,36 @@ async function deduplicateAgainstQueue(listings) {
     // Future: fetch existing MLS numbers from backend and pre-filter here.
   } catch(e) {}
   log(`✅ ${listings.length} listings after dedup check`);
+  return listings;
+}
+
+
+// ─── Step 3b: Geocode missing zip codes via Census Bureau API ────────────────
+async function geocodeZip(address, city, state) {
+  try {
+    const url = `https://geocoding.geo.census.gov/geocoder/locations/address?` +
+      `street=${encodeURIComponent(address)}&city=${encodeURIComponent(city)}&` +
+      `state=${encodeURIComponent(state)}&benchmark=Public_AR_Current&format=json`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const matched = data?.result?.addressMatches?.[0]?.matchedAddress || '';
+    const zipMatch = matched.match(/,\s*(\d{5})(?:-\d{4})?$/);
+    return zipMatch ? zipMatch[1] : '';
+  } catch(e) {
+    return '';
+  }
+}
+
+async function enrichZips(listings) {
+  const missing = listings.filter(l => !l.zip);
+  if (!missing.length) return listings;
+  log(`📮 Geocoding zip codes for ${missing.length} listings (Census Bureau)...`);
+  for (const listing of listings) {
+    if (!listing.zip) {
+      listing.zip = await geocodeZip(listing.address, listing.city, listing.state);
+      if (listing.zip) log(`   ${listing.address}, ${listing.city} → ${listing.zip}`);
+    }
+  }
   return listings;
 }
 
@@ -578,6 +608,7 @@ async function main() {
 
     listings = await filterActivesAndSold(listings);
     listings = await deduplicateAgainstQueue(listings);
+    listings = await enrichZips(listings);  // geocode any missing zips
 
     const contacts = await skipTrace(listings);
     await pushToPowerDial(contacts);
