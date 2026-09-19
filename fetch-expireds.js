@@ -91,9 +91,10 @@ async function fetchExpiredsFromMLS() {
   }
 
   log('🌐 Launching browser with saved session (bypassing SSO)...');
-  const browser = await chromium.connectOverCDP(
-  `https://chrome.browserless.io?token=${process.env.BROWSERLESS_TOKEN}`
-);
+  const browser = await chromium.launch({
+  headless: true,
+  args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--no-zygote']
+});
 
   // Inject saved cookies — bypasses PingOne SSO entirely
   const context = await browser.newContext({
