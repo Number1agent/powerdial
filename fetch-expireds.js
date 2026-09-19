@@ -141,6 +141,7 @@ function parseMLSCSV(csv) {
   const bedsIdx      = col('beds', 'bedrooms', 'br', 'ttlbeds', 'totalbeds', 'bedroomstotal');
   const bathsIdx     = col('baths', 'bathrooms', 'ba', 'fullbaths', 'ttlbaths', 'bathroomstotalinteger');
 
+  log(`📊 All CSV headers: ${headers.join(' | ')}`);
   log(`📊 CSV columns detected — address:${addrIdx} streetNum:${streetNumIdx} streetName:${streetNmIdx} city:${cityIdx} zip:${zipIdx} county:${countyIdx} price:${priceIdx}`);
 
   const listings = [];
@@ -485,6 +486,11 @@ async function skipTrace(listings) {
       });
 
       const data = await res.json();
+
+      // Log first 3 responses so we can debug DataSkip issues
+      if (results.length + misses < 3) {
+        log(`🔍 DataSkip [${listing.address}, ${listing.city}] → HTTP ${res.status} | found:${data.found} phones:${data.phones?.length ?? 0} raw:${JSON.stringify(data).substring(0, 200)}`);
+      }
 
       if (!data.found || !data.phones?.length) {
         misses++;
