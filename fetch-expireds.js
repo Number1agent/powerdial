@@ -133,7 +133,7 @@ function parseMLSCSV(csv) {
   const streetDirIdx = col('streetdirprefix', 'dirprefix', 'streetdir');
   const streetNmIdx  = col('streetname', 'stname');
   const streetSfxIdx = col('streetsuffix', 'strsuffix', 'suffix');
-  const cityIdx      = col('city', 'town', 'municipality', 'postalcity');
+  const cityIdx      = col('postalcity', 'city', 'town', 'municipality');
   const stateIdx     = col('state', 'st');
   const zipIdx       = col('zip', 'zipcode', 'postalcode');
   const countyIdx    = col('county');
@@ -492,13 +492,16 @@ async function skipTrace(listings) {
         log(`🔍 DataSkip [${listing.address}, ${listing.city}] → HTTP ${res.status} | found:${data.found} phones:${data.phones?.length ?? 0} raw:${JSON.stringify(data).substring(0, 200)}`);
       }
 
-      if (!data.found || !data.phones?.length) {
+      const contact = data.contact || data; // support both response shapes
+      const phones  = contact.phones || data.phones || [];
+
+      if (!data.found || !phones.length) {
         misses++;
         continue;
       }
 
       // Filter out DNC numbers
-      const cleanPhones = data.phones
+      const cleanPhones = phones
         .filter(p => !p.dnc)
         .map(p => ({ phone: p.number, label: p.type === 'mobile' ? 'Cell' : 'Home', status: 'pending' }));
 
@@ -509,7 +512,7 @@ async function skipTrace(listings) {
 
       hits++;
       results.push({
-        name:      data.fullName || 'Property Owner',
+        name:      contact.name || contact.fullName || data.fullName || 'Property Owner',
         phones:    cleanPhones,
         address:   listing.address,
         city:      listing.city,
