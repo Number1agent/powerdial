@@ -2,40 +2,38 @@
  * PowerDial — Daily Expireds Automation
  *
  * Runs every morning (scheduled via Railway cron):
- * 1. Logs into OneKey MLS, exports today's expired listings for target counties
- * 2. Filters out relisted / sold / pending properties
- * 3. Deduplicates against what's already in PowerDial
- * 4. Skip traces clean contacts via DataSkip API
- * 5. Pushes verified contacts to PowerDial backend queue
+ * 1. Logs into OneKey MLS (auto-login with credentials if session expired)
+ * 2. Exports today's expired listings for target counties
+ * 3. Filters out relisted / sold / pending properties
+ * 4. Deduplicates against what's already in PowerDial
+ * 5. Skip traces clean contacts via DataSkip API
+ * 6. Pushes verified contacts to PowerDial backend queue
  *
  * Environment variables required:
- *   ONEKEYMLS_USERNAME, ONEKEYMLS_PASSWORD
+ *   ONEKEYMLS_USERNAME, ONEKEYMLS_PASSWORD  (credentials for auto-login)
  *   DATASKIP_API_KEY
  *   EXPIREDS_API_KEY
  *   PUBLIC_URL (your Railway backend URL)
+ *
+ * Optional:
+ *   MLS_AUTH_STATE  (base64 stored-session JSON — speeds up login; auto-falls back to credentials)
  */
 
 require('dotenv').config();
 const { chromium } = require('playwright');
+const fs = require('fs');
+const path = require('path');
 
 // ─── Config ──────────────────────────────────────────────────────────────────
-const BACKEND_URL    = process.env.PUBLIC_URL;
-const DATASKIP_KEY   = process.env.DATASKIP_API_KEY;
-const EXPIREDS_KEY   = process.env.EXPIREDS_API_KEY;
-const MLS_USER       = process.env.ONEKEYMLS_USERNAME;
-const MLS_PASS       = process.env.ONEKEYMLS_PASSWORD;
+const BACKEND_URL  = process.env.PUBLIC_URL;
+const DATASKIP_KEY = process.env.DATASKIP_API_KEY;
+const EXPIREDS_KEY = process.env.EXPIREDS_API_KEY;
+const MLS_USER     = process.env.ONEKEYMLS_USERNAME;
+const MLS_PASS     = process.env.ONEKEYMLS_PASSWORD;
 
-// Target counties (OneKey MLS county names)
 const TARGET_COUNTIES = [
-  'Dutchess',
-  'Putnam',
-  'Westchester',
-  'Bronx',
-  'Kings',       // Brooklyn
-  'New York',    // Manhattan
-  'Queens',
-  'Richmond',    // Staten Island
-  'Rockland'
+  'Dutchess', 'Putnam', 'Westchester',
+  'Bronx', 'Kings', 'New York', 'Queens', 'Richmond', 'Rockland'
 ];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -47,33 +45,25 @@ function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
 }
 
-// ─── Step 1: Pull expireds from OneKey MLS ───────────────────────────────────
-
-/**
- * Load Playwright storage state from env var (Railway) or local file (dev).
- * MLS_AUTH_STATE env var = base64-encoded JSON written by encode-auth.js
- * mls-auth.json = local file written by setup-auth.js
- */
+// ─── Auth State (optional cached session) ────────────────────────────────────
 function loadAuthState() {
   const envState = process.env.MLS_AUTH_STATE;
   if (envState) {
     try {
       const json = Buffer.from(envState, 'base64').toString('utf8');
       const state = JSON.parse(json);
-      log(`🔑 Auth state loaded from MLS_AUTH_STATE env var (${state.cookies.length} cookies)`);
+      log(`🔑 Cached auth state found (${state.cookies.length} cookies) — will try first`);
       return state;
     } catch(e) {
       log(`⚠️  Failed to parse MLS_AUTH_STATE: ${e.message}`);
     }
   }
 
-  const fs = require('fs');
-  const path = require('path');
   const localFile = path.join(__dirname, 'mls-auth.json');
   if (fs.existsSync(localFile)) {
     try {
       const state = JSON.parse(fs.readFileSync(localFile, 'utf8'));
-      log(`🔑 Auth state loaded from mls-auth.json (${state.cookies.length} cookies)`);
+      log(`🔑 Cached auth state found in mls-auth.json (${state.cookies.length} cookies)`);
       return state;
     } catch(e) {
       log(`⚠️  Failed to parse mls-auth.json: ${e.message}`);
@@ -83,28 +73,232 @@ function loadAuthState() {
   return null;
 }
 
-async function fetchExpiredsFromMLS() {
-  const authState = loadAuthState();
-  if (!authState) {
-    log('❌ No auth state found. Run setup-auth.js + encode-auth.js and set MLS_AUTH_STATE in Railway.');
+// ─── CSV Parser ───────────────────────────────────────────────────────────────
+/**
+ * Parse a single CSV row, handling quoted fields with embedded commas/newlines.
+ */
+function parseCSVRow(line) {
+  const result = [];
+  let field = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') { field += '"'; i++; }
+      else inQuotes = !inQuotes;
+    } else if (ch === ',' && !inQuotes) {
+      result.push(field);
+      field = '';
+    } else {
+      field += ch;
+    }
+  }
+  result.push(field);
+  return result;
+}
+
+/**
+ * Parse the OneKey Matrix "Single Line Data" CSV export.
+ * Returns an array of listing objects.
+ */
+function parseMLSCSV(csv) {
+  const lines = csv.trim().split('\n').filter(l => l.trim());
+  if (lines.length < 2) {
+    log('⚠️  CSV has no data rows');
     return [];
   }
 
-  log('🌐 Launching browser with saved session (bypassing SSO)...');
+  const headers = parseCSVRow(lines[0]).map(h => h.trim().toLowerCase().replace(/[^a-z0-9#]/g, ''));
+
+  // Flexible column finder — tries multiple known header variations
+  const col = (...names) => {
+    for (const n of names) {
+      const norm = n.toLowerCase().replace(/[^a-z0-9#]/g, '');
+      const i = headers.indexOf(norm);
+      if (i !== -1) return i;
+    }
+    // Partial match fallback
+    for (const n of names) {
+      const norm = n.toLowerCase().replace(/[^a-z0-9#]/g, '');
+      const i = headers.findIndex(h => h.includes(norm) || norm.includes(h));
+      if (i !== -1) return i;
+    }
+    return -1;
+  };
+
+  const mlsIdx    = col('ml#', 'mls#', 'mlsnumber', 'listnumber', 'listingnumber');
+  const statusIdx = col('status', 'lststatus', 'liststatus');
+  const addrIdx   = col('address', 'streetaddress', 'propaddress', 'propertyaddress', 'streetname');
+  const cityIdx   = col('city', 'town', 'municipality');
+  const stateIdx  = col('state', 'st');
+  const zipIdx    = col('zip', 'zipcode', 'postalcode');
+  const countyIdx = col('county');
+  const priceIdx  = col('listprice', 'listingprice', 'price', 'lprice');
+  const bedsIdx   = col('beds', 'bedrooms', 'br', 'ttlbeds', 'totalbeds');
+  const bathsIdx  = col('baths', 'bathrooms', 'ba', 'fullbaths', 'ttlbaths');
+
+  log(`📊 CSV columns detected — address:${addrIdx} city:${cityIdx} zip:${zipIdx} county:${countyIdx} price:${priceIdx}`);
+
+  const listings = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cols = parseCSVRow(lines[i]);
+    if (cols.length < 3) continue;
+
+    const g = (idx) => idx >= 0 ? (cols[idx] || '').trim() : '';
+
+    const status = g(statusIdx).toLowerCase();
+    // Skip if there's a status field and it's NOT expired
+    if (status && !['exp', 'expired', ''].includes(status)) continue;
+
+    const county = g(countyIdx);
+    if (county && TARGET_COUNTIES.length > 0) {
+      const matched = TARGET_COUNTIES.some(tc =>
+        county.toLowerCase().includes(tc.toLowerCase())
+      );
+      if (!matched) continue;
+    }
+
+    const address = g(addrIdx);
+    if (!address) continue; // must have an address
+
+    listings.push({
+      mlsNum:    g(mlsIdx),
+      status:    g(statusIdx),
+      address,
+      city:      g(cityIdx),
+      state:     g(stateIdx) || 'NY',
+      zip:       g(zipIdx),
+      county,
+      listPrice: g(priceIdx),
+      beds:      g(bedsIdx),
+      baths:     g(bathsIdx),
+    });
+  }
+
+  return listings;
+}
+
+// ─── Credential-Based Auto-Login ─────────────────────────────────────────────
+/**
+ * Handle PingOne SSO login when session cookies are expired.
+ * Page should already be on the PingOne login redirect.
+ */
+async function loginWithCredentials(page) {
+  if (!MLS_USER || !MLS_PASS) {
+    log('❌ Cannot auto-login: ONEKEYMLS_USERNAME or ONEKEYMLS_PASSWORD not set in Railway env vars.');
+    return false;
+  }
+
+  log(`🔐 Auto-logging in via PingOne SSO (${page.url()})...`);
+
+  try {
+    // ── Step 1: Fill username field
+    await page.waitForSelector(
+      '#username, input[name="pf.username"], input[autocomplete="username"], input[type="text"]',
+      { timeout: 15000 }
+    );
+
+    const usernameSelectors = [
+      '#username',
+      'input[name="pf.username"]',
+      'input[autocomplete="username"]',
+      'input[type="email"]',
+      'input[type="text"]:not([type="hidden"])',
+    ];
+    let filledUser = false;
+    for (const sel of usernameSelectors) {
+      try {
+        const el = await page.$(sel);
+        if (el && await el.isVisible()) {
+          await el.fill(MLS_USER);
+          filledUser = true;
+          log(`   Filled username into: ${sel}`);
+          break;
+        }
+      } catch(_) {}
+    }
+    if (!filledUser) throw new Error('Could not find username field');
+
+    await sleep(600);
+
+    // ── Step 2: Click Next/Continue (some SSO flows split username & password)
+    const submitSelectors = [
+      'button[type="submit"]',
+      'input[type="submit"]',
+      '#submit-button',
+      '.ping-button',
+      'button:has-text("Next")',
+      'button:has-text("Continue")',
+      'button:has-text("Sign in")',
+    ];
+    for (const sel of submitSelectors) {
+      try {
+        const el = await page.$(sel);
+        if (el && await el.isVisible()) {
+          await el.click();
+          log(`   Clicked submit: ${sel}`);
+          break;
+        }
+      } catch(_) {}
+    }
+
+    await sleep(1500);
+
+    // ── Step 3: Fill password (may now be visible after clicking Next)
+    await page.waitForSelector('input[type="password"]', { timeout: 12000 });
+    await page.fill('input[type="password"]', MLS_PASS);
+    log('   Filled password');
+
+    await sleep(600);
+
+    // ── Step 4: Submit login
+    for (const sel of submitSelectors) {
+      try {
+        const el = await page.$(sel);
+        if (el && await el.isVisible()) {
+          await el.click();
+          log(`   Submitted login: ${sel}`);
+          break;
+        }
+      } catch(_) {}
+    }
+
+    // ── Step 5: Wait for redirect back to Matrix (may take 10–30s through SAML)
+    log('⏳ Waiting for SAML redirect back to Matrix...');
+    await page.waitForURL('**/matrix-new.onekeymlsny.com/**', { timeout: 60000 });
+    await sleep(3000);
+
+    log('✅ Auto-login successful — session is live');
+    return true;
+
+  } catch(err) {
+    log(`❌ Auto-login failed: ${err.message}`);
+    try {
+      const screenshotPath = `/tmp/login-error-${Date.now()}.png`;
+      await page.screenshot({ path: screenshotPath, fullPage: true });
+      log(`📸 Login error screenshot: ${screenshotPath}`);
+    } catch(_) {}
+    return false;
+  }
+}
+
+// ─── Step 1: Pull expireds from OneKey MLS ───────────────────────────────────
+async function fetchExpiredsFromMLS() {
+  log('🚀 Launching Chromium (headless)...');
   const browser = await chromium.launch({
     headless: true,
-    args: ['--disable-blink-features=AutomationControlled', '--no-sandbox']
+    args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--no-zygote', '--single-process']
   });
 
-  // Inject saved cookies — bypasses PingOne SSO entirely
+  const authState = loadAuthState();
   const context = await browser.newContext({
-    storageState: authState,
+    ...(authState ? { storageState: authState } : {}),
     userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
   });
   const page = await context.newPage();
 
   try {
-    // ── 1a. Navigate to Matrix MyMatrix — session already active, no SSO redirect
+    // ── 1a. Navigate to Matrix
     log('🌐 Navigating to Matrix MyMatrix...');
     await page.goto('https://matrix-new.onekeymlsny.com/Matrix/MyMatrix', {
       waitUntil: 'networkidle',
@@ -113,16 +307,20 @@ async function fetchExpiredsFromMLS() {
     await sleep(2000);
     log(`📍 URL: ${page.url()}`);
 
-    // ── 1b. Detect expired session (got redirected to SSO)
+    // ── 1b. Handle expired session — auto-login with credentials
     if (!page.url().includes('matrix-new.onekeymlsny.com')) {
-      log('❌ Session expired — need to refresh auth state.');
-      log('   Run setup-auth.js → encode-auth.js → update MLS_AUTH_STATE in Railway.');
-      await browser.close();
-      return [];
+      log('🔑 Session cookies expired — attempting auto-login...');
+      const ok = await loginWithCredentials(page);
+      if (!ok) {
+        log('❌ Login failed. Check ONEKEYMLS_USERNAME / ONEKEYMLS_PASSWORD in Railway env vars.');
+        await browser.close();
+        return [];
+      }
     }
+
     log('✅ Reached Matrix (session valid)');
 
-    // ── 1c. Click "Expired" in Market Watch widget (already preset by user)
+    // ── 1c. Click "Expired" in Market Watch widget (preset by user)
     log('🔍 Clicking Expired in Market Watch...');
     const clickedId = await page.evaluate(() => {
       const links = Array.from(document.querySelectorAll('a'));
@@ -185,7 +383,6 @@ async function fetchExpiredsFromMLS() {
 
     await browser.close();
 
-    const fs = require('fs');
     const csv = fs.readFileSync(csvPath, 'utf8');
     const listings = parseMLSCSV(csv);
     log(`📋 Found ${listings.length} expired listings`);
@@ -196,7 +393,7 @@ async function fetchExpiredsFromMLS() {
     try {
       const screenshotPath = `/tmp/mls-error-${Date.now()}.png`;
       await page.screenshot({ path: screenshotPath, fullPage: true });
-      log(`📸 Screenshot saved to ${screenshotPath}`);
+      log(`📸 Error screenshot saved to ${screenshotPath}`);
     } catch(_) {}
     await browser.close();
     return [];
@@ -206,10 +403,8 @@ async function fetchExpiredsFromMLS() {
 // ─── Step 2: Filter out relisted / sold / pending ────────────────────────────
 async function filterActivesAndSold(listings) {
   log('🔎 Cross-checking against active/sold listings...');
-  // We check the PowerDial backend for any listing already in the queue
-  // and also re-check MLS status via address search
-  // For now: filter by checking if the MLS status field already excluded them in parseMLSCSV
-  // A more thorough check would hit the MLS API per address — added in v2
+  // Status filtering already done in parseMLSCSV.
+  // Future v2: re-verify each address via MLS API to catch same-day relistings.
   log(`✅ ${listings.length} listings passed status filter`);
   return listings;
 }
@@ -218,9 +413,9 @@ async function filterActivesAndSold(listings) {
 async function deduplicateAgainstQueue(listings) {
   log('🔄 Checking for duplicates in existing queue...');
   try {
-    const res = await fetch(`${BACKEND_URL}/api/expireds/status`);
-    // For now, we rely on address-level dedup in the backend
-    // Future: fetch existing contact addresses from backend and filter here
+    await fetch(`${BACKEND_URL}/api/expireds/status`);
+    // Backend handles address-level dedup on insert.
+    // Future: fetch existing MLS numbers from backend and pre-filter here.
   } catch(e) {}
   log(`✅ ${listings.length} listings after dedup check`);
   return listings;
@@ -281,8 +476,7 @@ async function skipTrace(listings) {
         status:    'pending'
       });
 
-      // Small delay to be respectful to the API
-      await sleep(200);
+      await sleep(200); // be respectful to the API
 
     } catch(err) {
       log(`⚠️  Skip trace error for ${listing.address}: ${err.message}`);
@@ -321,9 +515,12 @@ async function main() {
   log('🚀 Starting daily expireds automation...');
   log(`📅 Date: ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}`);
 
-  // Auth handled via MLS_AUTH_STATE env var (see loadAuthState)
-  if (!DATASKIP_KEY)           { log('❌ Missing DATASKIP_API_KEY');        process.exit(1); }
-  if (!BACKEND_URL)            { log('❌ Missing PUBLIC_URL');              process.exit(1); }
+  // Validate required env vars
+  if (!DATASKIP_KEY) { log('❌ Missing DATASKIP_API_KEY'); process.exit(1); }
+  if (!BACKEND_URL)  { log('❌ Missing PUBLIC_URL');       process.exit(1); }
+  if (!MLS_USER || !MLS_PASS) {
+    log('⚠️  ONEKEYMLS_USERNAME / ONEKEYMLS_PASSWORD not set — auto-login disabled, relying on MLS_AUTH_STATE');
+  }
 
   try {
     let listings = await fetchExpiredsFromMLS();
