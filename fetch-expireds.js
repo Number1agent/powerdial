@@ -91,10 +91,9 @@ async function fetchExpiredsFromMLS() {
   }
 
   log('🌐 Launching browser with saved session (bypassing SSO)...');
-  const browser = await chromium.launch({
-    headless: true,
-    args: ['--disable-blink-features=AutomationControlled', '--no-sandbox', '--disable-dev-shm-usage', '--no-zygote', '--disable-gpu']
-  });
+  const browser = await chromium.connectOverCDP(
+  `https://chrome.browserless.io?token=${process.env.BROWSERLESS_TOKEN}`
+);
 
   // Inject saved cookies — bypasses PingOne SSO entirely
   const context = await browser.newContext({
@@ -324,6 +323,7 @@ async function main() {
   // Auth handled via MLS_AUTH_STATE env var (see loadAuthState)
   if (!DATASKIP_KEY)           { log('❌ Missing DATASKIP_API_KEY');        process.exit(1); }
   if (!BACKEND_URL)            { log('❌ Missing PUBLIC_URL');              process.exit(1); }
+ if (!process.env.BROWSERLESS_TOKEN) { log('❌ Missing BROWSERLESS_TOKEN'); process.exit(1); }
 
   try {
     let listings = await fetchExpiredsFromMLS();
