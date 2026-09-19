@@ -222,6 +222,7 @@ async function loginWithCredentials(page) {
     await sleep(600);
 
     // ── Step 2: Click Next/Continue (some SSO flows split username & password)
+    // First try clicking a visible submit button; fall back to pressing Enter
     const submitSelectors = [
       'button[type="submit"]',
       'input[type="submit"]',
@@ -230,37 +231,58 @@ async function loginWithCredentials(page) {
       'button:has-text("Next")',
       'button:has-text("Continue")',
       'button:has-text("Sign in")',
+      'button:has-text("Sign On")',
+      'input[name="pf.ok"]',
     ];
+    let clickedNext = false;
     for (const sel of submitSelectors) {
       try {
         const el = await page.$(sel);
         if (el && await el.isVisible()) {
           await el.click();
           log(`   Clicked submit: ${sel}`);
+          clickedNext = true;
           break;
         }
       } catch(_) {}
     }
+    if (!clickedNext) {
+      log('   No submit button found — pressing Enter on username field');
+      await page.keyboard.press('Enter');
+    }
 
-    await sleep(1500);
+    await sleep(2000);
 
     // ── Step 3: Fill password (may now be visible after clicking Next)
-    await page.waitForSelector('input[type="password"]', { timeout: 12000 });
-    await page.fill('input[type="password"]', MLS_PASS);
-    log('   Filled password');
+    // Check if password field appeared (split form) or was already there (single form)
+    const pwVisible = await page.$('input[type="password"]');
+    if (pwVisible) {
+      await page.fill('input[type="password"]', MLS_PASS);
+      log('   Filled password');
+    } else {
+      await page.waitForSelector('input[type="password"]', { timeout: 12000 });
+      await page.fill('input[type="password"]', MLS_PASS);
+      log('   Filled password (after waiting)');
+    }
 
     await sleep(600);
 
-    // ── Step 4: Submit login
+    // ── Step 4: Submit login (click button or press Enter)
+    let submitted = false;
     for (const sel of submitSelectors) {
       try {
         const el = await page.$(sel);
         if (el && await el.isVisible()) {
           await el.click();
           log(`   Submitted login: ${sel}`);
+          submitted = true;
           break;
         }
       } catch(_) {}
+    }
+    if (!submitted) {
+      log('   No submit button found — pressing Enter on password field');
+      await page.keyboard.press('Enter');
     }
 
     // ── Step 5: Wait for redirect back to Matrix (may take 10–30s through SAML)
