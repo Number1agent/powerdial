@@ -6734,14 +6734,10 @@ async function loadExpiredsTab() {
     const cached = (() => { try { const d = JSON.parse(localStorage.getItem('expiredsCache') || '{}'); return d.date === today ? d.contacts : null; } catch(_) { return null; } })();
 
     let rawContacts;
-    if (cached && cached.length) {
-      rawContacts = cached;
-    } else {
-      const r = await fetch(backendUrl + '/api/expireds/pending');
-      const data = await r.json();
-      rawContacts = data.contacts || [];
-      try { localStorage.setItem('expiredsCache', JSON.stringify({ date: today, contacts: rawContacts })); } catch(_) {}
-    }
+    // Always read from server — /api/expireds/today is non-destructive (never clears queue)
+    const r = await fetch(backendUrl + '/api/expireds/today');
+    const data = await r.json();
+    rawContacts = data.contacts || [];
 
     expiredsContacts = rawContacts.map(c => ({
       id: 'exp_' + Math.random().toString(36).slice(2),

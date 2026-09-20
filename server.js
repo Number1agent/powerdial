@@ -500,6 +500,13 @@ app.post('/api/expireds/queue', (req, res) => {
   res.json({ success: true, queued: contacts.length, total: expiredQueue.length });
 });
 
+// GET /api/expireds/today
+// Returns queued contacts WITHOUT clearing — safe to call multiple times
+app.get('/api/expireds/today', (req, res) => {
+  console.log(`[Expireds] Peeked at queue: ${expiredQueue.length} contacts`);
+  res.json({ contacts: expiredQueue, count: expiredQueue.length });
+});
+
 // GET /api/expireds/pending
 // Called by PowerDial on startup — returns all queued contacts and clears the queue
 app.get('/api/expireds/pending', (req, res) => {
