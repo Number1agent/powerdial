@@ -294,9 +294,22 @@ async function loginWithCredentials(page) {
       await page.keyboard.press('Enter');
     }
 
-    // ── Step 5: Wait for redirect back to Matrix (may take 10–30s through SAML)
-    log('⏳ Waiting for SAML redirect back to Matrix...');
-    await page.waitForURL('**/matrix-new.onekeymlsny.com/**', { timeout: 60000 });
+    // ── Step 5: Handle MFA if prompted, then wait for Matrix
+    log('⏳ Waiting for MFA or SAML redirect...');
+    // Wait up to 10s to see if MFA page appears
+    const currentUrl = page.url();
+    try {
+      await page.waitForURL('**/mfa**', { timeout: 10000 });
+      log('🔐 MFA required — check your email for a verification code.');
+      log('   Enter it in the browser window. Waiting up to 3 minutes...');
+      // After MFA is entered, OneKey will redirect back to Matrix
+      await page.waitForURL('**/matrix-new.onekeymlsny.com/**', { timeout: 180000 });
+    } catch(_) {
+      // No MFA page — either already on Matrix or still on login page
+      if (!page.url().includes('matrix-new.onekeymlsny.com')) {
+        await page.waitForURL('**/matrix-new.onekeymlsny.com/**', { timeout: 60000 });
+      }
+    }
     await sleep(3000);
 
     log('✅ Auto-login successful — session is live');
@@ -328,9 +341,10 @@ async function loginWithCredentials(page) {
 async function fetchExpiredsFromMLS() {
   const headless = process.env.HEADLESS !== 'false';
   log(`🚀 Launching Chromium (${headless ? 'headless' : 'visible'})...`);
+  const isLinux = process.platform === 'linux';
   const browser = await chromium.launch({
     headless,
-    args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--no-zygote', '--single-process']
+    args: isLinux ? ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--no-zygote', '--single-process'] : []
   });
 
   const authState = loadAuthState();
