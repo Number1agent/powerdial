@@ -10,6 +10,8 @@ const express = require('express');
 const cors = require('cors');
 const twilio = require('twilio');
 require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 app.use(cors());
@@ -448,13 +450,37 @@ app.post('/api/expireds/test-run', async (req, res) => {
 
   // Push to queue so PowerDial picks them up
   expiredQueue = [...expiredQueue, ...contacts];
+  saveQueue(expiredQueue);
   console.log(`[Expireds] Test run complete: ${hits} hits, ${misses} misses. Queue: ${expiredQueue.length}`);
   res.json({ success: true, hits, misses, queued: contacts.length });
 });
 
-// ─── Expireds Queue ───────────────────────────────────────────────────────────
-// In-memory queue — survives between requests, cleared after PowerDial fetches
-let expiredQueue = [];
+// ─── Expireds Queue (Persistent) ─────────────────────────────────────────────
+// Persisted to disk so Railway restarts don't lose queued contacts
+const QUEUE_FILE = path.join(__dirname, 'expireds-queue.json');
+
+function loadQueue() {
+  try {
+    if (fs.existsSync(QUEUE_FILE)) {
+      const data = JSON.parse(fs.readFileSync(QUEUE_FILE, 'utf8'));
+      return Array.isArray(data) ? data : [];
+    }
+  } catch (e) {
+    console.error('[Expireds] Failed to load queue from disk:', e.message);
+  }
+  return [];
+}
+
+function saveQueue(queue) {
+  try {
+    fs.writeFileSync(QUEUE_FILE, JSON.stringify(queue), 'utf8');
+  } catch (e) {
+    console.error('[Expireds] Failed to save queue to disk:', e.message);
+  }
+}
+
+let expiredQueue = loadQueue();
+console.log(`[Expireds] Loaded ${expiredQueue.length} contacts from disk on startup`);
 
 // POST /api/expireds/queue
 // Called by the automation script each morning after skip tracing
@@ -469,6 +495,7 @@ app.post('/api/expireds/queue', (req, res) => {
     return res.status(400).json({ error: 'No contacts provided' });
   }
   expiredQueue = [...expiredQueue, ...contacts];
+  saveQueue(expiredQueue);
   console.log(`[Expireds] Queued ${contacts.length} contacts. Total pending: ${expiredQueue.length}`);
   res.json({ success: true, queued: contacts.length, total: expiredQueue.length });
 });
@@ -478,6 +505,7 @@ app.post('/api/expireds/queue', (req, res) => {
 app.get('/api/expireds/pending', (req, res) => {
   const contacts = [...expiredQueue];
   expiredQueue = [];
+  saveQueue(expiredQueue);
   console.log(`[Expireds] Delivered ${contacts.length} pending contacts to PowerDial`);
   res.json({ contacts, count: contacts.length });
 });
