@@ -294,22 +294,24 @@ async function loginWithCredentials(page) {
       await page.keyboard.press('Enter');
     }
 
-    // ── Step 5: Handle MFA if prompted, then wait for Matrix
-    log('⏳ Waiting for MFA or SAML redirect...');
-    // Wait up to 10s to see if MFA page appears
-    const currentUrl = page.url();
-    try {
-      await page.waitForURL('**/mfa**', { timeout: 10000 });
+    // ── Step 5: Wait for SSO redirect, handle MFA if present, then go to Matrix
+    log('⏳ Waiting for SSO redirect...');
+    await sleep(4000);
+
+    const postLoginUrl = page.url();
+    log(`   Post-login URL: ${postLoginUrl}`);
+
+    if (postLoginUrl.includes('mfa') || postLoginUrl.includes('authentication')) {
       log('🔐 MFA required — check your email for a verification code.');
       log('   Enter it in the browser window. Waiting up to 3 minutes...');
-      // After MFA is entered, OneKey will redirect back to Matrix
-      await page.waitForURL('**/matrix-new.onekeymlsny.com/**', { timeout: 180000 });
-    } catch(_) {
-      // No MFA page — either already on Matrix or still on login page
-      if (!page.url().includes('matrix-new.onekeymlsny.com')) {
-        await page.waitForURL('**/matrix-new.onekeymlsny.com/**', { timeout: 60000 });
-      }
+      await page.waitForNavigation({ waitUntil: 'networkidle', timeout: 180000 });
+      await sleep(2000);
+      log(`   Post-MFA URL: ${page.url()}`);
     }
+
+    // SSO may land anywhere (HGAR portal, etc) — always navigate directly to Matrix
+    log('🎯 Navigating to Matrix...');
+    await page.goto('https://matrix-new.onekeymlsny.com/Matrix/MyMatrix', { waitUntil: 'networkidle', timeout: 30000 });
     await sleep(3000);
 
     log('✅ Auto-login successful — session is live');
@@ -386,7 +388,12 @@ async function fetchExpiredsFromMLS() {
       }
     }
 
-    log('✅ Reached Matrix (session valid)');
+    log(`✅ Reached Matrix — URL: ${page.url()}`);
+    if (!page.url().includes('matrix-new.onekeymlsny.com')) {
+      log('❌ Still not on Matrix after login. Aborting.');
+      await browser.close();
+      return [];
+    }
 
     // ── 1c. Click "Expired" in Market Watch widget (preset by user)
     log('🔍 Clicking Expired in Market Watch...');

@@ -6729,9 +6729,21 @@ async function loadExpiredsTab() {
   if (!backendUrl) { toast('\u26a0\ufe0f Set backend URL in Settings first', 'red'); return; }
 
   try {
-    const r = await fetch(backendUrl + '/api/expireds/pending');
-    const data = await r.json();
-    expiredsContacts = (data.contacts || []).map(c => ({
+    // Use cached contacts if already loaded today — avoid consuming queue twice
+    const today = new Date().toDateString();
+    const cached = (() => { try { const d = JSON.parse(localStorage.getItem('expiredsCache') || '{}'); return d.date === today ? d.contacts : null; } catch(_) { return null; } })();
+
+    let rawContacts;
+    if (cached && cached.length) {
+      rawContacts = cached;
+    } else {
+      const r = await fetch(backendUrl + '/api/expireds/pending');
+      const data = await r.json();
+      rawContacts = data.contacts || [];
+      try { localStorage.setItem('expiredsCache', JSON.stringify({ date: today, contacts: rawContacts })); } catch(_) {}
+    }
+
+    expiredsContacts = rawContacts.map(c => ({
       id: 'exp_' + Math.random().toString(36).slice(2),
       name: c.name || 'Property Owner',
       phones: c.phones || [],
