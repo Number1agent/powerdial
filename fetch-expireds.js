@@ -300,6 +300,17 @@ async function loginWithCredentials(page) {
     await sleep(3000);
 
     log('✅ Auto-login successful — session is live');
+
+    // Save fresh cookies so next run (and Railway) can reuse them
+    try {
+      const state = await context.storageState();
+      fs.writeFileSync(path.join(__dirname, 'mls-auth.json'), JSON.stringify(state));
+      log(`💾 Auth state saved (${state.cookies.length} cookies) — copy to Railway MLS_AUTH_STATE`);
+      log('   Run: cat mls-auth.json | base64 | pbcopy');
+    } catch(e) {
+      log(`⚠️  Could not save auth state: ${e.message}`);
+    }
+
     return true;
 
   } catch(err) {
@@ -315,9 +326,10 @@ async function loginWithCredentials(page) {
 
 // ─── Step 1: Pull expireds from OneKey MLS ───────────────────────────────────
 async function fetchExpiredsFromMLS() {
-  log('🚀 Launching Chromium (headless)...');
+  const headless = process.env.HEADLESS !== 'false';
+  log(`🚀 Launching Chromium (${headless ? 'headless' : 'visible'})...`);
   const browser = await chromium.launch({
-    headless: true,
+    headless,
     args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--no-zygote', '--single-process']
   });
 
