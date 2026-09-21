@@ -574,7 +574,7 @@ app.get('/api/expireds/status', async (req, res) => {
 });
 
 // ─── Health Check ─────────────────────────────────────────────────────────────
-app.get('/health', (req, res) => {
+app.get('/health', async (req, res) => {
   res.json({
     status: 'ok',
     demoMode: false,
