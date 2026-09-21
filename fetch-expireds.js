@@ -231,12 +231,21 @@ async function loginWithCredentials(page, context) {
 
     await sleep(800);
 
-    // ── Step 2: Log the page HTML for debugging, then submit via JS (bypasses visibility issues)
-    const pageSource = await page.content();
-    const formInfo = pageSource.match(/<form[^>]*>[\s\S]*?<\/form>/i)?.[0]?.substring(0, 800) || 'no form found';
-    log(`   Form HTML preview: ${formInfo.replace(/\s+/g, ' ')}`);
+    // ── Step 2: Try to fill password immediately (before submitting)
+    // Some forms show both fields at once; others show password only after username submit
+    let passwordFilledEarly = false;
+    try {
+      const pwEarly = await page.$('input[type="password"]');
+      if (pwEarly && await pwEarly.isVisible()) {
+        await pwEarly.fill(MLS_PASS);
+        passwordFilledEarly = true;
+        log('   Filled password (same page as username)');
+      }
+    } catch(_) {}
 
-    // Use JS click — bypasses Playwright's isVisible() checks which can fail in headless mode
+    await sleep(500);
+
+    // ── Step 3: Submit the form
     const clickResult = await page.evaluate(() => {
       const selectors = [
         'input[name="pf.ok"]',
@@ -249,24 +258,29 @@ async function loginWithCredentials(page, context) {
         const el = document.querySelector(sel);
         if (el) { el.click(); return `js-clicked: ${sel}`; }
       }
-      // Last resort: submit the form directly
       const form = document.querySelector('form');
       if (form) { form.submit(); return 'js-form-submit'; }
       return 'no-submit-found';
     });
-    log(`   Submit attempt: ${clickResult}`);
+    log(`   Submit: ${clickResult}`);
 
     await sleep(2000);
 
-    // ── Step 3: Fill password (may now be visible after clicking Next on split forms)
-    const pwField = await page.$('input[type="password"]');
-    if (pwField) {
-      await pwField.fill(MLS_PASS);
-      log('   Filled password');
-    } else {
-      await page.waitForSelector('input[type="password"]', { timeout: 12000 });
-      await page.fill('input[type="password"]', MLS_PASS);
-      log('   Filled password (after waiting for split form)');
+    // ── Step 4: If password wasn't on the first page, fill it now (split form)
+    if (!passwordFilledEarly) {
+      try {
+        const pwField = await page.$('input[type="password"]');
+        if (pwField && await pwField.isVisible()) {
+          await pwField.fill(MLS_PASS);
+          log('   Filled password (split form — second step)');
+        } else {
+          await page.waitForSelector('input[type="password"]', { timeout: 8000 });
+          await page.fill('input[type="password"]', MLS_PASS);
+          log('   Filled password (waited for split form)');
+        }
+      } catch(e) {
+        log('   No password field found on second step — may already be past it');
+      }
     }
 
     await sleep(600);
