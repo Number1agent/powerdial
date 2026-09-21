@@ -296,27 +296,39 @@ async function loginWithCredentials(page, context) {
 
     await sleep(600);
 
-    // ── Step 4: Submit login via JS click, then Enter as final fallback
-    const submitResult = await page.evaluate(() => {
-      const selectors = [
-        'input[name="pf.ok"]',
-        'input[type="submit"]',
-        'button[type="submit"]',
-        '#submit-button',
-        '.ping-button',
-      ];
-      for (const sel of selectors) {
-        const el = document.querySelector(sel);
-        if (el) { el.click(); return `js-clicked: ${sel}`; }
+    // ── Step 4: Only submit again if password was on a split second page
+    // If passwordFilledEarly, the first submit already sent both fields — skip this
+    if (!passwordFilledEarly) {
+      let submitResult = 'skipped';
+      try {
+        submitResult = await page.evaluate(() => {
+          const selectors = [
+            'input[name="pf.ok"]',
+            'input[type="submit"]',
+            'button[type="submit"]',
+            '#submit-button',
+            '.ping-button',
+          ];
+          for (const sel of selectors) {
+            const el = document.querySelector(sel);
+            if (el) { el.click(); return `js-clicked: ${sel}`; }
+          }
+          const form = document.querySelector('form');
+          if (form) { form.submit(); return 'js-form-submit'; }
+          return 'no-submit-found';
+        });
+      } catch(e) {
+        if (e.message && e.message.includes('context was destroyed')) {
+          submitResult = 'submitted (page navigated)';
+        } else {
+          throw e;
+        }
       }
-      const form = document.querySelector('form');
-      if (form) { form.submit(); return 'js-form-submit'; }
-      return 'no-submit-found';
-    });
-    log(`   Submit result: ${submitResult}`);
-    if (submitResult === 'no-submit-found') {
-      log('   Pressing Enter as final fallback');
-      await page.keyboard.press('Enter');
+      log(`   Submit result: ${submitResult}`);
+      if (submitResult === 'no-submit-found') {
+        log('   Pressing Enter as final fallback');
+        try { await page.keyboard.press('Enter'); } catch(_) {}
+      }
     }
 
     // ── Step 5: Wait for SSO redirect, handle MFA if present, then go to Matrix
