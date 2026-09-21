@@ -12,7 +12,8 @@
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "playwright": "^1.63.0",
-    "twilio": "^5.3.3"
+    "twilio": "^5.3.3",
+    "pg": "*"
   },
   "devDependencies": {
     "nodemon": "^3.1.4"
