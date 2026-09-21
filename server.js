@@ -478,6 +478,8 @@ async function initDb() {
   }
 }
 initDb();
+console.log("[Expireds] DATABASE_URL set:", !!process.env.DATABASE_URL);
+console.log("[Expireds] pgPool ready:", !!pgPool);
 
 // In-memory fallback if no DB
 let memQueue = [];
@@ -551,7 +553,7 @@ app.get('/api/expireds/today', async (req, res) => {
 
 // GET /api/expireds/pending
 // Called by PowerDial on startup — returns all queued contacts and clears the queue
-app.get('/api/expireds/pending', (req, res) => {
+app.get('/api/expireds/pending', async (req, res) => {
   try {
     const contacts = await dbGetContacts();
     // Don't clear — use /api/expireds/today for non-destructive reads
@@ -571,6 +573,13 @@ app.get('/api/expireds/status', async (req, res) => {
   } catch(e) {
     res.json({ pending: 0 });
   }
+});
+
+// ─── Debug Endpoint ─────────────────────────────────────────────────────────
+app.get('/api/debug', async (req, res) => {
+  const dbOk = pgPool ? await pgPool.query('SELECT 1').then(()=>true).catch(()=>false) : false;
+  const count = pgPool ? await pgPool.query('SELECT COUNT(*) FROM expireds_queue').then(r=>parseInt(r.rows[0].count,10)).catch(()=>-1) : memQueue.length;
+  res.json({ databaseUrl: !!process.env.DATABASE_URL, pgPoolReady: !!pgPool, dbConnected: dbOk, queueCount: count, memQueueLen: memQueue.length });
 });
 
 // ─── Health Check ─────────────────────────────────────────────────────────────

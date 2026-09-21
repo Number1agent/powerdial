@@ -6734,10 +6734,24 @@ async function loadExpiredsTab() {
     const cached = (() => { try { const d = JSON.parse(localStorage.getItem('expiredsCache') || '{}'); return d.date === today ? d.contacts : null; } catch(_) { return null; } })();
 
     let rawContacts;
-    // Always read from server — /api/expireds/today is non-destructive (never clears queue)
-    const r = await fetch(backendUrl + '/api/expireds/today');
-    const data = await r.json();
-    rawContacts = data.contacts || [];
+    let sourceLabel = 'server';
+    // Fetch from server — /api/expireds/today is non-destructive (never clears queue)
+    try {
+      const r = await fetch(backendUrl + '/api/expireds/today');
+      const data = await r.json();
+      rawContacts = data.contacts || [];
+      // Save to localStorage as backup whenever server has data
+      if (rawContacts.length > 0) {
+        try { localStorage.setItem('expiredsCache', JSON.stringify({ date: today, contacts: rawContacts })); } catch(_) {}
+      }
+    } catch(fetchErr) {
+      rawContacts = [];
+    }
+    // If server returned nothing, fall back to localStorage backup
+    if (rawContacts.length === 0 && cached && cached.length > 0) {
+      rawContacts = cached;
+      sourceLabel = 'local backup';
+    }
 
     expiredsContacts = rawContacts.map(c => ({
       id: 'exp_' + Math.random().toString(36).slice(2),
@@ -6767,7 +6781,7 @@ async function loadExpiredsTab() {
       </div>
     `).join('') + '<div style="padding:10px;text-align:center"><button class="btn btn-primary" style="font-size:12px" onclick="loadAllExpiredsToQueue()">\ud83d\udce5 Load All to Queue</button></div>';
 
-    toast('\u2705 ' + expiredsContacts.length + ' expired contacts loaded', 'green');
+    toast('\u2705 ' + expiredsContacts.length + ' expired contacts loaded (' + sourceLabel + ')', 'green');
   } catch(e) {
     toast('\u274c Failed to fetch expireds: ' + e.message, 'red');
   }
