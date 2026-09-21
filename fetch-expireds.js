@@ -246,22 +246,33 @@ async function loginWithCredentials(page, context) {
     await sleep(500);
 
     // ── Step 3: Submit the form
-    const clickResult = await page.evaluate(() => {
-      const selectors = [
-        'input[name="pf.ok"]',
-        'input[type="submit"]',
-        'button[type="submit"]',
-        '#submit-button',
-        '.ping-button',
-      ];
-      for (const sel of selectors) {
-        const el = document.querySelector(sel);
-        if (el) { el.click(); return `js-clicked: ${sel}`; }
+    // Note: page.evaluate may throw "Execution context was destroyed" when form.submit()
+    // causes a navigation — that is expected and means the submit WORKED.
+    let clickResult = 'unknown';
+    try {
+      clickResult = await page.evaluate(() => {
+        const selectors = [
+          'input[name="pf.ok"]',
+          'input[type="submit"]',
+          'button[type="submit"]',
+          '#submit-button',
+          '.ping-button',
+        ];
+        for (const sel of selectors) {
+          const el = document.querySelector(sel);
+          if (el) { el.click(); return `js-clicked: ${sel}`; }
+        }
+        const form = document.querySelector('form');
+        if (form) { form.submit(); return 'js-form-submit'; }
+        return 'no-submit-found';
+      });
+    } catch(e) {
+      if (e.message && e.message.includes('context was destroyed')) {
+        clickResult = 'submitted (page navigated)';
+      } else {
+        throw e;
       }
-      const form = document.querySelector('form');
-      if (form) { form.submit(); return 'js-form-submit'; }
-      return 'no-submit-found';
-    });
+    }
     log(`   Submit: ${clickResult}`);
 
     await sleep(2000);
