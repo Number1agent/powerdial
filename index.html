@@ -240,6 +240,8 @@
   .line-card.noanswer { border-color: var(--border-light); }
   .line-card.voicemail { border-color: var(--orange); }
   .line-card.voicemail .line-status-bar { background: var(--orange-dim); }
+  .line-card.machine { border-color: #7c3aed; }
+  .line-card.machine .line-status-bar { background: rgba(124,58,237,0.15); }
   .line-card.busy { border-color: var(--red); }
   .line-card.busy .line-status-bar { background: var(--red-dim); }
 
@@ -406,23 +408,24 @@
 
   /* Property info panel */
   .prop-panel {
-    background: #f7f8fc;
-    border: 1px solid #dde0ee;
+    background: var(--bg-3);
+    border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 12px 14px;
+    padding: 10px 12px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 7px;
+    margin-top: 8px;
   }
   .prop-address-main {
-    font-size: 17px;
+    font-size: 14px;
     font-weight: 700;
-    color: #111122;
+    color: var(--text-primary);
     line-height: 1.3;
   }
   .prop-address-city {
-    font-size: 14px;
-    color: #444466;
+    font-size: 12px;
+    color: var(--text-secondary);
     margin-top: 1px;
   }
   .prop-links {
@@ -435,9 +438,9 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
-    padding: 4px 10px;
+    padding: 3px 9px;
     border-radius: 20px;
     text-decoration: none;
     border: 1px solid;
@@ -445,18 +448,19 @@
     white-space: nowrap;
   }
   .prop-link:hover { opacity: 0.75; }
-  .prop-link-zillow  { background: #006aff12; color: #006aff; border-color: #006aff35; }
-  .prop-link-maps    { background: #34a85312; color: #1a7a40; border-color: #34a85335; }
-  .prop-link-street  { background: #f9ab0012; color: #b07800; border-color: #f9ab0035; }
-  .prop-link-records { background: #7c3aed12; color: #6d28d9; border-color: #7c3aed35; }
+  .prop-link-zillow  { background: rgba(0,106,255,0.12); color: #60a5fa; border-color: rgba(96,165,250,0.3); }
+  .prop-link-maps    { background: rgba(52,168,83,0.12); color: var(--green); border-color: rgba(46,204,113,0.3); }
+  .prop-link-street  { background: rgba(251,191,36,0.12); color: var(--yellow); border-color: rgba(251,191,36,0.3); }
+  .prop-link-records { background: rgba(124,111,255,0.12); color: var(--accent); border-color: rgba(124,111,255,0.3); }
   .prop-meta-row {
     display: flex;
-    gap: 14px;
-    font-size: 12px;
-    color: #666688;
+    gap: 10px;
+    font-size: 11px;
+    color: var(--text-muted);
     flex-wrap: wrap;
+    align-items: center;
   }
-  .prop-meta-row strong { color: #222244; }
+  .prop-meta-row strong { color: var(--text-secondary); }
   /* Property data grid (Mojo-style 2-col) */
   .prop-data-grid {
     display: grid;
@@ -469,14 +473,14 @@
     align-items: baseline;
     gap: 4px;
     font-size: 12px;
-    color: #444466;
+    color: var(--text-secondary);
     line-height: 1.5;
   }
-  .prop-data-item .pdl { color: #888899; min-width: 62px; flex-shrink: 0; }
-  .prop-data-item .pdv { font-weight: 600; color: #111133; }
-  .prop-data-item.avm-item .pdl { color: #1a7a40; }
-  .prop-data-item.avm-item .pdv { color: #15803d; font-size: 14px; font-weight: 700; }
-  .prop-data-item.units-item .pdv { color: #7c3aed; font-weight: 700; }
+  .prop-data-item .pdl { color: var(--text-muted); min-width: 62px; flex-shrink: 0; }
+  .prop-data-item .pdv { font-weight: 600; color: var(--text-primary); }
+  .prop-data-item.avm-item .pdl { color: var(--green); }
+  .prop-data-item.avm-item .pdv { color: var(--green); font-size: 14px; font-weight: 700; }
+  .prop-data-item.units-item .pdv { color: var(--accent); font-weight: 700; }
   .active-timer-big {
     font-size: 28px;
     font-weight: 800;
@@ -983,6 +987,7 @@
     flex-direction: column;
     gap: 6px;
     border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
     background: var(--bg-1);
     flex-shrink: 0;
   }
@@ -1725,6 +1730,7 @@
   <div class="topbar-spacer"></div>
 
   <div class="session-controls">
+    <button class="btn btn-ghost btn-icon" onclick="showAddContactModal()" title="Add Contact">➕</button>
     <button class="btn btn-ghost btn-icon" onclick="showImportModal()" title="Import Contacts">📋</button>
     <button class="btn btn-ghost btn-icon" onclick="showSettingsModal()" title="Settings">⚙️</button>
     <button id="btnPause" class="btn btn-pause hidden" onclick="togglePause()">⏸ Pause</button>
@@ -1847,12 +1853,6 @@
         <div class="sidebar-section-label">GROUPS</div>
         <div id="sidebarGroups"></div>
         <div class="sidebar-new-list" onclick="promptNewGroup()">＋ New group</div>
-
-        <div class="sidebar-section-label">EXPIREDS</div>
-        <div class="mojo-all-btn" id="expiredsBtn" onclick="loadExpiredsTab()" style="margin:4px 8px;border-radius:8px;font-size:12px;padding:7px 10px">
-          <span>📋 Today's Expireds</span>
-          <span class="mojo-count" id="expiredsCount">…</span>
-        </div>
       </div>
 
       <!-- Queue area -->
@@ -1862,7 +1862,18 @@
             <span class="search-icon">🔍</span>
             <input type="text" id="queueSearch" placeholder="Search contacts..." oninput="renderQueue()" />
           </div>
-          <div id="bulkBar" style="display:none;padding:5px 8px;border-top:1px solid var(--border);background:var(--bg-3);display:none;align-items:center;gap:6px;flex-wrap:wrap">
+          <!-- Status tab filters -->
+          <div class="queue-filter-row">
+            <button class="queue-tab active" id="tab-all" onclick="setQueueTab('all')">All</button>
+            <button class="queue-tab" id="tab-pending" onclick="setQueueTab('pending')">Pending</button>
+            <button class="queue-tab" id="tab-called" onclick="setQueueTab('called')">Called</button>
+            <button class="queue-tab" id="tab-hot" onclick="setQueueTab('hot')">🔥 Hot</button>
+            <button class="queue-tab" id="tab-interested" onclick="setQueueTab('interested')">🌟 Warm</button>
+            <button class="queue-tab" id="tab-callback" onclick="setQueueTab('callback')">📅 CB</button>
+          </div>
+          <!-- City chips hidden from toolbar; city filtering done via sidebar "Organize by city" -->
+          <div id="cityFilterRow" style="display:none"></div>
+          <div id="bulkBar" style="display:none;padding:5px 8px;border-top:1px solid var(--border);background:var(--bg-3);align-items:center;gap:6px;flex-wrap:wrap">
             <span id="bulkCount" style="font-size:11px;color:var(--text-secondary);flex:1"></span>
             <button class="btn btn-ghost" style="font-size:11px;padding:3px 10px" onclick="bulkAssignToList()">📁 Move to List</button>
             <button class="btn btn-ghost" style="font-size:11px;padding:3px 10px" onclick="bulkAssignToGroup()">🏷️ Add to Group</button>
@@ -1876,7 +1887,9 @@
           </div>
         </div>
         <div class="import-bar">
+          <button class="btn btn-ghost" style="font-size:11px" onclick="showAddContactModal()">➕ Add</button>
           <button class="btn btn-ghost" style="font-size:11px" onclick="showImportModal()">📥 Import</button>
+          <button class="btn btn-ghost" style="font-size:11px" id="retryBtn" onclick="retryNoAnswers()" title="Reset no-answer contacts back to pending so they get redialed">🔁 Retry NAs</button>
           <button class="btn btn-ghost btn-icon" title="Clear queue" onclick="clearQueue()">🗑</button>
         </div>
       </div>
@@ -2039,6 +2052,11 @@
             style="flex:1;padding:7px 10px;background:#2a1a3a;border:1px solid #4a2a6a;border-radius:6px;color:#c084fc;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;transition:background 0.1s"
             onmouseover="this.style.background='#341a4a'" onmouseout="this.style.background='#2a1a3a'">
             📤 Push to Cloze
+          </button>
+          <button onclick="dncFromDisp()" title="Add all numbers to DNC list"
+            style="flex:1;padding:7px 10px;background:#2d1515;border:1px solid #5a2222;border-radius:6px;color:#fca5a5;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;transition:background 0.1s"
+            onmouseover="this.style.background='#3a1a1a'" onmouseout="this.style.background='#2d1515'">
+            🚫 Add to DNC
           </button>
         </div>
       </div>
@@ -2261,6 +2279,43 @@
   </div>
 </div>
 
+<!-- ===== ADD CONTACT MODAL ===== -->
+<div id="addContactModal" class="modal-overlay hidden">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-title">➕ Add Contact</div>
+    <div class="input-group">
+      <div class="input-label">Name <span style="color:var(--accent-red)">*</span></div>
+      <input class="input-field" id="acName" placeholder="John Smith" autocomplete="off">
+    </div>
+    <div class="input-group">
+      <div class="input-label">Phone <span style="color:var(--accent-red)">*</span></div>
+      <input class="input-field" id="acPhone" placeholder="(914) 555-0123" type="tel" autocomplete="off">
+    </div>
+    <div class="input-group">
+      <div class="input-label">Phone 2 <span style="color:var(--text-muted);font-weight:400">(optional)</span></div>
+      <input class="input-field" id="acPhone2" placeholder="(845) 555-0456" type="tel" autocomplete="off">
+    </div>
+    <div class="input-group">
+      <div class="input-label">Address / City</div>
+      <input class="input-field" id="acCity" placeholder="123 Main St, Bronx NY 10451" autocomplete="off">
+    </div>
+    <div class="input-group">
+      <div class="input-label">List <span style="color:var(--text-muted);font-weight:400">(optional)</span></div>
+      <select class="input-field" id="acList">
+        <option value="">— All Contacts —</option>
+      </select>
+    </div>
+    <div class="input-group">
+      <div class="input-label">Notes</div>
+      <textarea class="input-field" id="acNotes" rows="2" placeholder="Any notes about this contact…"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('addContactModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveNewContact()">Add Contact</button>
+    </div>
+  </div>
+</div>
+
 <div id="settingsModal" class="modal-overlay hidden">
   <div class="modal" style="max-width:580px;padding:0;overflow:hidden;display:flex;flex-direction:column;max-height:88vh">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;border-bottom:1px solid var(--border);flex-shrink:0">
@@ -2308,6 +2363,12 @@
         <label class="toggle-row">
           <span class="toggle-label"><strong>Record all calls</strong><span class="toggle-sub">Stores recordings on Twilio linked to each contact</span></span>
           <input type="checkbox" id="settingRecordCalls" class="toggle-checkbox">
+        </label>
+        <div style="height:1px;background:var(--border);margin:16px 0"></div>
+        <div class="stab-section-title">Answering Machine Detection (AMD)</div>
+        <label class="toggle-row">
+          <span class="toggle-label"><strong>Enable AMD</strong><span class="toggle-sub">Twilio auto-detects machines — skips them instantly so you only hear live answers</span></span>
+          <input type="checkbox" id="settingAmd" class="toggle-checkbox">
         </label>
         <div style="height:1px;background:var(--border);margin:16px 0"></div>
         <div class="stab-section-title">Voicemail Drop Library</div>
@@ -2383,6 +2444,18 @@
         <div class="stab-section-title">FUB CSV Export</div>
         <p style="font-size:11px;color:var(--text-muted);margin-bottom:8px">Download all call records as a Follow Up Boss–formatted CSV you can import directly.</p>
         <button class="btn btn-ghost" style="width:100%;font-size:12px" onclick="exportToFUBCsv()">📥 Download FUB CSV</button>
+        <div style="height:1px;background:var(--border);margin:16px 0"></div>
+        <div class="stab-section-title" style="display:flex;align-items:center;justify-content:space-between">
+          <span>🚫 Do Not Call List</span>
+          <span id="dncCountBadge" style="font-size:11px;color:var(--text-muted);font-weight:400">0 numbers</span>
+        </div>
+        <p style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Phone numbers on this list are blocked from dialing and automatically flagged on import.</p>
+        <textarea id="dncBulkInput" class="input-field" rows="3" placeholder="Paste numbers to add, one per line or comma-separated..." style="font-size:12px;font-family:monospace;resize:vertical;margin-bottom:8px"></textarea>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <button class="btn btn-primary" style="flex:1;font-size:12px" onclick="bulkAddDNC()">➕ Add Numbers</button>
+          <button class="btn btn-ghost" style="font-size:12px;color:var(--red)" onclick="clearAllDNC()">🗑 Clear All</button>
+        </div>
+        <div id="dncListEl" style="max-height:160px;overflow-y:auto"></div>
       </div>
 
     </div>
@@ -2514,6 +2587,7 @@ const state = {
     delay: 3,
     tzProtect: false,
     recordCalls: false,
+    amdEnabled: true,
     aiSummary: false,
     claudeApiKey: '',
     clozeApiKey: '',
@@ -2539,12 +2613,12 @@ const state = {
   lists: [],             // [{ id, name }] — named call lists
   groups: [],            // [{ id, name }] — user-created groups
   activeListId: null,    // null = show all lists
-  showingExpireds: false,  // true when Expireds tab is active
   sessionStartTime: null,
   sessionTimerInt: null,
   pendingCbContact: null, // contact waiting for callback date assignment
   goal: { type: 'contacts', target: 0, current: 0 },
   _dispContact: null,     // contact reference kept across disposition
+  dncNumbers: new Set(), // persistent phone number blocklist
 };
 
 // Global error handler — surfaces silent JS errors as visible toasts during dev
@@ -2692,6 +2766,11 @@ function switchSettingsTab(name) {
   if (name === 'plans') renderActionPlanList();
   if (name === 'rules') renderListRuleList();
   if (name === 'recording') renderVmLibraryList();
+  if (name === 'integrations') {
+    renderDNCList();
+    const badge = document.getElementById('dncCountBadge');
+    if (badge) badge.textContent = `${state.dncNumbers.size} number${state.dncNumbers.size !== 1 ? 's' : ''}`;
+  }
 }
 
 function showSettingsModal() {
@@ -2702,6 +2781,7 @@ function showSettingsModal() {
   document.getElementById('settingDelay').value = state.settings.delay;
   document.getElementById('settingTzProtect').checked = !!state.settings.tzProtect;
   document.getElementById('settingRecordCalls').checked = !!state.settings.recordCalls;
+  document.getElementById('settingAmd').checked = state.settings.amdEnabled !== false;
   renderVmLibraryList();
   document.getElementById('settingAiSummary').checked = !!state.settings.aiSummary;
   document.getElementById('settingClaudeApiKey').value = state.settings.claudeApiKey || '';
@@ -2720,6 +2800,7 @@ function saveSettings() {
   state.settings.delay = parseInt(document.getElementById('settingDelay').value) || 3;
   state.settings.tzProtect = document.getElementById('settingTzProtect').checked;
   state.settings.recordCalls = document.getElementById('settingRecordCalls').checked;
+  state.settings.amdEnabled  = document.getElementById('settingAmd').checked;
   saveVmLibraryFromUI();
   state.settings.aiSummary = document.getElementById('settingAiSummary').checked;
   state.settings.claudeApiKey = document.getElementById('settingClaudeApiKey').value.trim();
@@ -3427,6 +3508,34 @@ function parseCSVRow(row) {
   return result;
 }
 
+// Parse entire CSV respecting quoted fields that contain embedded newlines.
+// Returns array of field arrays (one per logical row), skipping the header row.
+function parseCSVRows(raw) {
+  const rows = [];
+  let cur = '', inQuote = false, fields = [];
+  // Normalize line endings
+  const text = raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '"') {
+      if (inQuote && text[i + 1] === '"') { cur += '"'; i++; } // escaped quote
+      else inQuote = !inQuote;
+    } else if (ch === ',' && !inQuote) {
+      fields.push(cur.trim()); cur = '';
+    } else if (ch === '\n' && !inQuote) {
+      fields.push(cur.trim()); cur = '';
+      if (fields.some(f => f)) rows.push(fields); // skip blank rows
+      fields = [];
+    } else {
+      cur += ch;
+    }
+  }
+  // Flush last field/row
+  fields.push(cur.trim());
+  if (fields.some(f => f)) rows.push(fields);
+  return rows; // includes header row at index 0
+}
+
 function cleanPhone(p) {
   if (!p) return '';
   const digits = p.replace(/\D/g, '');
@@ -3440,9 +3549,10 @@ function isMojoCSV(headers) {
 }
 
 function parseMojoCSV(raw) {
-  const lines = raw.split('\n').filter(l => l.trim());
-  if (lines.length < 2) return [];
-  const headers = parseCSVRow(lines[0]);
+  const allRows = parseCSVRows(raw); // handles quoted newlines correctly
+  if (allRows.length < 2) return [];
+  const headers = allRows[0];
+  const lines = allRows; // reuse variable name below
 
   // Find name column
   const nameIdx  = headers.findIndex(h => /^(full name|first or full name|name)$/i.test(h.trim()));
@@ -3479,7 +3589,7 @@ function parseMojoCSV(raw) {
 
   const contacts = [];
   for (let i = 1; i < lines.length; i++) {
-    const parts = parseCSVRow(lines[i]);
+    const parts = lines[i]; // already parsed rows from parseCSVRows
     const getName = () => {
       if (nameIdx >= 0 && parts[nameIdx]?.trim()) return parts[nameIdx].trim();
       const first = firstIdx >= 0 ? parts[firstIdx]?.trim() : '';
@@ -3595,8 +3705,20 @@ const CSV_FIELD_OPTIONS = [
   { value: 'state',     label: 'State' },
   { value: 'zip',       label: 'Zip' },
   { value: 'email',     label: 'Email' },
-  { value: 'notes',     label: 'Notes' },
-  { value: 'type',      label: 'Lead Type' },
+  { value: 'notes',        label: 'Notes' },
+  { value: 'type',         label: 'Lead Type' },
+  // Property data
+  { value: 'avm',          label: 'AVM / Est. Value' },
+  { value: 'taxValue',     label: 'Tax Value' },
+  { value: 'propertyType', label: 'Property Type' },
+  { value: 'beds',         label: 'Beds' },
+  { value: 'baths',        label: 'Baths' },
+  { value: 'sqft',         label: 'Sq Ft' },
+  { value: 'acres',        label: 'Acres' },
+  { value: 'units',        label: 'Units' },
+  { value: 'yearBuilt',    label: 'Year Built' },
+  { value: 'occupancy',    label: 'Occupancy' },
+  { value: 'owner',        label: 'Owner Name' },
 ];
 
 function autoDetectMapping(header) {
@@ -3625,20 +3747,33 @@ function autoDetectMapping(header) {
   if (/^(notes?|comment|description|remarks?)$/.test(h)) return 'notes';
   // Lead type
   if (/^(type|lead type|contact type|prospect type)$/.test(h)) return 'type';
-  // Mojo-specific columns we always skip
-  if (/^(avm|avm value|estimated value|tax value|assessed value|occupancy|sq ?ft|acres|lot size|units|property type|beds|baths|year built|owner|do not call|dnc|record type)$/i.test(h)) return 'skip';
+  // Property data columns — now mappable
+  if (/^(avm|avm value|estimated value|est\.? value|estimated home value)$/i.test(h)) return 'avm';
+  if (/^(tax value|assessed value|tax assessed value)$/i.test(h)) return 'taxValue';
+  if (/^(property type|prop type|type of property)$/i.test(h)) return 'propertyType';
+  if (/^(beds?|bedrooms?|bed count|# beds?)$/i.test(h)) return 'beds';
+  if (/^(baths?|bathrooms?|bath count|# baths?)$/i.test(h)) return 'baths';
+  if (/^(sq ?ft|square feet|square footage|sqft|living area|floor area)$/i.test(h)) return 'sqft';
+  if (/^(acres?|lot size|lot acres?)$/i.test(h)) return 'acres';
+  if (/^(units?|unit count|number of units|# units?)$/i.test(h)) return 'units';
+  if (/^(year built|yr built|built)$/i.test(h)) return 'yearBuilt';
+  if (/^(occupancy|occupancy status|owner occupied|renter)$/i.test(h)) return 'occupancy';
+  if (/^(owner|owner name|record owner)$/i.test(h)) return 'owner';
+  // Skip columns
+  if (/^(do not call|dnc|record type|phone\s*\d+\s*label)$/i.test(h)) return 'skip';
   return 'skip';
 }
 
 function showColumnMapper(raw) {
   state._csvRaw = raw;
-  const lines = raw.split('\n').filter(l => l.trim());
-  if (lines.length < 2) { toast('⚠️ CSV needs at least a header row and one data row', 'yellow'); return; }
+  // Use full quoted-newline-aware parser so row count is accurate
+  const allRows = parseCSVRows(raw);
+  if (allRows.length < 2) { toast('⚠️ CSV needs at least a header row and one data row', 'yellow'); return; }
 
-  const headers = parseCSVRow(lines[0]);
+  const headers = allRows[0];
   state._csvHeaders = headers;
-  const previewRows = lines.slice(1, 6).map(l => parseCSVRow(l));
-  const dataCount = lines.length - 1;
+  const previewRows = allRows.slice(1, 6);
+  const dataCount = allRows.length - 1;
 
   // Build table HTML
   const selectHtml = (colIdx) => {
@@ -3679,7 +3814,18 @@ function importFromMapping() {
   const raw = state._csvRaw;
   const headers = state._csvHeaders;
   if (!raw || !headers.length) { toast('⚠️ No CSV data to import', 'yellow'); return; }
-
+  // Show processing indicator for large files
+  const importBtn = document.getElementById('colMapImportBtn');
+  if (importBtn) { importBtn.disabled = true; importBtn.textContent = '⏳ Importing…'; }
+  // Yield to UI thread so the button state renders before we block on CSV parsing
+  setTimeout(() => _doImportFromMapping(raw, headers, importBtn), 50);
+}
+function _doImportFromMapping(raw, headers, importBtn) {
+  try { _runImportFromMapping(raw, headers); }
+  catch(e) { console.error('[PowerDial] import error:', e); toast(`❌ Import error: ${e.message||e}`, 'red'); }
+  finally { if (importBtn) { importBtn.disabled = false; importBtn.textContent = 'Import Contacts'; } }
+}
+function _runImportFromMapping(raw, headers) {
   // Build column mapping: collect ALL assigned columns per field type
   // phoneIdxs = ordered list of column indices mapped to 'phone'
   // singular fields: first assigned column wins
@@ -3707,10 +3853,11 @@ function importFromMapping() {
     return orderIdx === 0 ? 'Phone' : `Phone ${orderIdx + 1}`;
   }
 
-  const lines = raw.split('\n').filter(l => l.trim()).slice(1);
+  const allRows = parseCSVRows(raw); // handles quoted newlines correctly
+  const dataRows = allRows.slice(1);  // skip header row
   const contacts = [];
-  for (const line of lines) {
-    const parts = parseCSVRow(line);
+  let skippedNoPhone = 0;
+  for (const parts of dataRows) {
     const get = (key) => (singular[key] !== undefined ? (parts[singular[key]] || '').trim() : '');
 
     // Name: full name > first+last > address fallback
@@ -3728,11 +3875,16 @@ function importFromMapping() {
       const phone = cleanPhone(raw);
       if (phone) phones.push({ phone, label: phoneLabel(colIdx, orderIdx), status: 'pending' });
     });
-    if (!phones.length) continue;
+    if (!phones.length) { skippedNoPhone++; continue; }
 
     const city = get('city'), st = get('state'), zip = get('zip'), addr = get('address');
     const cityStateParts = [city, st ? (zip ? `${st} ${zip}` : st) : zip].filter(Boolean);
     const fullAddr = [addr, cityStateParts.join(', ')].filter(Boolean).join(', ');
+
+    const propFields = {};
+    ['avm','taxValue','propertyType','beds','baths','sqft','acres','units','yearBuilt','occupancy','owner'].forEach(f => {
+      const v = get(f); if (v) propFields[f] = v;
+    });
 
     contacts.push({
       name,
@@ -3741,11 +3893,15 @@ function importFromMapping() {
       city, state: st, zip, address: addr,
       email: get('email'),
       type: get('type'),
-      status: 'pending'
+      status: 'pending',
+      ...propFields
     });
   }
 
-  if (!contacts.length) { toast('⚠️ No contacts with phone numbers found', 'yellow'); return; }
+  if (!contacts.length) {
+    toast(`⚠️ No contacts with phone numbers found (${skippedNoPhone} rows had no valid phone)`, 'yellow');
+    return;
+  }
 
   // List assignment
   const listNameInput = (document.getElementById('importListName2')?.value || '').trim();
@@ -3755,7 +3911,12 @@ function importFromMapping() {
     if (!existing) existing = createList(listNameInput);
     listId = existing.id;
   }
-  const tagged = contacts.map(c => ({ ...c, listId }));
+  // Auto-flag contacts whose phones are on the DNC list
+  const tagged = contacts.map(c => {
+    const onDNC = (c.phones||[]).some(p => isOnDNC(p.number||p.raw));
+    return { ...c, listId, ...(onDNC ? { isDNC: true } : {}) };
+  });
+  const dncFlagged = tagged.filter(c => c.isDNC).length;
 
   if (state.session) stopSession();
   if (listId) {
@@ -3772,7 +3933,9 @@ function importFromMapping() {
   saveContacts();
   if (listId) setActiveList(listId); else renderQueue();
   const totalPhones = tagged.reduce((s, c) => s + (c.phones?.length || 1), 0);
-  toast(`✅ ${tagged.length} contacts · ${totalPhones} phone numbers${listNameInput ? ` → "${listNameInput}"` : ''}`, 'green');
+  const dncMsg = dncFlagged ? ` · 🚫 ${dncFlagged} DNC` : '';
+  const skipMsg = skippedNoPhone ? ` · ⚠️ ${skippedNoPhone} skipped (no phone)` : '';
+  toast(`✅ ${tagged.length} contacts · ${totalPhones} phone numbers${listNameInput ? ` → "${listNameInput}"` : ''}${dncMsg}${skipMsg}`, 'green', 6000);
 }
 
 function importContacts() {
@@ -3840,7 +4003,14 @@ function _importContactsInner() {
     if (!existing) existing = createList(listNameInput);
     listId = existing.id;
   }
-  contacts = contacts.map(c => ({ ...c, listId }));
+  // Auto-flag contacts whose phones are on the DNC list
+  const dncFlaggedInner = contacts.filter(c =>
+    (c.phones||[]).some(p => isOnDNC(p.number||p.raw))
+  ).length;
+  contacts = contacts.map(c => {
+    const onDNC = (c.phones||[]).some(p => isOnDNC(p.number||p.raw));
+    return { ...c, listId, ...(onDNC ? { isDNC: true } : {}) };
+  });
 
   // Append to existing contacts (or replace if same list)
   if (listId) {
@@ -3874,7 +4044,89 @@ function _importContactsInner() {
 
   const totalPhones = contacts.reduce((sum, c) => sum + (c.phones?.length || 1), 0);
   const listMsg = listNameInput ? ` → "${listNameInput}"` : '';
-  toast(`✅ ${contacts.length} contacts · ${totalPhones} phone numbers${listMsg}`, 'green');
+  const dncMsgInner = dncFlaggedInner ? ` · 🚫 ${dncFlaggedInner} DNC` : '';
+  toast(`✅ ${contacts.length} contacts · ${totalPhones} phone numbers${listMsg}${dncMsgInner}`, 'green');
+}
+
+// ===== ADD CONTACT =====
+function showAddContactModal() {
+  // Populate list dropdown with current lists
+  const sel = document.getElementById('acList');
+  sel.innerHTML = '<option value="">— All Contacts —</option>';
+  state.lists.forEach(l => {
+    const opt = document.createElement('option');
+    opt.value = l.id;
+    opt.textContent = l.name;
+    if (state.activeListId && l.id === state.activeListId) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  // Clear fields
+  ['acName','acPhone','acPhone2','acCity','acNotes'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('addContactModal').classList.remove('hidden');
+  setTimeout(() => document.getElementById('acName').focus(), 80);
+}
+
+function saveNewContact() {
+  const name  = (document.getElementById('acName').value  || '').trim();
+  const phone = (document.getElementById('acPhone').value || '').trim();
+  if (!name)  { toast('⚠️ Name is required', 'yellow'); return; }
+  if (!phone) { toast('⚠️ Phone is required', 'yellow'); return; }
+
+  const phones = [{ phone, label: 'Phone', status: 'pending' }];
+  const phone2 = (document.getElementById('acPhone2').value || '').trim();
+  if (phone2) phones.push({ phone: phone2, label: 'Phone 2', status: 'pending' });
+
+  const city  = (document.getElementById('acCity').value  || '').trim();
+  const notes = (document.getElementById('acNotes').value || '').trim();
+  const listId = document.getElementById('acList').value || null;
+
+  const contact = {
+    name,
+    phones,
+    notes: city || notes,
+    city: city ? city.split(',')[0].trim() : '',
+    status: 'pending',
+    listId: listId || undefined
+  };
+  if (city && notes) contact.notes = city + (notes ? '\n' + notes : '');
+
+  // DNC check
+  if ((contact.phones||[]).some(p => isOnDNC(p.phone))) {
+    contact.isDNC = true;
+    toast('⚠️ Phone is on DNC list — contact marked DNC', 'yellow');
+  }
+
+  state.contacts.push(contact);
+  state.queue = [...state.contacts];
+  saveContacts();
+  closeModal('addContactModal');
+
+  if (listId) setActiveList(listId);
+  else renderQueue();
+
+  toast(`✅ ${name} added to queue`, 'green');
+}
+
+// Reset no-answer contacts back to pending for a redial pass
+function retryNoAnswers() {
+  const scope = state.activeListId !== null
+    ? state.contacts.filter(c => c.listId === state.activeListId)
+    : state.contacts;
+  const naContacts = scope.filter(c => c.status === 'noanswer' && !c.isDNC);
+  if (!naContacts.length) { toast('No no-answer contacts to retry', 'gray'); return; }
+  naContacts.forEach(c => {
+    c.status = 'pending';
+    c.disposition = null;
+    // Also reset phone statuses
+    (c.phones||[]).forEach(p => { if (p.status === 'noanswer') p.status = 'pending'; });
+  });
+  state.currentIdx = 0;
+  saveContacts();
+  renderQueue();
+  updateProgress();
+  toast(`🔁 ${naContacts.length} no-answers reset to pending`, 'accent');
 }
 
 function clearQueue() {
@@ -3997,7 +4249,6 @@ function renderSidebar() {
 }
 
 function setActiveGroup(id) {
-  state.showingExpireds = false;
   state.activeGroup = state.activeGroup === id ? null : id;
   if (state.activeGroup !== null) state.activeListId = null;
   renderSidebar();
@@ -4047,29 +4298,9 @@ function getContactCity(c) {
 }
 
 function renderCityChips() {
-  const row = document.getElementById('cityFilterRow');
-  if (!row) return;
-
-  // Collect unique cities using the normalizer
-  const cities = {};
-  state.contacts.forEach(c => {
-    if (state.activeListId !== null && c.listId !== state.activeListId) return;
-    const city = getContactCity(c);
-    if (!city) return;
-    const key = city.toLowerCase();
-    if (!cities[key]) cities[key] = { label: city, count: 0 };
-    cities[key].count++;
-  });
-
-  const keys = Object.keys(cities).sort();
-  if (!keys.length) { row.style.display = 'none'; return; }
-
-  row.style.display = 'flex';
-  row.innerHTML = `<span class="city-filter-label">📍</span>` +
-    keys.map(k => {
-      const active = state.activeCity === k;
-      return `<button class="city-chip${active ? ' active' : ''}" onclick="setCityFilter('${k}')">${cities[k].label} <span style="opacity:0.65">${cities[k].count}</span></button>`;
-    }).join('');
+  // City chips are no longer shown in the toolbar (too many cities with large lists).
+  // City-level filtering is done via sidebar "Organize by city" → lists.
+  // This function is kept as a no-op so callers don't break.
 }
 
 function setCityFilter(key) {
@@ -4088,6 +4319,9 @@ function getBulkContacts() {
     if (state.activeCity && getContactCity(c).toLowerCase() !== state.activeCity) return false;
     if (state.queueTab === 'pending' && c.status !== 'pending') return false;
     if (state.queueTab === 'called'  && c.status === 'pending') return false;
+    if (state.queueTab === 'hot' && !(c.temperature === 'hot' || c.disposition === 'Hot Lead' || c.disposition === 'Appointment')) return false;
+    if (state.queueTab === 'interested' && !(c.temperature === 'warm' || c.disposition === 'Interested')) return false;
+    if (state.queueTab === 'callback' && c.status !== 'callback') return false;
     if (q && ![c.name,...(c.phones||[]).map(p=>p.phone),c.city,c.state,c.zip,c.notes,c.address,c.type,c.disposition,c.callNotes]
       .some(v => (v||'').toLowerCase().includes(q))) return false;
     return true;
@@ -4174,6 +4408,7 @@ function setQueueTab(tab) {
   const btn = document.getElementById('tab-' + tab);
   if (btn) btn.classList.add('active');
   renderQueue();
+  updateProgress();
 }
 
 function cycleSort() {
@@ -4187,7 +4422,6 @@ function cycleSort() {
 }
 
 function renderQueue() {
-  if (state.showingExpireds) return;  // Expireds tab is active — don't overwrite
   const el = document.getElementById('queueList');
   const badge = document.getElementById('queueBadge');
   const pending = state.contacts.filter(c => c.status === 'pending').length;
@@ -4223,6 +4457,9 @@ function renderQueue() {
     if (state.activeCity && getContactCity(c).toLowerCase() !== state.activeCity) return false;
     if (state.queueTab === 'pending') return c.status === 'pending';
     if (state.queueTab === 'called')  return c.status !== 'pending';
+    if (state.queueTab === 'hot')      return c.temperature === 'hot' || c.disposition === 'Hot Lead' || c.disposition === 'Appointment';
+    if (state.queueTab === 'interested') return c.temperature === 'warm' || c.disposition === 'Interested';
+    if (state.queueTab === 'callback') return c.status === 'callback';
     return true; // 'all'
   });
 
@@ -4287,6 +4524,12 @@ function contactItem(c, i) {
   const zillowHref = addr ? `https://www.zillow.com/homes/${encodeURIComponent(addr)}_rb/` : '';
   const tempClass = c.temperature ? `temp-${c.temperature}` : 'temp-none';
 
+  // Expired date chip (shown on contacts in the Expireds list)
+  const expList = state.lists.find(l => l.isExpireds);
+  const expChip = (c.expiredDate && expList && c.listId === expList.id)
+    ? `<span style="font-size:9px;background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:4px;padding:1px 5px;white-space:nowrap">🗓 Exp ${c.expiredDate}</span>`
+    : '';
+
   // Callback date chip
   let cbChip = '';
   if (c.callbackDate && c.status === 'callback') {
@@ -4317,7 +4560,7 @@ function contactItem(c, i) {
         return formatPhone(first.phone) + label + extra;
       })()}</div>
       ${addr ? `<div class="contact-address">${addr}${zillowHref ? ` <a href="${zillowHref}" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="zillow-btn" style="margin-left:5px;font-size:9px;padding:1px 5px">🏠</a>` : ''}</div>` : ''}
-      ${cbChip ? `<div style="margin-top:3px">${cbChip}</div>` : ''}
+      ${expChip || cbChip ? `<div style="margin-top:3px;display:flex;gap:4px;flex-wrap:wrap">${expChip}${cbChip}</div>` : ''}
       ${c.callNotes ? `<div class="contact-address" style="color:var(--yellow);opacity:0.8">📝 ${c.callNotes}</div>` : ''}
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
@@ -4362,6 +4605,64 @@ function createList(name) {
   return list;
 }
 
+// ===== EXPIREDS LIST =====
+const EXPIREDS_LIST_NAME = '📋 Expireds';
+
+function initExpiredsList() {
+  let list = state.lists.find(l => l.isExpireds);
+  if (!list) list = state.lists.find(l => l.name === EXPIREDS_LIST_NAME);
+  if (!list) {
+    const id = 'list_expireds';
+    list = { id, name: EXPIREDS_LIST_NAME, isExpireds: true };
+    state.lists.unshift(list); // pin to front
+    saveListsDB();
+    renderListTabs();
+  } else if (!list.isExpireds) {
+    list.isExpireds = true;
+    saveListsDB();
+  }
+  return list;
+}
+
+async function checkPendingExpireds() {
+  if (!state.settings.backendUrl) return;
+  try {
+    const res = await fetch(`${state.settings.backendUrl}/api/expireds/pending`);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data.contacts || !data.contacts.length) return;
+
+    const expList = initExpiredsList();
+    const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+    const newContacts = data.contacts.map(c => ({
+      ...c,
+      listId: expList.id,
+      status: 'pending',
+      expiredDate: today,
+      // Notes: combine address info if provided
+      notes: [c.address, c.city, c.county ? c.county + ' County' : '', c.listPrice ? `List: $${Number(c.listPrice).toLocaleString()}` : '', c.beds ? `${c.beds}bd/${c.baths}ba` : ''].filter(Boolean).join(' · ')
+    }));
+
+    // TRUE APPEND — never remove existing expireds contacts
+    state.contacts = [...state.contacts, ...newContacts];
+    state.queue = [...state.contacts];
+    saveContacts();
+
+    if (state.activeListId === expList.id || !state.activeListId) {
+      setActiveList(expList.id);
+    } else {
+      renderQueue();
+    }
+
+    setTimeout(() => {
+      toast(`📋 ${newContacts.length} new expireds loaded for ${today}`, 'green');
+    }, 800);
+  } catch(e) {
+    console.error('[PowerDial] Failed to check pending expireds:', e);
+  }
+}
+
 function deleteList(id, e) {
   if (e) e.stopPropagation();
   state.lists = state.lists.filter(l => l.id !== id);
@@ -4375,7 +4676,6 @@ function deleteList(id, e) {
 }
 
 function setActiveList(id) {
-  state.showingExpireds = false;
   state.activeListId = id;
   state.activeGroup = null;
   state.activeCity = null;
@@ -4983,19 +5283,41 @@ async function loadListsDB() {
 }
 
 async function saveContacts() {
+  const CHUNK = 5000; // write in chunks to avoid transaction size limits
   try {
     const db = await openDB();
-    const tx = db.transaction(STORE, 'readwrite');
-    const store = tx.objectStore(STORE);
-    store.clear();
-    state.contacts.forEach((c, i) => store.put({ ...c, _idx: i }));
-    await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
+
+    // 1. Clear existing records
+    const clearTx = db.transaction(STORE, 'readwrite');
+    clearTx.objectStore(STORE).clear();
+    await new Promise((res, rej) => { clearTx.oncomplete = res; clearTx.onerror = rej; });
+
+    // 2. Write in chunks so no single transaction explodes
+    const contacts = state.contacts;
+    for (let start = 0; start < contacts.length; start += CHUNK) {
+      const chunk = contacts.slice(start, start + CHUNK);
+      const tx = db.transaction(STORE, 'readwrite');
+      const store = tx.objectStore(STORE);
+      chunk.forEach((c, j) => store.put({ ...c, _idx: start + j }));
+      await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
+    }
+
     db.close();
-    // Always keep localStorage in sync so the fallback reflects cleared state too
-    try { localStorage.setItem('powerdial_contacts', JSON.stringify(state.contacts)); } catch(_) {}
+    // For small datasets only, keep localStorage in sync as a quick-load cache
+    if (contacts.length <= 2000) {
+      try { localStorage.setItem('powerdial_contacts', JSON.stringify(contacts)); } catch(_) {}
+    } else {
+      // Clear stale localStorage so we never load a truncated version after a reload
+      try { localStorage.removeItem('powerdial_contacts'); } catch(_) {}
+    }
   } catch(e) {
-    // IndexedDB failed — fall back to localStorage only
-    try { localStorage.setItem('powerdial_contacts', JSON.stringify(state.contacts)); } catch(_) {}
+    console.error('[PowerDial] saveContacts IDB error:', e);
+    // IndexedDB failed — only use localStorage for small datasets
+    if (state.contacts.length <= 2000) {
+      try { localStorage.setItem('powerdial_contacts', JSON.stringify(state.contacts)); } catch(_) {}
+    } else {
+      toast('⚠️ Could not save contacts — IndexedDB unavailable. Data may be lost on reload.', 'red', 8000);
+    }
   }
 }
 
@@ -5428,12 +5750,15 @@ function dialContact(line, contact, phoneEntry) {
 // ============================================================
 function simulateDemoSession(pairs) {
   // Simulate each line with random outcomes
-  const outcomes = ['connected', 'noanswer', 'voicemail', 'noanswer', 'connected', 'busy'];
+  // When AMD is on, voicemail outcomes become machine detections instead
+  const baseOutcomes = ['connected', 'noanswer', 'voicemail', 'noanswer', 'connected', 'busy'];
   const delays = [2000 + Math.random()*3000, 3000 + Math.random()*4000, 2500 + Math.random()*3500];
 
   pairs.forEach(({ contact }, i) => {
     const line = state.lines[i];
-    const outcome = outcomes[Math.floor(Math.random() * outcomes.length)];
+    let outcome = baseOutcomes[Math.floor(Math.random() * baseOutcomes.length)];
+    // AMD demo: replace voicemail with machine detection when AMD enabled
+    if (outcome === 'voicemail' && state.settings.amdEnabled) outcome = 'machine';
     const delay = delays[i];
 
     setTimeout(() => {
@@ -5447,6 +5772,8 @@ function simulateDemoSession(pairs) {
         } else {
           lineConnected(line);
         }
+      } else if (outcome === 'machine') {
+        lineMachine(line);
       } else if (outcome === 'voicemail') {
         lineVoicemail(line);
       } else if (outcome === 'busy') {
@@ -5566,6 +5893,21 @@ function lineVoicemail(line) {
   // Auto-drop voicemail line after 2s
   setTimeout(() => { if (line.status === 'voicemail') lineDone(line, 'vm_dropped'); }, 2000);
   toast(`📬 VM dropped: ${line.contact.name}`, 'orange');
+  checkAllDone();
+}
+
+function lineMachine(line) {
+  // AMD detected an answering machine — skip instantly without logging a VM
+  if (line.timerInt) clearInterval(line.timerInt);
+  line.status = 'machine';
+  updateLineUI(line);
+  state.stats.amdSkipped = (state.stats.amdSkipped || 0) + 1;
+  // Mark contact as no-answer and move on after brief display
+  setTimeout(() => {
+    if (line.status !== 'machine') return;
+    toast(`🤖 Machine skipped: ${line.contact?.name || ''}`, 'gray', 2000);
+    lineDone(line, 'noanswer', true);
+  }, 1200);
   checkAllDone();
 }
 
@@ -5877,6 +6219,7 @@ async function dialReal(pairs) {
         agentPhone: state.settings.myPhone,
         vmUrl: state.settings.vmUrl,
         record: !!state.settings.recordCalls,
+        machineDetection: state.settings.amdEnabled ? 'DetectMessageEnd' : 'Disable',
       })
     });
     const data = await resp.json();
@@ -5910,7 +6253,16 @@ function processBackendEvents(data) {
   // Process line status updates from backend
   data.lines?.forEach(lineData => {
     const line = state.lines[lineData.lineId - 1];
-    if (!line || line.status === lineData.status) return;
+    if (!line) return;
+    // AMD result: answeredBy comes from Twilio's asyncAmdStatusCallback
+    const answeredBy = lineData.answeredBy || '';
+    if (answeredBy && state.settings.amdEnabled) {
+      const isMachine = /machine/.test(answeredBy); // machine_start, machine_end_beep, machine_end_silence
+      if (isMachine && line.status !== 'machine' && line.status !== 'idle') {
+        lineMachine(line); return;
+      }
+    }
+    if (line.status === lineData.status) return;
     if (lineData.status === 'connected') lineConnected(line);
     else if (lineData.status === 'voicemail') lineVoicemail(line);
     else if (lineData.status === 'noanswer' || lineData.status === 'busy') lineDone(line, lineData.status);
@@ -5936,10 +6288,11 @@ function updateLineUI(line) {
   card.className = 'line-card ' + (line.status === 'ringing' ? 'ringing' :
     line.status === 'connected' ? 'connected' :
     line.status === 'voicemail' ? 'voicemail' :
+    line.status === 'machine' ? 'machine' :
     line.status === 'busy' ? 'busy' :
     line.status === 'noanswer' ? 'noanswer' : 'idle');
 
-  const statusLabels = { idle:'Idle', ringing:'Ringing...', connected:'Connected', noanswer:'No Answer', voicemail:'Voicemail', busy:'Busy', dropped:'Dropped' };
+  const statusLabels = { idle:'Idle', ringing:'Ringing...', connected:'Connected', noanswer:'No Answer', voicemail:'Voicemail', machine:'🤖 Machine', busy:'Busy', dropped:'Dropped' };
   badge.textContent = statusLabels[line.status] || line.status;
   badge.className = `line-status-badge status-${line.status}`;
 
@@ -5982,7 +6335,9 @@ function showActiveCall(line) {
   document.getElementById('activeName').textContent = line.contact.name;
   const activePhone = line.phoneEntry?.phone || (line.contact.phones?.[0]?.phone) || '';
   const activeLabel = line.phoneEntry?.label ? ` · ${line.phoneEntry.label}` : '';
-  document.getElementById('activeSub').innerHTML = `${formatPhone(activePhone)}${activeLabel} · <span>Line ${line.id}</span>`;
+  const localCid = getOutboundCallerId(activePhone);
+  const cidDisplay = localCid ? ` · 📍 ${formatPhone(localCid)}` : '';
+  document.getElementById('activeSub').innerHTML = `${formatPhone(activePhone)}${activeLabel} · <span>Line ${line.id}</span>${cidDisplay ? `<span style="color:var(--cyan);font-size:11px;margin-left:4px">${cidDisplay}</span>` : ''}`;
   document.getElementById('activeTimer').textContent = '0:00';
   document.getElementById('callNotes').value = '';
   // Show recording badge if recording is enabled
@@ -5992,28 +6347,35 @@ function showActiveCall(line) {
 
   // ── Property info panel (Mojo-style) ──────────────────────
   const c = line.contact;
-  const streetAddr = (c.address || c.notes || '').trim();
+  const streetAddr = (c.address || '').trim();
   const cityLine   = [c.city, c.state, c.zip].filter(Boolean).join(', ');
   const fullAddr   = [streetAddr, cityLine].filter(Boolean).join(', ');
   const propPanel  = document.getElementById('propPanel');
+  const fmtMoney = v => v ? (v.toString().startsWith('$') ? v : '$' + Number(v.toString().replace(/[^0-9.]/g,'')).toLocaleString()) : '';
 
-  if (streetAddr || cityLine) {
-    document.getElementById('propAddrMain').textContent = streetAddr || cityLine;
+  // Property data grid rows
+  const gridEl = document.getElementById('propDataGrid');
+  const gridRows = [];
+  if (c.avm)          gridRows.push(`<div class="prop-data-item avm-item"><span class="pdl">AVM</span><span class="pdv">${fmtMoney(c.avm)}</span></div>`);
+  if (c.units && parseInt(c.units) > 1)
+                      gridRows.push(`<div class="prop-data-item units-item"><span class="pdl">Units</span><span class="pdv">${c.units}</span></div>`);
+  if (c.beds)         gridRows.push(`<div class="prop-data-item"><span class="pdl">Beds</span><span class="pdv">${c.beds}</span></div>`);
+  if (c.baths)        gridRows.push(`<div class="prop-data-item"><span class="pdl">Baths</span><span class="pdv">${c.baths}</span></div>`);
+  if (c.sqft)         gridRows.push(`<div class="prop-data-item"><span class="pdl">Sq Ft</span><span class="pdv">${Number(c.sqft).toLocaleString()}</span></div>`);
+  if (c.yearBuilt)    gridRows.push(`<div class="prop-data-item"><span class="pdl">Built</span><span class="pdv">${c.yearBuilt}</span></div>`);
+  if (c.taxValue)     gridRows.push(`<div class="prop-data-item"><span class="pdl">Tax Val</span><span class="pdv">${fmtMoney(c.taxValue)}</span></div>`);
+  if (c.propertyType) gridRows.push(`<div class="prop-data-item"><span class="pdl">Type</span><span class="pdv">${c.propertyType}</span></div>`);
+  if (c.occupancy)    gridRows.push(`<div class="prop-data-item"><span class="pdl">Occupancy</span><span class="pdv">${c.occupancy}</span></div>`);
+  if (c.acres)        gridRows.push(`<div class="prop-data-item"><span class="pdl">Acres</span><span class="pdv">${c.acres}</span></div>`);
+  if (c.owner)        gridRows.push(`<div class="prop-data-item" style="grid-column:1/-1"><span class="pdl">Owner</span><span class="pdv">${c.owner}</span></div>`);
+
+  // Show panel if there's ANY data — address, city, or property fields
+  const hasAnyData = streetAddr || cityLine || gridRows.length || c.email || c.notes;
+  if (hasAnyData) {
+    // Address lines
+    document.getElementById('propAddrMain').textContent = streetAddr || cityLine || c.name;
     document.getElementById('propAddrCity').textContent = streetAddr ? cityLine : '';
 
-    // Property data grid — AVM, Units, Tax Value, Type, Occupancy, Baths, Sq Ft, Acres
-    const gridEl = document.getElementById('propDataGrid');
-    const gridRows = [];
-    const fmtMoney = v => v ? (v.toString().startsWith('$') ? v : '$' + Number(v.toString().replace(/[^0-9.]/g,'')).toLocaleString()) : '';
-    if (c.avm)          gridRows.push(`<div class="prop-data-item avm-item"><span class="pdl">AVM:</span><span class="pdv">${fmtMoney(c.avm)}</span></div>`);
-    if (c.units && parseInt(c.units) > 1)
-                        gridRows.push(`<div class="prop-data-item units-item"><span class="pdl">Units:</span><span class="pdv">${c.units} Units</span></div>`);
-    if (c.taxValue)     gridRows.push(`<div class="prop-data-item"><span class="pdl">Tax Value:</span><span class="pdv">${fmtMoney(c.taxValue)}</span></div>`);
-    if (c.propertyType) gridRows.push(`<div class="prop-data-item"><span class="pdl">Prop Type:</span><span class="pdv">${c.propertyType}</span></div>`);
-    if (c.occupancy)    gridRows.push(`<div class="prop-data-item"><span class="pdl">Occupancy:</span><span class="pdv">${c.occupancy}</span></div>`);
-    if (c.baths)        gridRows.push(`<div class="prop-data-item"><span class="pdl">Baths:</span><span class="pdv">${c.baths}</span></div>`);
-    if (c.sqft)         gridRows.push(`<div class="prop-data-item"><span class="pdl">Sq Ft:</span><span class="pdv">${Number(c.sqft).toLocaleString()}</span></div>`);
-    if (c.acres)        gridRows.push(`<div class="prop-data-item"><span class="pdl">Acres:</span><span class="pdv">${c.acres}</span></div>`);
     if (gridRows.length) {
       gridEl.innerHTML = gridRows.join('');
       gridEl.style.display = '';
@@ -6021,27 +6383,32 @@ function showActiveCall(line) {
       gridEl.style.display = 'none';
     }
 
-    // Meta row — type, disposition, list
+    // Meta row — type, list, email, notes
     const metaParts = [];
-    if (c.type)        metaParts.push(`<span><strong>Type:</strong> ${c.type}</span>`);
-    if (c.disposition) metaParts.push(`<span><strong>Status:</strong> ${c.disposition}</span>`);
+    if (c.email)       metaParts.push(`<span>✉️ <a href="mailto:${c.email}" style="color:var(--accent);text-decoration:none">${c.email}</a></span>`);
+    if (c.type)        metaParts.push(`<span>🏷️ ${c.type}</span>`);
+    if (c.notes && !streetAddr) metaParts.push(`<span style="color:var(--text-muted)">${c.notes.slice(0,60)}${c.notes.length>60?'…':''}</span>`);
     if (c.listId) {
       const list = state.lists.find(l => l.id === c.listId);
-      if (list) metaParts.push(`<span><strong>List:</strong> ${list.name}</span>`);
+      if (list) metaParts.push(`<span>📁 ${list.name}</span>`);
     }
     document.getElementById('propMeta').innerHTML = metaParts.join('');
 
-    // Quick-link buttons
-    const enc = encodeURIComponent(fullAddr || streetAddr || cityLine);
-    const links = [
-      { cls:'prop-link-zillow',  href:`https://www.zillow.com/homes/${enc}_rb/`,             label:'🏠 Zillow' },
-      { cls:'prop-link-maps',    href:`https://maps.google.com/?q=${enc}`,                    label:'📍 Maps' },
-      { cls:'prop-link-street',  href:`https://maps.google.com/?q=${enc}&layer=c`,            label:'🚗 Street View' },
-      { cls:'prop-link-records', href:`https://www.google.com/search?q=${enc}+property+records+owner`, label:'📋 Records' },
-    ];
-    document.getElementById('propLinks').innerHTML = links.map(l =>
-      `<a class="prop-link ${l.cls}" href="${l.href}" target="_blank" rel="noopener">${l.label}</a>`
-    ).join('');
+    // Quick-link buttons — only if we have an address to search
+    if (fullAddr) {
+      const enc = encodeURIComponent(fullAddr);
+      const links = [
+        { cls:'prop-link-zillow',  href:`https://www.zillow.com/homes/${enc}_rb/`,             label:'🏠 Zillow' },
+        { cls:'prop-link-maps',    href:`https://maps.google.com/?q=${enc}`,                    label:'📍 Maps' },
+        { cls:'prop-link-street',  href:`https://maps.google.com/?q=${enc}&layer=c`,            label:'🚗 Street' },
+        { cls:'prop-link-records', href:`https://www.google.com/search?q=${enc}+property+records+owner`, label:'📋 Records' },
+      ];
+      document.getElementById('propLinks').innerHTML = links.map(l =>
+        `<a class="prop-link ${l.cls}" href="${l.href}" target="_blank" rel="noopener">${l.label}</a>`
+      ).join('');
+    } else {
+      document.getElementById('propLinks').innerHTML = '';
+    }
 
     propPanel.style.display = '';
   } else {
@@ -6513,14 +6880,99 @@ function updateSessionTimer() {
 }
 
 // ============================================================
+// ============================================================
+//  DNC PERSISTENT LIST
+// ============================================================
+function normPhone(p) {
+  return (p || '').replace(/\D/g, '').slice(-10);
+}
+function loadDNCNumbers() {
+  try {
+    const arr = JSON.parse(localStorage.getItem('powerdial_dnc') || '[]');
+    state.dncNumbers = new Set(arr);
+  } catch(e) { state.dncNumbers = new Set(); }
+}
+function saveDNCNumbers() {
+  try { localStorage.setItem('powerdial_dnc', JSON.stringify([...state.dncNumbers])); } catch(e) {}
+}
+function isOnDNC(phone) {
+  return state.dncNumbers.has(normPhone(phone));
+}
+function addToDNCList(phone) {
+  const n = normPhone(phone);
+  if (!n) return false;
+  state.dncNumbers.add(n);
+  saveDNCNumbers();
+  return true;
+}
+function removeFromDNCList(phone) {
+  const n = normPhone(phone);
+  state.dncNumbers.delete(n);
+  saveDNCNumbers();
+}
+// Quick-add from disposition panel
+function dncFromDisp() {
+  const contact = state._dispContact || state._pendingContact;
+  if (!contact) return;
+  // Add all phones from contact to DNC
+  const phones = (contact.phones || []).map(p => p.number || p.raw);
+  phones.forEach(p => addToDNCList(p));
+  contact.isDNC = true;
+  saveContacts();
+  renderQueue();
+  toast(`🚫 ${contact.name} added to DNC (${phones.length} number${phones.length>1?'s':''})`, 'red');
+}
+// Settings DNC tab helpers
+function renderDNCList() {
+  const el = document.getElementById('dncListEl');
+  if (!el) return;
+  const nums = [...state.dncNumbers];
+  if (!nums.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:8px 0">No numbers in DNC list.</div>'; return; }
+  el.innerHTML = nums.map(n =>
+    `<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px">
+      <span style="font-family:monospace;color:var(--text-secondary)">(${n.slice(0,3)}) ${n.slice(3,6)}-${n.slice(6)}</span>
+      <button onclick="removeDNCNumber('${n}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:13px;padding:2px 6px">✕</button>
+    </div>`
+  ).join('');
+}
+function removeDNCNumber(n) {
+  state.dncNumbers.delete(n);
+  saveDNCNumbers();
+  renderDNCList();
+  toast('✅ Number removed from DNC', 'green');
+}
+function bulkAddDNC() {
+  const raw = document.getElementById('dncBulkInput')?.value || '';
+  const lines = raw.split(/[\n,;]+/).map(l => normPhone(l)).filter(n => n.length >= 7);
+  let added = 0;
+  lines.forEach(n => { state.dncNumbers.add(n); added++; });
+  saveDNCNumbers();
+  if (document.getElementById('dncBulkInput')) document.getElementById('dncBulkInput').value = '';
+  renderDNCList();
+  toast(`🚫 Added ${added} number${added!==1?'s':''} to DNC`, 'red');
+}
+function clearAllDNC() {
+  if (!confirm(`Clear all ${state.dncNumbers.size} DNC numbers?`)) return;
+  state.dncNumbers.clear();
+  saveDNCNumbers();
+  renderDNCList();
+  toast('🗑 DNC list cleared', 'gray');
+}
+
 //  DNC
 // ============================================================
 function toggleDNC() {
   if (drawerContactIdx === null) return;
   const c = state.contacts[drawerContactIdx];
   c.isDNC = !c.isDNC;
-  if (c.isDNC) { c.status = 'noanswer'; toast(`🚫 ${c.name} added to DNC`, 'red'); }
-  else { toast(`✅ ${c.name} removed from DNC`, 'green'); }
+  if (c.isDNC) {
+    c.status = 'noanswer';
+    (c.phones||[]).forEach(p => addToDNCList(p.number||p.raw));
+    toast(`🚫 ${c.name} added to DNC`, 'red');
+  } else {
+    (c.phones||[]).forEach(p => removeFromDNCList(p.number||p.raw));
+    toast(`✅ ${c.name} removed from DNC`, 'green');
+  }
   // Update button
   const dncBtn = document.getElementById('dncDrawerBtn');
   if (dncBtn) { dncBtn.textContent = c.isDNC ? '✅ Remove DNC' : '🚫 DNC'; dncBtn.style.color = c.isDNC ? 'var(--green)' : 'var(--red)'; }
@@ -6632,7 +7084,7 @@ function formatTime(s) {
 function showModal(id) { document.getElementById(id).classList.remove('hidden'); }
 function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
-function toast(msg, color = 'gray') {
+function toast(msg, color = 'gray', duration = 3000) {
   const colors = { green:'var(--green)', yellow:'var(--yellow)', red:'var(--red)', accent:'var(--accent)', orange:'var(--orange)', gray:'var(--text-secondary)' };
   const container = document.getElementById('toastContainer');
   const t = document.createElement('div');
@@ -6641,7 +7093,7 @@ function toast(msg, color = 'gray') {
   t.style.borderLeftWidth = '3px';
   t.textContent = msg;
   container.appendChild(t);
-  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.3s'; setTimeout(()=>t.remove(), 300); }, 3000);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.3s'; setTimeout(()=>t.remove(), 300); }, duration);
 }
 
 // ============================================================
@@ -6660,6 +7112,7 @@ async function init() {
   // Load action plans and list rules
   try { state.actionPlans = JSON.parse(localStorage.getItem('powerdial_actionPlans') || '[]'); } catch(e) {}
   try { state.listRules   = JSON.parse(localStorage.getItem('powerdial_listRules')   || '[]'); } catch(e) {}
+  loadDNCNumbers();
 
   // Restore lists, groups, and contacts from last session
   const savedLists = await loadListsDB();
@@ -6680,8 +7133,14 @@ async function init() {
     state.queue = [...savedContacts];
     if (needsSave) saveContacts(); // persist migrated format back to DB
   }
+  // Ensure the permanent Expireds list exists
+  initExpiredsList();
+
   renderSidebar();
   renderQueue();
+
+  // Check for pending expireds from the automation pipeline
+  checkPendingExpireds();
 
   // Show Resume button if there are contacts already dialed from a prior session
   if (state.contacts.some(c => !c.isDNC && c.status !== 'pending')) {
@@ -6711,121 +7170,6 @@ async function init() {
 }
 
 document.addEventListener('DOMContentLoaded', init);
-
-// ============================================================
-//  EXPIREDS TAB
-// ============================================================
-let expiredsContacts = [];
-
-async function loadExpiredsTab() {
-  document.querySelectorAll('.mojo-all-btn').forEach(b => b.classList.remove('active'));
-  const btn = document.getElementById('expiredsBtn');
-  if (btn) btn.classList.add('active');
-  state.activeListId = null;
-  state.activeGroup = null;
-  state.showingExpireds = true;
-
-  const backendUrl = (state.settings?.backendUrl || '').replace(/\/$/, '');
-  if (!backendUrl) { toast('\u26a0\ufe0f Set backend URL in Settings first', 'red'); return; }
-
-  try {
-    // Use cached contacts if already loaded today — avoid consuming queue twice
-    const today = new Date().toDateString();
-    const cached = (() => { try { const d = JSON.parse(localStorage.getItem('expiredsCache') || '{}'); return d.date === today ? d.contacts : null; } catch(_) { return null; } })();
-
-    let rawContacts;
-    let sourceLabel = 'server';
-    // Fetch from server — /api/expireds/today is non-destructive (never clears queue)
-    try {
-      const r = await fetch(backendUrl + '/api/expireds/today');
-      const data = await r.json();
-      rawContacts = data.contacts || [];
-      // Save to localStorage as backup whenever server has data
-      if (rawContacts.length > 0) {
-        try { localStorage.setItem('expiredsCache', JSON.stringify({ date: today, contacts: rawContacts })); } catch(_) {}
-      }
-    } catch(fetchErr) {
-      rawContacts = [];
-    }
-    // If server returned nothing, fall back to localStorage backup
-    if (rawContacts.length === 0 && cached && cached.length > 0) {
-      rawContacts = cached;
-      sourceLabel = 'local backup';
-    }
-
-    expiredsContacts = rawContacts.map(c => ({
-      id: 'exp_' + Math.random().toString(36).slice(2),
-      name: c.name || 'Property Owner',
-      phones: c.phones || [],
-      address: [c.address, c.city, c.state].filter(Boolean).join(', '),
-      listPrice: c.listPrice ? '$' + Number(c.listPrice).toLocaleString() : '',
-      beds: c.beds || '', baths: c.baths || '', county: c.county || '',
-      status: 'pending', tag: 'expired'
-    }));
-
-    const el = document.getElementById('expiredsCount');
-    if (el) el.textContent = expiredsContacts.length;
-
-    const queueList = document.getElementById('queueList');
-    if (!expiredsContacts.length) {
-      queueList.innerHTML = '<div class="empty-state"><div class="empty-icon">\ud83d\udcad</div><div class="empty-title">No expireds yet</div><div class="empty-sub">Run the daily pipeline or check back after 6 AM.</div></div>';
-      return;
-    }
-    queueList.innerHTML = expiredsContacts.map((c, i) => `
-      <div class="contact-card" style="padding:10px 12px;border-bottom:1px solid var(--border)">
-        <div style="font-weight:600;font-size:13px">${c.name}</div>
-        <div style="font-size:11px;color:var(--text-muted)">${c.address}</div>
-        <div style="font-size:11px;color:var(--accent);margin-top:2px">${c.listPrice}${c.beds ? ' \u00b7 ' + c.beds + 'bd' : ''}${c.baths ? '/' + c.baths + 'ba' : ''} \u00b7 ${c.county}</div>
-        <div style="font-size:11px;color:var(--text-secondary);margin-top:3px">${c.phones.map(p=>p.phone+' ('+p.label+')').join(', ')}</div>
-        <button class="btn btn-ghost" style="margin-top:6px;font-size:11px;padding:3px 10px" onclick="loadExpiredToQueue(${i})">\u2b06 Load to Queue</button>
-      </div>
-    `).join('') + '<div style="padding:10px;text-align:center"><button class="btn btn-primary" style="font-size:12px" onclick="loadAllExpiredsToQueue()">\ud83d\udce5 Load All to Queue</button></div>';
-
-    toast('\u2705 ' + expiredsContacts.length + ' expired contacts loaded (' + sourceLabel + ')', 'green');
-  } catch(e) {
-    toast('\u274c Failed to fetch expireds: ' + e.message, 'red');
-  }
-}
-
-function getOrCreateExpiredsList() {
-  const name = "Today's Expireds";
-  let list = state.lists.find(l => l.name === name);
-  if (!list) list = createList(name);
-  return list;
-}
-
-function loadExpiredToQueue(i) {
-  const c = expiredsContacts[i];
-  if (!c) return;
-  const list = getOrCreateExpiredsList();
-  state.contacts.push({ ...c, listId: list.id });
-  saveContacts();
-  renderSidebar();
-  toast('\u2705 ' + c.name + " added to Today's Expireds folder", 'green');
-}
-
-function loadAllExpiredsToQueue() {
-  const list = getOrCreateExpiredsList();
-  const tagged = expiredsContacts.map(c => ({ ...c, listId: list.id }));
-  state.contacts.push(...tagged);
-  saveContacts();
-  state.showingExpireds = false;
-  setActiveList(list.id);
-  toast('\u2705 ' + expiredsContacts.length + " expireds loaded into Today's Expireds folder", 'green');
-}
-
-async function refreshExpiredsCount() {
-  const backendUrl = (state.settings?.backendUrl || '').replace(/\/$/, '');
-  if (!backendUrl) return;
-  try {
-    const r = await fetch(backendUrl + '/api/expireds/status');
-    const data = await r.json();
-    const el = document.getElementById('expiredsCount');
-    if (el) el.textContent = data.pending || 0;
-  } catch(e) {}
-}
-setTimeout(refreshExpiredsCount, 2000);
-
 </script>
 </body>
 </html>
