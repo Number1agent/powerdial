@@ -193,7 +193,7 @@ function parseMLSCSV(csv) {
  * Handle PingOne SSO login when session cookies are expired.
  * Page should already be on the PingOne login redirect.
  */
-async function loginWithCredentials(page) {
+async function loginWithCredentials(page, context) {
   if (!MLS_USER || !MLS_PASS) {
     log('❌ Cannot auto-login: ONEKEYMLS_USERNAME or ONEKEYMLS_PASSWORD not set in Railway env vars.');
     return false;
@@ -301,12 +301,21 @@ async function loginWithCredentials(page) {
     const postLoginUrl = page.url();
     log(`   Post-login URL: ${postLoginUrl}`);
 
-    if (postLoginUrl.includes('mfa') || postLoginUrl.includes('authentication')) {
-      log('🔐 MFA required — check your email for a verification code.');
-      log('   Enter it in the browser window. Waiting up to 3 minutes...');
-      await page.waitForNavigation({ waitUntil: 'networkidle', timeout: 180000 });
-      await sleep(2000);
-      log(`   Post-MFA URL: ${page.url()}`);
+    if (postLoginUrl.includes('mfa') || postLoginUrl.includes('authentication') || postLoginUrl.includes('verify')) {
+      log('🔐 MFA required — sending SMS alert...');
+      await sendSMS('PowerDial: MFA triggered. Check your email for the code and enter it in the browser window.');
+      log('   ⏳ Enter the MFA code in the browser. Waiting up to 5 minutes for you to complete it...');
+      // Wait until we're fully past MFA — URL must reach a non-MFA, non-auth page
+      try {
+        await page.waitForFunction(
+          () => !window.location.href.includes('mfa') && !window.location.href.includes('authentication') && !window.location.href.includes('verify'),
+          { timeout: 300000 }
+        );
+      } catch(e) {
+        log('❌ Timed out waiting for MFA completion');
+      }
+      await sleep(3000);
+      log(`   ✅ Post-MFA URL: ${page.url()}`);
     }
 
     // SSO may land anywhere (HGAR portal, etc) — always navigate directly to Matrix
@@ -380,7 +389,7 @@ async function fetchExpiredsFromMLS() {
     // ── 1b. Handle expired session — auto-login with credentials
     if (!page.url().includes('matrix-new.onekeymlsny.com')) {
       log('🔑 Session cookies expired — attempting auto-login...');
-      const ok = await loginWithCredentials(page);
+      const ok = await loginWithCredentials(page, context);
       if (!ok) {
         log('❌ Login failed. Check ONEKEYMLS_USERNAME / ONEKEYMLS_PASSWORD in Railway env vars.');
         await browser.close();
@@ -391,6 +400,7 @@ async function fetchExpiredsFromMLS() {
     log(`✅ Reached Matrix — URL: ${page.url()}`);
     if (!page.url().includes('matrix-new.onekeymlsny.com')) {
       log('❌ Still not on Matrix after login. Aborting.');
+      await sendSMS('PowerDial: Login failed — could not reach Matrix. Run manually: HEADLESS=false node fetch-expireds.js');
       await browser.close();
       return [];
     }
@@ -620,6 +630,32 @@ async function pushToPowerDial(contacts) {
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
+// ─── SMS Alert via Twilio ────────────────────────────────────────────────────
+async function sendSMS(message) {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken  = process.env.TWILIO_AUTH_TOKEN;
+  const from       = process.env.TWILIO_PHONE_NUMBER;
+  const to         = '+16465791511';
+  if (!accountSid || !authToken || !from) {
+    log('⚠️  Twilio not configured — cannot send SMS alert');
+    return;
+  }
+  try {
+    const resp = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Basic ' + Buffer.from(`${accountSid}:${authToken}`).toString('base64'),
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: new URLSearchParams({ From: from, To: to, Body: message }).toString()
+    });
+    if (resp.ok) log('📱 SMS alert sent');
+    else log('⚠️  SMS send failed: ' + (await resp.text()));
+  } catch(e) {
+    log('⚠️  SMS error: ' + e.message);
+  }
+}
+
 async function main() {
   log('🚀 Starting daily expireds automation...');
   log(`📅 Date: ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}`);
