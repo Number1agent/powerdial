@@ -521,7 +521,7 @@ async function dbCount() {
 // POST /api/expireds/queue
 // Called by the automation script each morning after skip tracing
 // Body: { contacts: [{name, phones, notes, city, county, listPrice, beds, baths, address}], apiKey }
-app.post('/api/expireds/queue', (req, res) => {
+app.post('/api/expireds/queue', async (req, res) => {
   const { contacts, apiKey } = req.body;
   const expectedKey = process.env.EXPIREDS_API_KEY;
   if (expectedKey && apiKey !== expectedKey) {
