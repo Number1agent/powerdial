@@ -10,9 +10,6 @@ const express = require('express');
 const cors = require('cors');
 const twilio = require('twilio');
 require('dotenv').config();
-const fs = require('fs');
-const path = require('path');
-const { Pool } = require('pg');
 
 const app = express();
 app.use(cors());
@@ -450,78 +447,19 @@ app.post('/api/expireds/test-run', async (req, res) => {
   }
 
   // Push to queue so PowerDial picks them up
-  await dbAddContacts(contacts);
-  const queueSize = await dbCount();
-  console.log(`[Expireds] Test run complete: ${hits} hits, ${misses} misses. Queue: ${queueSize}`);
+  expiredQueue = [...expiredQueue, ...contacts];
+  console.log(`[Expireds] Test run complete: ${hits} hits, ${misses} misses. Queue: ${expiredQueue.length}`);
   res.json({ success: true, hits, misses, queued: contacts.length });
 });
 
-// ─── Expireds Queue (PostgreSQL) ─────────────────────────────────────────────
-// Contacts survive Railway restarts via PostgreSQL
-const pgPool = process.env.DATABASE_URL
-  ? new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } })
-  : null;
-
-async function initDb() {
-  if (!pgPool) { console.log('[Expireds] No DATABASE_URL — using in-memory queue'); return; }
-  try {
-    await pgPool.query(`
-      CREATE TABLE IF NOT EXISTS expireds_queue (
-        id SERIAL PRIMARY KEY,
-        contact JSONB NOT NULL,
-        created_at TIMESTAMPTZ DEFAULT NOW()
-      )
-    `);
-    console.log('[Expireds] PostgreSQL queue table ready');
-  } catch(e) {
-    console.error('[Expireds] DB init error:', e.message);
-  }
-}
-initDb();
-console.log("[Expireds] DATABASE_URL set:", !!process.env.DATABASE_URL);
-console.log("[Expireds] pgPool ready:", !!pgPool);
-
-// In-memory fallback if no DB
-let memQueue = [];
-
-async function dbAddContacts(contacts) {
-  if (!pgPool) { memQueue = [...memQueue, ...contacts]; return; }
-  const client = await pgPool.connect();
-  try {
-    await client.query('BEGIN');
-    for (const c of contacts) {
-      await client.query('INSERT INTO expireds_queue (contact) VALUES ($1)', [JSON.stringify(c)]);
-    }
-    await client.query('COMMIT');
-  } catch(e) {
-    await client.query('ROLLBACK');
-    throw e;
-  } finally {
-    client.release();
-  }
-}
-
-async function dbGetContacts() {
-  if (!pgPool) return memQueue;
-  const res = await pgPool.query('SELECT contact FROM expireds_queue ORDER BY id');
-  return res.rows.map(r => r.contact);
-}
-
-async function dbClearContacts() {
-  if (!pgPool) { memQueue = []; return; }
-  await pgPool.query('DELETE FROM expireds_queue');
-}
-
-async function dbCount() {
-  if (!pgPool) return memQueue.length;
-  const res = await pgPool.query('SELECT COUNT(*) FROM expireds_queue');
-  return parseInt(res.rows[0].count, 10);
-}
+// ─── Expireds Queue ───────────────────────────────────────────────────────────
+// In-memory queue — survives between requests, cleared after PowerDial fetches
+let expiredQueue = [];
 
 // POST /api/expireds/queue
 // Called by the automation script each morning after skip tracing
 // Body: { contacts: [{name, phones, notes, city, county, listPrice, beds, baths, address}], apiKey }
-app.post('/api/expireds/queue', async (req, res) => {
+app.post('/api/expireds/queue', (req, res) => {
   const { contacts, apiKey } = req.body;
   const expectedKey = process.env.EXPIREDS_API_KEY;
   if (expectedKey && apiKey !== expectedKey) {
@@ -530,65 +468,33 @@ app.post('/api/expireds/queue', async (req, res) => {
   if (!Array.isArray(contacts) || !contacts.length) {
     return res.status(400).json({ error: 'No contacts provided' });
   }
-  try {
-    await dbAddContacts(contacts);
-    const total = await dbCount();
-    console.log(`[Expireds] Queued ${contacts.length} contacts. Total pending: ${total}`);
-    res.json({ success: true, queued: contacts.length, total });
-  } catch(e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// GET /api/expireds/today
-// Returns queued contacts WITHOUT clearing — safe to call multiple times
-app.get('/api/expireds/today', async (req, res) => {
-  try {
-    const contacts = await dbGetContacts();
-    res.json({ contacts, count: contacts.length });
-  } catch(e) {
-    res.status(500).json({ error: e.message });
-  }
+  expiredQueue = [...expiredQueue, ...contacts];
+  console.log(`[Expireds] Queued ${contacts.length} contacts. Total pending: ${expiredQueue.length}`);
+  res.json({ success: true, queued: contacts.length, total: expiredQueue.length });
 });
 
 // GET /api/expireds/pending
 // Called by PowerDial on startup — returns all queued contacts and clears the queue
-app.get('/api/expireds/pending', async (req, res) => {
-  try {
-    const contacts = await dbGetContacts();
-    // Don't clear — use /api/expireds/today for non-destructive reads
-    console.log(`[Expireds] Delivered ${contacts.length} pending contacts`);
-    res.json({ contacts, count: contacts.length });
-  } catch(e) {
-    res.status(500).json({ error: e.message });
-  }
+app.get('/api/expireds/pending', (req, res) => {
+  const contacts = [...expiredQueue];
+  expiredQueue = [];
+  console.log(`[Expireds] Delivered ${contacts.length} pending contacts to PowerDial`);
+  res.json({ contacts, count: contacts.length });
 });
 
 // GET /api/expireds/status
 // Check queue without clearing it
-app.get('/api/expireds/status', async (req, res) => {
-  try {
-    const count = await dbCount();
-    res.json({ pending: count });
-  } catch(e) {
-    res.json({ pending: 0 });
-  }
-});
-
-// ─── Debug Endpoint ─────────────────────────────────────────────────────────
-app.get('/api/debug', async (req, res) => {
-  const dbOk = pgPool ? await pgPool.query('SELECT 1').then(()=>true).catch(()=>false) : false;
-  const count = pgPool ? await pgPool.query('SELECT COUNT(*) FROM expireds_queue').then(r=>parseInt(r.rows[0].count,10)).catch(()=>-1) : memQueue.length;
-  res.json({ databaseUrl: !!process.env.DATABASE_URL, pgPoolReady: !!pgPool, dbConnected: dbOk, queueCount: count, memQueueLen: memQueue.length });
+app.get('/api/expireds/status', (req, res) => {
+  res.json({ pending: expiredQueue.length });
 });
 
 // ─── Health Check ─────────────────────────────────────────────────────────────
-app.get('/health', async (req, res) => {
+app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
     demoMode: false,
     twilioConfigured: !!process.env.TWILIO_ACCOUNT_SID,
-    expiredsPending: await dbCount().catch(() => 0)
+    expiredsPending: expiredQueue.length
   });
 });
 
