@@ -11,6 +11,25 @@ const cors = require('cors');
 const twilio = require('twilio');
 require('dotenv').config();
 
+// ─── PostgreSQL (expireds persistence) ───────────────────────────────────────
+const { Pool } = require('pg');
+const pgPool = process.env.DATABASE_URL
+  ? new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } })
+  : null;
+
+if (pgPool) {
+  pgPool.query(`
+    CREATE TABLE IF NOT EXISTS expired_contacts (
+      id SERIAL PRIMARY KEY,
+      data JSONB NOT NULL,
+      queued_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `).then(() => console.log('[DB] expired_contacts table ready'))
+    .catch(err => console.error('[DB] Table creation error:', err.message));
+} else {
+  console.warn('[DB] No DATABASE_URL — expireds will be in-memory only');
+}
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -446,20 +465,29 @@ app.post('/api/expireds/test-run', async (req, res) => {
     }
   }
 
-  // Push to queue so PowerDial picks them up
-  expiredQueue = [...expiredQueue, ...contacts];
-  console.log(`[Expireds] Test run complete: ${hits} hits, ${misses} misses. Queue: ${expiredQueue.length}`);
+  // Push to queue so PowerDial picks them up (use DB if available)
+  if (pgPool) {
+    try {
+      await Promise.all(contacts.map(c => pgPool.query('INSERT INTO expired_contacts (data) VALUES ($1)', [JSON.stringify(c)])));
+    } catch(dbErr) {
+      console.error('[Expireds] Test DB insert error:', dbErr.message);
+      expiredQueueFallback = [...expiredQueueFallback, ...contacts];
+    }
+  } else {
+    expiredQueueFallback = [...expiredQueueFallback, ...contacts];
+  }
+  console.log(`[Expireds] Test run complete: ${hits} hits, ${misses} misses. Queued: ${contacts.length}`);
   res.json({ success: true, hits, misses, queued: contacts.length });
 });
 
-// ─── Expireds Queue ───────────────────────────────────────────────────────────
-// In-memory queue — survives between requests, cleared after PowerDial fetches
-let expiredQueue = [];
+// ─── Expireds Queue (PostgreSQL-backed) ──────────────────────────────────────
+// Contacts are persisted in DB — survive server restarts and browser wipes.
+// Fallback to in-memory if DATABASE_URL is not set.
+let expiredQueueFallback = [];
 
 // POST /api/expireds/queue
-// Called by the automation script each morning after skip tracing
-// Body: { contacts: [{name, phones, notes, city, county, listPrice, beds, baths, address}], apiKey }
-app.post('/api/expireds/queue', (req, res) => {
+// Called by fetch-expireds.js each morning after skip tracing
+app.post('/api/expireds/queue', async (req, res) => {
   const { contacts, apiKey } = req.body;
   const expectedKey = process.env.EXPIREDS_API_KEY;
   if (expectedKey && apiKey !== expectedKey) {
@@ -468,24 +496,77 @@ app.post('/api/expireds/queue', (req, res) => {
   if (!Array.isArray(contacts) || !contacts.length) {
     return res.status(400).json({ error: 'No contacts provided' });
   }
-  expiredQueue = [...expiredQueue, ...contacts];
-  console.log(`[Expireds] Queued ${contacts.length} contacts. Total pending: ${expiredQueue.length}`);
-  res.json({ success: true, queued: contacts.length, total: expiredQueue.length });
+  if (pgPool) {
+    try {
+      // Insert each contact as a JSON row
+      const inserts = contacts.map(c => pgPool.query(
+        'INSERT INTO expired_contacts (data) VALUES ($1)', [JSON.stringify(c)]
+      ));
+      await Promise.all(inserts);
+      const { rows } = await pgPool.query('SELECT COUNT(*) AS total FROM expired_contacts');
+      const total = parseInt(rows[0].total, 10);
+      console.log(`[Expireds] Queued ${contacts.length} contacts in DB. Total: ${total}`);
+      return res.json({ success: true, queued: contacts.length, total });
+    } catch (err) {
+      console.error('[Expireds] DB insert error:', err.message);
+      // fall through to in-memory
+    }
+  }
+  // Fallback: in-memory
+  expiredQueueFallback = [...expiredQueueFallback, ...contacts];
+  console.log(`[Expireds] Queued ${contacts.length} contacts in memory. Total: ${expiredQueueFallback.length}`);
+  res.json({ success: true, queued: contacts.length, total: expiredQueueFallback.length });
 });
 
 // GET /api/expireds/pending
-// Called by PowerDial on startup — returns all queued contacts and clears the queue
-app.get('/api/expireds/pending', (req, res) => {
-  const contacts = [...expiredQueue];
-  expiredQueue = [];
-  console.log(`[Expireds] Delivered ${contacts.length} pending contacts to PowerDial`);
+// Called by PowerDial on startup — returns all contacts WITHOUT clearing them
+// (they persist until /api/expireds/clear is called explicitly)
+app.get('/api/expireds/pending', async (req, res) => {
+  if (pgPool) {
+    try {
+      const { rows } = await pgPool.query('SELECT data FROM expired_contacts ORDER BY queued_at ASC');
+      const contacts = rows.map(r => r.data);
+      console.log(`[Expireds] Delivered ${contacts.length} persisted contacts to PowerDial`);
+      return res.json({ contacts, count: contacts.length });
+    } catch (err) {
+      console.error('[Expireds] DB read error:', err.message);
+    }
+  }
+  // Fallback: in-memory (do NOT clear)
+  const contacts = [...expiredQueueFallback];
+  console.log(`[Expireds] Delivered ${contacts.length} in-memory contacts to PowerDial`);
   res.json({ contacts, count: contacts.length });
 });
 
 // GET /api/expireds/status
-// Check queue without clearing it
-app.get('/api/expireds/status', (req, res) => {
-  res.json({ pending: expiredQueue.length });
+// Check queue without affecting it
+app.get('/api/expireds/status', async (req, res) => {
+  if (pgPool) {
+    try {
+      const { rows } = await pgPool.query('SELECT COUNT(*) AS total FROM expired_contacts');
+      return res.json({ pending: parseInt(rows[0].total, 10) });
+    } catch (err) {
+      console.error('[Expireds] DB status error:', err.message);
+    }
+  }
+  res.json({ pending: expiredQueueFallback.length });
+});
+
+// DELETE /api/expireds/clear
+// Explicitly clear all expireds (call when you're done dialing them)
+app.delete('/api/expireds/clear', async (req, res) => {
+  if (pgPool) {
+    try {
+      const { rowCount } = await pgPool.query('DELETE FROM expired_contacts');
+      console.log(`[Expireds] Cleared ${rowCount} contacts from DB`);
+      return res.json({ success: true, cleared: rowCount });
+    } catch (err) {
+      console.error('[Expireds] DB clear error:', err.message);
+    }
+  }
+  const cleared = expiredQueueFallback.length;
+  expiredQueueFallback = [];
+  res.json({ success: true, cleared });
 });
 
 // ─── Health Check ─────────────────────────────────────────────────────────────
@@ -494,7 +575,7 @@ app.get('/health', (req, res) => {
     status: 'ok',
     demoMode: false,
     twilioConfigured: !!process.env.TWILIO_ACCOUNT_SID,
-    expiredsPending: expiredQueue.length
+    expiredsPending: expiredQueueFallback.length
   });
 });
 

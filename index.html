@@ -3986,13 +3986,42 @@ function _importContactsInner() {
       else toast(`✅ ${withCity} contacts with city data imported`, 'green');
     } else {
       // ── Simple CSV: Name, Phone, Notes ──
+      // Also handles headerless Mojo format: Name, Phone, "Street, City, Zip"
       contacts = raw.split('\n').filter(r => r.trim()).map(row => {
         const parts = parseCSVRow(row);
         const phone = parts[1] || '—';
+        const rawAddr = parts[2] || '';
+        // Try to split "Street Address, City, Zip" into components
+        let address = rawAddr, city = '', state = '', zip = '';
+        const addrParts = rawAddr.split(',').map(s => s.trim()).filter(Boolean);
+        if (addrParts.length >= 2) {
+          const lastPart = addrParts[addrParts.length - 1];
+          const secondLast = addrParts[addrParts.length - 2];
+          // Check if last part is a zip code (5 digits, or state + zip like "NY 10801")
+          const zipMatch = lastPart.match(/^(?:([A-Z]{2})\s+)?(\d{5}(?:-\d{4})?)$/);
+          if (zipMatch) {
+            zip = zipMatch[2];
+            if (zipMatch[1]) state = zipMatch[1];
+            // Check if second-to-last looks like a state abbreviation
+            const stateMatch = !state && secondLast.match(/^[A-Z]{2}$/);
+            if (stateMatch) {
+              state = secondLast;
+              city = addrParts.slice(0, addrParts.length - 2).join(', ');
+            } else {
+              city = addrParts.slice(0, addrParts.length - 1).join(', ');
+            }
+            address = addrParts[0];
+          } else if (addrParts.length >= 2) {
+            // No zip found — treat last part as city
+            address = addrParts[0];
+            city = addrParts.slice(1).join(', ');
+          }
+        }
         return {
           name: parts[0] || 'Unknown',
           phones: [{ phone, label: 'Phone', status: 'pending' }],
-          notes: parts[2] || '',
+          notes: rawAddr,
+          address, city, state, zip,
           status: 'pending'
         };
       });
@@ -4024,14 +4053,14 @@ function _importContactsInner() {
     state.contacts = state.contacts.filter(c => c.listId !== listId);
     state.contacts = [...state.contacts, ...contacts];
   } else {
-    // No list — replace all contacts but carry over groupId for matching names
+    // No list — always APPEND to existing contacts (carry over groupId for matching names)
     const prevByName = {};
     state.contacts.forEach(c => { if (c.name && c.groupId) prevByName[c.name.toLowerCase()] = c.groupId; });
     contacts = contacts.map(c => {
       const savedGroup = prevByName[c.name?.toLowerCase()];
       return savedGroup ? { ...c, groupId: savedGroup } : c;
     });
-    state.contacts = contacts;
+    state.contacts = [...state.contacts, ...contacts];
   }
   state.queue = [...state.contacts];
   state.currentIdx = 0;
