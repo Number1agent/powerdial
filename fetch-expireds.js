@@ -25,6 +25,11 @@ const fs = require('fs');
 const path = require('path');
 
 // ─── Config ──────────────────────────────────────────────────────────────────
+
+// --from-file <path>  Re-push a previously saved skip-trace result without hitting DataSkip again
+const fromFileArg = process.argv.indexOf('--from-file');
+const FROM_FILE = fromFileArg !== -1 ? process.argv[fromFileArg + 1] : null;
+
 const BACKEND_URL  = process.env.PUBLIC_URL;
 const DATASKIP_KEY = process.env.DATASKIP_API_KEY;
 const EXPIREDS_KEY = process.env.EXPIREDS_API_KEY;
@@ -697,6 +702,20 @@ async function main() {
   log('🚀 Starting daily expireds automation...');
   log(`📅 Date: ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}`);
 
+  // --from-file: re-push a saved skip-trace result without hitting DataSkip
+  if (FROM_FILE) {
+    if (!fs.existsSync(FROM_FILE)) {
+      log(`❌ File not found: ${FROM_FILE}`);
+      process.exit(1);
+    }
+    const contacts = JSON.parse(fs.readFileSync(FROM_FILE, 'utf8'));
+    log(`📂 Loaded ${contacts.length} contacts from ${FROM_FILE}`);
+    if (!BACKEND_URL) { log('❌ Missing PUBLIC_URL'); process.exit(1); }
+    await pushToPowerDial(contacts);
+    log('✅ Done re-pushing from file — no DataSkip charges incurred.');
+    return;
+  }
+
   // Validate required env vars
   if (!DATASKIP_KEY) { log('❌ Missing DATASKIP_API_KEY'); process.exit(1); }
   if (!BACKEND_URL)  { log('❌ Missing PUBLIC_URL');       process.exit(1); }
@@ -713,6 +732,16 @@ async function main() {
     listings = await enrichZips(listings);  // geocode any missing zips
 
     const contacts = await skipTrace(listings);
+
+    // Save skip-trace results locally so you can re-push without re-charging DataSkip
+    if (contacts.length) {
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const backupPath = path.join(__dirname, `expireds-${dateStr}.json`);
+      fs.writeFileSync(backupPath, JSON.stringify(contacts, null, 2));
+      log(`💾 Saved ${contacts.length} skip-traced contacts to ${backupPath}`);
+      log(`   To re-push anytime: node fetch-expireds.js --from-file ${backupPath}`);
+    }
+
     await pushToPowerDial(contacts);
 
     log('🎉 Done! Open PowerDial to see today\'s expireds.');
