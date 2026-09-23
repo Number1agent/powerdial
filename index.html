@@ -4526,7 +4526,7 @@ function contactItem(c, i) {
   if (c.isDNC) rowClass += ' called';
   else if (c.status !== 'pending') rowClass += ' called';
   const realIdx = state.contacts.indexOf(c);
-  const addr = (c.notes || c.address || '').trim();
+  const addr = ([c.address, c.city, c.state].filter(Boolean).join(', ') || c.notes || '').trim();
   const zillowHref = addr ? `https://www.zillow.com/homes/${encodeURIComponent(addr)}_rb/` : '';
   const tempClass = c.temperature ? `temp-${c.temperature}` : 'temp-none';
 
