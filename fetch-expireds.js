@@ -28,6 +28,7 @@ const path = require('path');
 
 // --from-file <path>  Re-push a previously saved skip-trace result without hitting DataSkip again
 const fromFileArg = process.argv.indexOf('--from-file');
+const LOGIN_TEST = process.argv.includes('--login-test');
 const FROM_FILE = fromFileArg !== -1 ? process.argv[fromFileArg + 1] : null;
 
 const BACKEND_URL  = process.env.PUBLIC_URL;
@@ -776,6 +777,10 @@ async function main() {
 
   try {
     let listings = await fetchExpiredsFromMLS();
+    if (LOGIN_TEST) {
+      log(`✅ Login test complete — ${listings.length} expireds found. No skip trace or push performed.`);
+      return;
+    }
     if (!listings.length) { log('📭 No expireds found for today'); return; }
 
     listings = await filterActivesAndSold(listings);
