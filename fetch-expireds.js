@@ -354,7 +354,7 @@ async function loginWithCredentials(page, context) {
         const visibleBrowser = await chromium.launch({ headless: false, args: [] });
         const visibleContext = await visibleBrowser.newContext({
           ...(authState ? { storageState: authState } : {}),
-          userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+          userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
         });
         const visiblePage = await visibleContext.newPage();
         await visiblePage.goto('https://matrix-new.onekeymlsny.com/Matrix/MyMatrix', { waitUntil: 'networkidle', timeout: 30000 });
@@ -432,14 +432,30 @@ async function fetchExpiredsFromMLS() {
   const isLinux = process.platform === 'linux';
   const browser = await chromium.launch({
     headless,
-    args: isLinux ? ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--no-zygote', '--single-process'] : []
+    args: [
+      ...(isLinux ? ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--no-zygote', '--single-process'] : []),
+      '--disable-blink-features=AutomationControlled',
+    ]
   });
 
   const authState = loadAuthState();
   const context = await browser.newContext({
     ...(authState ? { storageState: authState } : {}),
-    userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+    viewport: { width: 1440, height: 900 },
+    locale: 'en-US',
+    timezoneId: 'America/New_York',
+    extraHTTPHeaders: { 'Accept-Language': 'en-US,en;q=0.9' },
   });
+
+  // Mask automation fingerprint so OneKey doesn't flag as bot
+  await context.addInitScript(() => {
+    Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+    Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+    Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+    window.chrome = { runtime: {} };
+  });
+
   const page = await context.newPage();
 
   // Block any navigation to the old/wrong Matrix domain and redirect to correct one
