@@ -344,20 +344,55 @@ async function loginWithCredentials(page, context) {
     log(`   Post-login URL: ${postLoginUrl}`);
 
     if (postLoginUrl.includes('mfa') || postLoginUrl.includes('authentication') || postLoginUrl.includes('verify')) {
-      log('🔐 MFA required — sending SMS alert...');
-      await sendSMS('PowerDial: MFA triggered. Check your email for the code and enter it in the browser window.');
-      log('   ⏳ Enter the MFA code in the browser. Waiting up to 5 minutes for you to complete it...');
-      // Wait until we're fully past MFA — URL must reach a non-MFA, non-auth page
-      try {
-        await page.waitForFunction(
-          () => !window.location.href.includes('mfa') && !window.location.href.includes('authentication') && !window.location.href.includes('verify'),
-          { timeout: 300000 }
-        );
-      } catch(e) {
-        log('❌ Timed out waiting for MFA completion');
+      if (headless) {
+        // Can't complete MFA in headless mode — relaunch visibly so user can enter the code
+        log('🔐 MFA required but running headless — relaunching with visible browser...');
+        log('   ⚠️  A browser window will open. Enter your MFA code there, then the script will continue.');
+        await sendSMS('PowerDial: MFA required. A browser window opened on your Mac — enter your code to continue the expireds run.');
+        await browser.close();
+
+        const visibleBrowser = await chromium.launch({ headless: false, args: [] });
+        const visibleContext = await visibleBrowser.newContext({
+          ...(authState ? { storageState: authState } : {}),
+          userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        });
+        const visiblePage = await visibleContext.newPage();
+        await visiblePage.goto('https://matrix-new.onekeymlsny.com/Matrix/MyMatrix', { waitUntil: 'networkidle', timeout: 30000 });
+        await sleep(2000);
+
+        // Wait up to 5 minutes for user to complete MFA
+        log('   ⏳ Waiting up to 5 minutes for MFA completion...');
+        try {
+          await visiblePage.waitForURL('**/Matrix/**', { timeout: 300000 });
+        } catch(e) {
+          log('❌ Timed out waiting for MFA. Run manually: HEADLESS=false node fetch-expireds.js');
+          await visibleBrowser.close();
+          return [];
+        }
+
+        // Save fresh cookies from visible session
+        try {
+          const newState = await visibleContext.storageState();
+          fs.writeFileSync(path.join(__dirname, 'mls-auth.json'), JSON.stringify(newState));
+          log(`💾 Fresh auth state saved after MFA (${newState.cookies.length} cookies)`);
+        } catch(e) {}
+
+        await visibleBrowser.close();
+        // Restart the whole flow with fresh cookies
+        log('✅ MFA complete — restarting with fresh session...');
+        return await fetchExpiredsFromMLS();
+      } else {
+        // Already running visibly — user can see the MFA screen directly
+        log('🔐 MFA required — waiting up to 5 minutes for you to complete it...');
+        await sendSMS('PowerDial: MFA triggered. Enter the code in the browser window that opened on your Mac.');
+        try {
+          await page.waitForURL('**/Matrix/**', { timeout: 300000 });
+        } catch(e) {
+          log('❌ Timed out waiting for MFA completion');
+        }
+        await sleep(3000);
+        log(`   ✅ Post-MFA URL: ${page.url()}`);
       }
-      await sleep(3000);
-      log(`   ✅ Post-MFA URL: ${page.url()}`);
     }
 
     // SSO may land anywhere (HGAR portal, etc) — always navigate directly to Matrix
