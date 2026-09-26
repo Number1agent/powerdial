@@ -199,7 +199,7 @@ function parseMLSCSV(csv) {
  * Handle PingOne SSO login when session cookies are expired.
  * Page should already be on the PingOne login redirect.
  */
-async function loginWithCredentials(page, context) {
+async function loginWithCredentials(page, context, headless) {
   if (!MLS_USER || !MLS_PASS) {
     log('❌ Cannot auto-login: ONEKEYMLS_USERNAME or ONEKEYMLS_PASSWORD not set in Railway env vars.');
     return false;
@@ -483,7 +483,7 @@ async function fetchExpiredsFromMLS() {
     // ── 1b. Handle expired session — auto-login with credentials
     if (!page.url().includes('matrix-new.onekeymlsny.com')) {
       log('🔑 Session cookies expired — attempting auto-login...');
-      const ok = await loginWithCredentials(page, context);
+      const ok = await loginWithCredentials(page, context, headless);
       if (!ok) {
         log('❌ Login failed. Check ONEKEYMLS_USERNAME / ONEKEYMLS_PASSWORD in Railway env vars.');
         await browser.close();
