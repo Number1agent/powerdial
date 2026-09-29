@@ -2240,6 +2240,10 @@
       </div>
       <div class="import-note">Contacts in the same list are kept together in your sidebar. Leave blank to load into All Contacts.</div>
 
+      <div style="display:flex;align-items:center;gap:8px;margin:8px 0 4px">
+        <input type="checkbox" id="importAsExpireds" style="width:16px;height:16px;cursor:pointer;accent-color:#ef4444">
+        <label for="importAsExpireds" style="font-size:13px;cursor:pointer;color:var(--text-main)">📋 Import as Expireds <span style="color:var(--text-muted);font-size:11px">(goes to Expireds list, not geo)</span></label>
+      </div>
       <div class="modal-actions">
         <button class="btn btn-ghost" onclick="closeModal('importModal')">Cancel</button>
         <button class="btn btn-ghost" style="font-size:12px" onclick="loadFromAgentOS()">🔗 AgentOS</button>
@@ -2256,6 +2260,10 @@
       <div class="input-group" style="margin-bottom:6px">
         <div class="input-label">Save to List <span style="color:var(--text-muted);font-weight:400">(optional)</span></div>
         <input class="input-field" id="importListName2" placeholder="e.g. Kingsbridge 2025, Manhattan Expireds…" />
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin:8px 0 4px">
+        <input type="checkbox" id="importAsExpireds2" style="width:16px;height:16px;cursor:pointer;accent-color:#ef4444">
+        <label for="importAsExpireds2" style="font-size:13px;cursor:pointer;color:var(--text-main)">📋 Import as Expireds <span style="color:var(--text-muted);font-size:11px">(goes to Expireds list, not geo)</span></label>
       </div>
       <div class="modal-actions">
         <button class="btn btn-ghost" onclick="backToImportStep1()">← Back</button>
@@ -2462,6 +2470,15 @@
           <button class="btn btn-ghost" style="font-size:12px;color:var(--red)" onclick="clearAllDNC()">🗑 Clear All</button>
         </div>
         <div id="dncListEl" style="max-height:160px;overflow-y:auto"></div>
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-top:16px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:6px">
+          <span>🔁 Remove Duplicates</span>
+        </div>
+        <p style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Scans all contacts across every list and removes duplicates matched by name + address. Keeps the first occurrence.</p>
+        <button class="btn btn-ghost" style="font-size:12px;color:var(--red)" onclick="dedupeAllContacts()">🗑 Remove Duplicates Now</button>
+        <span id="dedupeResult" style="font-size:11px;color:var(--text-muted);margin-left:10px"></span>
       </div>
 
     </div>
@@ -3910,9 +3927,13 @@ function _runImportFromMapping(raw, headers) {
   }
 
   // List assignment
+  const importAsExpireds2 = document.getElementById('importAsExpireds2')?.checked;
   const listNameInput = (document.getElementById('importListName2')?.value || '').trim();
   let listId = null;
-  if (listNameInput) {
+  if (importAsExpireds2) {
+    const expList = initExpiredsList();
+    listId = expList.id;
+  } else if (listNameInput) {
     let existing = state.lists.find(l => l.name.toLowerCase() === listNameInput.toLowerCase());
     if (!existing) existing = createList(listNameInput);
     listId = existing.id;
@@ -3926,8 +3947,13 @@ function _runImportFromMapping(raw, headers) {
 
   if (state.session) stopSession();
   if (listId) {
-    state.contacts = state.contacts.filter(c => c.listId !== listId);
-    state.contacts = [...state.contacts, ...tagged];
+    if (importAsExpireds2) {
+      // Expireds: always append, never wipe existing
+      state.contacts = [...state.contacts, ...tagged];
+    } else {
+      state.contacts = state.contacts.filter(c => c.listId !== listId);
+      state.contacts = [...state.contacts, ...tagged];
+    }
   } else {
     state.contacts = tagged;
   }
@@ -4031,9 +4057,13 @@ function _importContactsInner() {
   if (!contacts.length) { toast('⚠️ No contacts parsed', 'yellow'); return; }
 
   // Handle list assignment
+  const importAsExpireds = document.getElementById('importAsExpireds')?.checked;
   const listNameInput = (document.getElementById('importListName')?.value || '').trim();
   let listId = null;
-  if (listNameInput) {
+  if (importAsExpireds) {
+    const expList = initExpiredsList();
+    listId = expList.id;
+  } else if (listNameInput) {
     let existing = state.lists.find(l => l.name.toLowerCase() === listNameInput.toLowerCase());
     if (!existing) existing = createList(listNameInput);
     listId = existing.id;
@@ -4049,9 +4079,14 @@ function _importContactsInner() {
 
   // Append to existing contacts (or replace if same list)
   if (listId) {
-    // Remove old contacts from this list, then append new
-    state.contacts = state.contacts.filter(c => c.listId !== listId);
-    state.contacts = [...state.contacts, ...contacts];
+    if (importAsExpireds) {
+      // Expireds: always append, never wipe existing
+      state.contacts = [...state.contacts, ...contacts];
+    } else {
+      // Remove old contacts from this list, then append new
+      state.contacts = state.contacts.filter(c => c.listId !== listId);
+      state.contacts = [...state.contacts, ...contacts];
+    }
   } else {
     // No list — always APPEND to existing contacts (carry over groupId for matching names)
     const prevByName = {};
@@ -6992,6 +7027,23 @@ function clearAllDNC() {
   saveDNCNumbers();
   renderDNCList();
   toast('🗑 DNC list cleared', 'gray');
+}
+
+function dedupeAllContacts() {
+  const seen = new Set();
+  const before = state.contacts.length;
+  state.contacts = state.contacts.filter(c => {
+    const key = (c.name||'').toLowerCase().trim() + '|' + (c.address||'').toLowerCase().trim();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  const removed = before - state.contacts.length;
+  saveContacts();
+  renderQueue();
+  const el = document.getElementById('dedupeResult');
+  if (el) el.textContent = removed ? `Removed ${removed} duplicate${removed!==1?'s':''}` : 'No duplicates found';
+  toast(removed ? `✅ Removed ${removed} duplicate contact${removed!==1?'s':''}` : '✅ No duplicates found', removed ? 'green' : 'yellow');
 }
 
 //  DNC
