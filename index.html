@@ -356,40 +356,188 @@
   /* ===== ACTIVE CALL PANEL ===== */
   .active-call-area {
     flex: 1;
-    padding: 12px 14px 14px;
+    padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 0;
     overflow: hidden;
   }
 
+  /* Live call banner — green bar at top */
+  .live-call-banner {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: #16a34a;
+    color: #fff;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    flex-shrink: 0;
+  }
+  .live-call-banner.visible { display: flex; }
+  .live-call-banner .lcb-timer { font-family: 'SF Mono', monospace; font-size: 14px; }
+  .live-call-banner .lcb-name { font-size: 14px; }
+  .live-call-banner .lcb-phone { opacity: 0.85; font-size: 13px; }
+
+  /* Mojo-style two-column layout */
   .active-call-card {
     background: #ffffff;
-    border: 2px solid #22c55e;
-    border-radius: var(--radius);
-    padding: 18px;
+    border-top: 2px solid #22c55e;
+    display: flex;
+    flex-direction: row;
+    flex: 1;
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgba(34,197,94,0.12);
+  }
+
+  /* Left main contact panel */
+  .mojo-main {
+    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    box-shadow: 0 4px 24px rgba(34,197,94,0.18);
+    overflow-y: auto;
+    padding: 14px 16px;
+    gap: 0;
   }
-  .active-header {
-    display: flex; align-items: flex-start; justify-content: space-between;
+
+  /* Right disposition sidebar */
+  .mojo-disp-bar {
+    width: 160px;
+    flex-shrink: 0;
+    background: #1a1a2e;
+    border-left: 1px solid #2a2a40;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 6px 10px;
+    overflow-y: auto;
   }
+  .mojo-disp-btn {
+    width: 100%;
+    padding: 7px 8px;
+    border-radius: 6px;
+    border: none;
+    background: #c0392b;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.12s;
+    text-align: left;
+    line-height: 1.3;
+  }
+  .mojo-disp-btn:hover { background: #e74c3c; }
+  .mojo-disp-btn .mojo-key {
+    background: rgba(0,0,0,0.35);
+    color: #fff;
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 10px;
+    font-weight: 800;
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+  .mojo-disp-btn.mojo-dark {
+    background: #2d2d4a;
+    color: #c0c0e8;
+  }
+  .mojo-disp-btn.mojo-dark:hover { background: #3a3a5a; color: #fff; }
+  .mojo-disp-btn.mojo-dnc { background: #7f1d1d; color: #fca5a5; }
+  .mojo-disp-btn.mojo-dnc:hover { background: #991b1b; color: #fff; }
+  .mojo-disp-btn.mojo-stop { background: #991b1b; color: #fff; justify-content: center; }
+  .mojo-disp-btn.mojo-stop:hover { background: #b91c1c; }
+  .mojo-disp-divider {
+    height: 1px; background: #2a2a40; margin: 2px 0;
+  }
+  .mojo-hotkey-row {
+    display: flex; gap: 4px; align-items: center;
+    padding: 4px 2px 0;
+    font-size: 9px; color: #555577; justify-content: center;
+  }
+
+  /* Contact name / header */
   .active-contact-name {
-    font-size: 28px;
+    font-size: 22px;
     font-weight: 800;
     color: #111111;
     line-height: 1.15;
-    letter-spacing: -0.5px;
+    letter-spacing: -0.3px;
+    margin-bottom: 2px;
   }
   .active-contact-sub {
-    font-size: 16px;
-    color: #444444;
-    margin-top: 4px;
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 8px;
     font-weight: 500;
   }
   .active-contact-sub span { color: #5b4fff; font-weight: 700; }
+
+  /* Action bar (Appointment / Task / Maps / Zillow) */
+  .mojo-action-bar {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e8e8f0;
+  }
+  .mojo-action-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    background: #f7f7fa;
+    color: #333;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.12s;
+    white-space: nowrap;
+  }
+  .mojo-action-btn:hover { background: #eeeef6; }
+  .mojo-action-btn.green { background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; }
+  .mojo-action-btn.green:hover { background: #dcfce7; }
+  .mojo-action-btn.blue { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
+  .mojo-action-btn.blue:hover { background: #dbeafe; }
+
+  /* Phones list */
+  .mojo-phones-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+  .mojo-phone-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 8px; border-radius: 6px; border: 1px solid #e8e8f0;
+    background: #f9f9fc; font-size: 13px;
+  }
+  .mojo-phone-row.active-phone {
+    background: #f0fdf4; border-color: #22c55e; color: #15803d; font-weight: 700;
+  }
+  .mojo-phone-num { flex: 1; font-weight: 600; font-family: 'SF Mono', monospace; font-size: 13px; }
+  .mojo-phone-label { font-size: 10px; color: #888; font-weight: 500; }
+  .mojo-phone-row.active-phone .mojo-phone-label { color: #16a34a; }
+
+  /* Email row */
+  .mojo-email-row {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: #2563eb; margin-bottom: 8px;
+  }
+  .mojo-email-row a { color: #2563eb; text-decoration: none; }
+  .mojo-email-row a:hover { text-decoration: underline; }
+
+  /* Meta row (list, type) */
+  .mojo-meta-row {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;
+    font-size: 11px; color: #666;
+  }
+  .mojo-meta-chip {
+    background: #f0f0f8; border: 1px solid #ddd; border-radius: 4px;
+    padding: 2px 7px; font-size: 11px; color: #555; font-weight: 500;
+  }
+
+  .active-header { display: none; }
   .zillow-btn {
     font-size: 12px;
     font-weight: 700;
@@ -1973,49 +2121,110 @@
 
     <!-- Active Call Panel -->
     <div class="active-call-area" id="activeCallArea">
+      <!-- Live call banner -->
+      <div class="live-call-banner" id="liveCallBanner">
+        <span style="font-size:11px;background:rgba(0,0,0,0.25);border-radius:3px;padding:2px 6px">LIVE</span>
+        <span class="lcb-timer" id="activeTimer">0:00</span>
+        <span class="lcb-name" id="activeName">—</span>
+        <span class="lcb-phone" id="activeSub">—</span>
+        <span id="recBadge" class="rec-badge" style="display:none">⏺ REC</span>
+      </div>
+
       <div class="active-call-card" id="activeCallCard" style="display:none">
-        <div class="active-header">
-          <div style="flex:1;min-width:0">
-            <div class="active-contact-name" id="activeName">—</div>
-            <div class="active-contact-sub" id="activeSub">—</div>
+
+        <!-- LEFT: main contact panel -->
+        <div class="mojo-main">
+
+          <!-- Action bar -->
+          <div class="mojo-action-bar">
+            <button class="mojo-action-btn green" onclick="openAppointmentModal && openAppointmentModal(state._dispContact)">📅 Appointment</button>
+            <button class="mojo-action-btn" onclick="openTaskModal && openTaskModal(state._dispContact)">✅ Task</button>
+            <button class="mojo-action-btn" onclick="openFollowUpModal && openFollowUpModal(state._dispContact)">📞 Follow Up Call</button>
+            <a id="mojoMapsLink" class="mojo-action-btn blue" href="#" target="_blank" rel="noopener">📍 Google Maps</a>
+            <a id="mojoZillowLink" class="mojo-action-btn blue" href="#" target="_blank" rel="noopener">🏠 Zillow</a>
           </div>
-          <div style="text-align:right;flex-shrink:0;margin-left:10px">
-            <div class="active-timer-big" id="activeTimer">0:00</div>
-            <div class="active-timer-label" style="display:flex;align-items:center;justify-content:flex-end;gap:5px">
-              Connected
-              <span id="recBadge" class="rec-badge" style="display:none">⏺ REC</span>
+
+          <!-- Contact name -->
+          <div class="active-contact-name" id="mojoContactName">—</div>
+          <div style="font-size:12px;color:#888;margin-bottom:8px" id="mojoContactOwner"></div>
+
+          <!-- Address -->
+          <div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:10px" id="mojoAddrBlock">
+            <span style="color:#888;font-size:13px">📍</span>
+            <div>
+              <div style="font-size:13px;font-weight:600;color:#222" id="propAddrMain"></div>
+              <div style="font-size:12px;color:#666" id="propAddrCity"></div>
             </div>
           </div>
-        </div>
 
-        <!-- Property Info Panel (Mojo-style) -->
-        <div class="prop-panel" id="propPanel" style="display:none">
-          <div>
-            <div class="prop-address-main" id="propAddrMain"></div>
-            <div class="prop-address-city" id="propAddrCity"></div>
+          <!-- Phones -->
+          <div style="font-size:10px;font-weight:700;letter-spacing:.07em;color:#888;text-transform:uppercase;margin-bottom:4px">Phones</div>
+          <div class="mojo-phones-list" id="mojoPhonesEl"></div>
+
+          <!-- Email -->
+          <div class="mojo-email-row" id="mojoEmailRow" style="display:none">
+            <span>✉️</span>
+            <a id="mojoEmailLink" href="#">—</a>
           </div>
-          <div class="prop-data-grid" id="propDataGrid" style="display:none"></div>
-          <div class="prop-meta-row" id="propMeta"></div>
-          <div class="prop-links" id="propLinks"></div>
-        </div>
 
-        <div class="active-tags" id="activeTags"></div>
-        <div class="active-controls">
-          <button class="ctrl-btn ctrl-contact" onclick="hangupActive()" title="I spoke with this person — hang up and log the call">
-            <span class="ctrl-icon">✅</span><span>Contact</span>
+          <!-- Meta chips (List, Type) -->
+          <div class="mojo-meta-row" id="mojoMetaRow"></div>
+
+          <!-- Property data grid -->
+          <div class="prop-panel" id="propPanel" style="display:none;margin-top:4px;background:#f9f9fc;border:1px solid #e0e0ee">
+            <div class="prop-data-grid" id="propDataGrid" style="display:none"></div>
+            <div class="prop-meta-row" id="propMeta"></div>
+            <div class="prop-links" id="propLinks"></div>
+          </div>
+
+          <!-- Tags / groups -->
+          <div class="active-tags" id="activeTags" style="margin-top:8px"></div>
+          <div id="activeCallGroupRow" style="display:none;padding:8px 0 4px;border-top:1px solid #e8e8f0;margin-top:8px">
+            <div style="font-size:10px;font-weight:600;letter-spacing:.06em;color:#888;text-transform:uppercase;margin-bottom:6px">Assign to Group</div>
+            <div id="activeCallGroupPills" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+          </div>
+
+        </div><!-- /mojo-main -->
+
+        <!-- RIGHT: disposition sidebar -->
+        <div class="mojo-disp-bar">
+          <button class="mojo-disp-btn" onclick="hangupActive()" title="Spoke with person">
+            Contact <span class="mojo-key">1</span>
           </button>
-          <button class="ctrl-btn ctrl-nocontact" onclick="hangupNoContact()" title="No real conversation — hang up and continue dialing">
-            <span class="ctrl-icon">📵</span><span>No Contact</span>
+          <button class="mojo-disp-btn" onclick="hangupNoContact()" title="No answer — next number">
+            No Contact<br><span style="font-size:9px;opacity:.8">(Next Number)</span><span class="mojo-key">2</span>
           </button>
-          <button class="ctrl-btn ctrl-badnum" onclick="hangupThenBadNumber()" title="Bad number — remove and continue">
-            <span class="ctrl-icon">☎✕</span><span>Bad #</span>
+          <button class="mojo-disp-btn" onclick="hangupNoContact()" title="No answer — next record">
+            No Contact<br><span style="font-size:9px;opacity:.8">(Next Record)</span><span class="mojo-key">3</span>
           </button>
-        </div>
-        <!-- Group assignment strip (shown during connected call) -->
-        <div id="activeCallGroupRow" style="display:none;padding:8px 12px 4px;border-top:1px solid var(--border)">
-          <div style="font-size:10px;font-weight:600;letter-spacing:.06em;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">Assign to Group</div>
-          <div id="activeCallGroupPills" style="display:flex;flex-wrap:wrap;gap:6px"></div>
-        </div>
+          <button class="mojo-disp-btn" onclick="hangupThenBadNumber()" title="Bad number">
+            Bad Number <span class="mojo-key">4</span>
+          </button>
+          <button class="mojo-disp-btn" onclick="dropVoicemailById(0)" title="Drop voicemail">
+            Voicemail <span class="mojo-key">5</span>
+          </button>
+          <div class="mojo-disp-divider"></div>
+          <button class="mojo-disp-btn mojo-dnc" onclick="(function(){if(state._dispContact){state._dispContact.isDNC=true;saveContacts();}hangupNoContact();})()" title="DNC this contact">
+            DNC Contact
+          </button>
+          <button class="mojo-disp-btn mojo-dnc" onclick="(function(){const p=state.activeLineId&&state.lines?.[state.activeLineId]?.phoneEntry?.phone;if(p)addToDNC(p);hangupNoContact();})()" title="DNC this number">
+            DNC Number
+          </button>
+          <div class="mojo-disp-divider"></div>
+          <button class="mojo-disp-btn mojo-dark" onclick="(function(){const l=state.activeLineId!=null&&state.lines?.[state.activeLineId];if(l)muteLine(l);})()" title="Redial / mute toggle">
+            🔁 Redial <span class="mojo-key">R</span>
+          </button>
+          <button class="mojo-disp-btn mojo-dark" onclick="hangupActive()" title="Hang up">
+            📵 Hang up <span class="mojo-key">H</span>
+          </button>
+          <button class="mojo-disp-btn mojo-dark" onclick="togglePause()" title="Pause dialing">
+            ⏸ Pause <span class="mojo-key">P</span>
+          </button>
+          <button class="mojo-disp-btn mojo-stop" onclick="stopSession()" title="Stop session">
+            ⏹ Stop
+          </button>
+        </div><!-- /mojo-disp-bar -->
+
       </div>
 
       <!-- No active call state -->
@@ -6399,31 +6608,85 @@ function showActiveCall(line) {
   document.getElementById('notesSection').style.display = 'flex';
   const card = document.getElementById('activeCallCard');
   card.style.display = 'flex';
-  card.style.borderColor = '';
-  card.style.background = '';
 
-  document.getElementById('activeName').textContent = line.contact.name;
-  const activePhone = line.phoneEntry?.phone || (line.contact.phones?.[0]?.phone) || '';
-  const activeLabel = line.phoneEntry?.label ? ` · ${line.phoneEntry.label}` : '';
-  const localCid = getOutboundCallerId(activePhone);
-  const cidDisplay = localCid ? ` · 📍 ${formatPhone(localCid)}` : '';
-  document.getElementById('activeSub').innerHTML = `${formatPhone(activePhone)}${activeLabel} · <span>Line ${line.id}</span>${cidDisplay ? `<span style="color:var(--cyan);font-size:11px;margin-left:4px">${cidDisplay}</span>` : ''}`;
+  // ── Live call banner ─────────────────────────────────────
+  const banner = document.getElementById('liveCallBanner');
+  if (banner) banner.classList.add('visible');
+  const c = line.contact;
+  const activePhone = line.phoneEntry?.phone || (c.phones?.[0]?.phone) || '';
+  // Banner fields
+  document.getElementById('activeName').textContent = c.name || '—';
+  document.getElementById('activeSub').textContent = activePhone ? formatPhone(activePhone) : '—';
   document.getElementById('activeTimer').textContent = '0:00';
-  document.getElementById('callNotes').value = '';
-  // Show recording badge if recording is enabled
   const recBadge = document.getElementById('recBadge');
   if (recBadge) recBadge.style.display = state.settings.recordCalls ? '' : 'none';
-  renderActiveNoteLog(line.contact);
 
-  // ── Property info panel (Mojo-style) ──────────────────────
-  const c = line.contact;
+  // ── Contact name + owner ─────────────────────────────────
+  document.getElementById('mojoContactName').textContent = c.name || '—';
+  document.getElementById('mojoContactOwner').textContent = c.owner && c.owner !== c.name ? c.owner : '';
+
+  // ── Phones list ──────────────────────────────────────────
+  const phonesEl = document.getElementById('mojoPhonesEl');
+  if (phonesEl) {
+    const phones = c.phones || [];
+    if (phones.length) {
+      phonesEl.innerHTML = phones.map(p => {
+        const isActive = p.phone === activePhone;
+        return `<div class="mojo-phone-row${isActive ? ' active-phone' : ''}">
+          <span class="mojo-phone-num">${formatPhone(p.phone)}</span>
+          <span class="mojo-phone-label">${p.label || 'Phone'}</span>
+          ${isActive ? '<span style="font-size:10px;font-weight:700;color:#16a34a;margin-left:4px">● ACTIVE</span>' : ''}
+        </div>`;
+      }).join('');
+    } else {
+      phonesEl.innerHTML = '<div style="font-size:12px;color:#aaa">No phones on record</div>';
+    }
+  }
+
+  // ── Email ────────────────────────────────────────────────
+  const emailRow = document.getElementById('mojoEmailRow');
+  const emailLink = document.getElementById('mojoEmailLink');
+  if (c.email && emailRow && emailLink) {
+    emailLink.href = `mailto:${c.email}`;
+    emailLink.textContent = c.email;
+    emailRow.style.display = 'flex';
+  } else if (emailRow) {
+    emailRow.style.display = 'none';
+  }
+
+  // ── Meta chips (list, type) ──────────────────────────────
+  const metaRow = document.getElementById('mojoMetaRow');
+  if (metaRow) {
+    const chips = [];
+    if (c.listId) {
+      const list = state.lists.find(l => l.id === c.listId);
+      if (list) chips.push(`<span class="mojo-meta-chip">📁 ${list.name}</span>`);
+    }
+    if (c.type) chips.push(`<span class="mojo-meta-chip">🏷️ ${c.type}</span>`);
+    metaRow.innerHTML = chips.join('');
+  }
+
+  // ── Address ──────────────────────────────────────────────
   const streetAddr = (c.address || '').trim();
   const cityLine   = [c.city, c.state, c.zip].filter(Boolean).join(', ');
   const fullAddr   = [streetAddr, cityLine].filter(Boolean).join(', ');
+  document.getElementById('propAddrMain').textContent = streetAddr || cityLine || '';
+  document.getElementById('propAddrCity').textContent = streetAddr ? cityLine : '';
+  const addrBlock = document.getElementById('mojoAddrBlock');
+  if (addrBlock) addrBlock.style.display = (streetAddr || cityLine) ? 'flex' : 'none';
+
+  // ── Maps / Zillow action links ───────────────────────────
+  if (fullAddr) {
+    const enc = encodeURIComponent(fullAddr);
+    const mapsEl = document.getElementById('mojoMapsLink');
+    const zillowEl = document.getElementById('mojoZillowLink');
+    if (mapsEl) mapsEl.href = `https://maps.google.com/?q=${enc}`;
+    if (zillowEl) zillowEl.href = `https://www.zillow.com/homes/${enc}_rb/`;
+  }
+
+  // ── Property data panel ──────────────────────────────────
   const propPanel  = document.getElementById('propPanel');
   const fmtMoney = v => v ? (v.toString().startsWith('$') ? v : '$' + Number(v.toString().replace(/[^0-9.]/g,'')).toLocaleString()) : '';
-
-  // Property data grid rows
   const gridEl = document.getElementById('propDataGrid');
   const gridRows = [];
   if (c.avm)          gridRows.push(`<div class="prop-data-item avm-item"><span class="pdl">AVM</span><span class="pdv">${fmtMoney(c.avm)}</span></div>`);
@@ -6437,67 +6700,42 @@ function showActiveCall(line) {
   if (c.propertyType) gridRows.push(`<div class="prop-data-item"><span class="pdl">Type</span><span class="pdv">${c.propertyType}</span></div>`);
   if (c.occupancy)    gridRows.push(`<div class="prop-data-item"><span class="pdl">Occupancy</span><span class="pdv">${c.occupancy}</span></div>`);
   if (c.acres)        gridRows.push(`<div class="prop-data-item"><span class="pdl">Acres</span><span class="pdv">${c.acres}</span></div>`);
-  if (c.owner)        gridRows.push(`<div class="prop-data-item" style="grid-column:1/-1"><span class="pdl">Owner</span><span class="pdv">${c.owner}</span></div>`);
 
-  // Show panel if there's ANY data — address, city, or property fields
-  const hasAnyData = streetAddr || cityLine || gridRows.length || c.email || c.notes;
-  if (hasAnyData) {
-    // Address lines
-    document.getElementById('propAddrMain').textContent = streetAddr || cityLine || c.name;
-    document.getElementById('propAddrCity').textContent = streetAddr ? cityLine : '';
-
-    if (gridRows.length) {
-      gridEl.innerHTML = gridRows.join('');
-      gridEl.style.display = '';
-    } else {
-      gridEl.style.display = 'none';
-    }
-
-    // Meta row — type, list, email, notes
-    const metaParts = [];
-    if (c.email)       metaParts.push(`<span>✉️ <a href="mailto:${c.email}" style="color:var(--accent);text-decoration:none">${c.email}</a></span>`);
-    if (c.type)        metaParts.push(`<span>🏷️ ${c.type}</span>`);
-    if (c.notes && !streetAddr) metaParts.push(`<span style="color:var(--text-muted)">${c.notes.slice(0,60)}${c.notes.length>60?'…':''}</span>`);
-    if (c.listId) {
-      const list = state.lists.find(l => l.id === c.listId);
-      if (list) metaParts.push(`<span>📁 ${list.name}</span>`);
-    }
-    document.getElementById('propMeta').innerHTML = metaParts.join('');
-
-    // Quick-link buttons — only if we have an address to search
+  if (gridRows.length) {
+    gridEl.innerHTML = gridRows.join('');
+    gridEl.style.display = '';
+    const propMeta = document.getElementById('propMeta');
+    if (propMeta) propMeta.innerHTML = '';
     if (fullAddr) {
       const enc = encodeURIComponent(fullAddr);
-      const links = [
-        { cls:'prop-link-zillow',  href:`https://www.zillow.com/homes/${enc}_rb/`,             label:'🏠 Zillow' },
-        { cls:'prop-link-maps',    href:`https://maps.google.com/?q=${enc}`,                    label:'📍 Maps' },
-        { cls:'prop-link-street',  href:`https://maps.google.com/?q=${enc}&layer=c`,            label:'🚗 Street' },
-        { cls:'prop-link-records', href:`https://www.google.com/search?q=${enc}+property+records+owner`, label:'📋 Records' },
-      ];
-      document.getElementById('propLinks').innerHTML = links.map(l =>
-        `<a class="prop-link ${l.cls}" href="${l.href}" target="_blank" rel="noopener">${l.label}</a>`
-      ).join('');
+      document.getElementById('propLinks').innerHTML = [
+        `<a class="prop-link prop-link-maps" href="https://maps.google.com/?q=${enc}&layer=c" target="_blank" rel="noopener">🚗 Street View</a>`,
+        `<a class="prop-link prop-link-records" href="https://www.google.com/search?q=${enc}+property+records+owner" target="_blank" rel="noopener">📋 Records</a>`,
+      ].join('');
     } else {
       document.getElementById('propLinks').innerHTML = '';
     }
-
     propPanel.style.display = '';
   } else {
     propPanel.style.display = 'none';
   }
 
+  // ── Tags ─────────────────────────────────────────────────
   const tags = document.getElementById('activeTags');
-  const typeClass = (line.contact.type || '').toLowerCase().includes('buyer') ? 'buyer' : 'seller';
-  const typeLbl = line.contact.type || (typeClass === 'buyer' ? 'Buyer' : 'Seller');
-  const temp = line.contact.temperature;
+  const typeClass = (c.type || '').toLowerCase().includes('buyer') ? 'buyer' : 'seller';
+  const typeLbl = c.type || (typeClass === 'buyer' ? 'Buyer' : 'Seller');
+  const temp = c.temperature;
   const tempTag = temp ? `<span class="tag tag-${temp}">${{hot:'🔥 Hot', warm:'🌟 Warm', cold:'❄️ Cold'}[temp]||temp}</span>` : '';
-  const cbTag = line.contact.callbackDate ? `<span class="tag" style="background:var(--accent-dim);color:var(--accent)">📅 Callback</span>` : '';
+  const cbTag = c.callbackDate ? `<span class="tag" style="background:var(--accent-dim);color:var(--accent)">📅 Callback</span>` : '';
   tags.innerHTML = `<span class="tag tag-${typeClass}">${typeLbl}</span><span class="tag tag-line">Line ${line.id}</span>${tempTag}${cbTag}`;
 
-  // Show group assignment strip during active call
-  state._dispContact = line.contact;
+  // ── Group strip ───────────────────────────────────────────
+  state._dispContact = c;
+  document.getElementById('callNotes').value = '';
+  renderActiveNoteLog(c);
   const groupRow = document.getElementById('activeCallGroupRow');
   if (state.groups && state.groups.length) {
-    renderCallGroups(line.contact, 'activeCallGroupPills');
+    renderCallGroups(c, 'activeCallGroupPills');
     groupRow.style.display = '';
   } else {
     groupRow.style.display = 'none';
@@ -6507,8 +6745,8 @@ function showActiveCall(line) {
 function clearActiveCall(hideDisp = true) {
   const card = document.getElementById('activeCallCard');
   card.style.display = 'none';
-  card.style.borderColor = '';
-  card.style.background = '';
+  const banner = document.getElementById('liveCallBanner');
+  if (banner) banner.classList.remove('visible');
   // Only hide the disposition panel if explicitly asked — showDisposition() keeps it open
   if (hideDisp) {
     document.getElementById('dispSection').style.display = 'none';
