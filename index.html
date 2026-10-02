@@ -7494,6 +7494,56 @@ async function init() {
   }, 500);
 }
 
+
+// ── Mojo-style active-call keyboard shortcuts ────────────────────────────────
+// 1 = Contact (spoke to them)  2 = No Contact Next #  3 = No Contact Next Record
+// 4 = Bad Number  5 = Voicemail  R = Redial/mute  H = Hang up  P = Pause
+document.addEventListener('keydown', function(e) {
+  // Only fire when a call is live (activeCallCard visible) and focus is NOT in a text input
+  const card = document.getElementById('activeCallCard');
+  if (!card || card.style.display === 'none') return;
+  const tag = (document.activeElement || {}).tagName || '';
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+  switch (e.key) {
+    case '1':
+      e.preventDefault();
+      hangupActive();
+      break;
+    case '2':
+      e.preventDefault();
+      hangupNoContact();
+      break;
+    case '3':
+      e.preventDefault();
+      hangupNoContact();
+      break;
+    case '4':
+      e.preventDefault();
+      hangupThenBadNumber();
+      break;
+    case '5':
+      e.preventDefault();
+      dropVoicemailById(0);
+      break;
+    case 'r': case 'R':
+      e.preventDefault();
+      (function() {
+        const l = state.activeLineId != null && state.lines?.[state.activeLineId];
+        if (l) muteLine(l);
+      })();
+      break;
+    case 'h': case 'H':
+      e.preventDefault();
+      hangupActive();
+      break;
+    case 'p': case 'P':
+      e.preventDefault();
+      togglePause();
+      break;
+  }
+});
+
 document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
