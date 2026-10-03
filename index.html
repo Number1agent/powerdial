@@ -2191,7 +2191,7 @@
           <button class="mojo-disp-btn" onclick="hangupActive()" title="Spoke with person">
             Contact <span class="mojo-key">1</span>
           </button>
-          <button class="mojo-disp-btn" onclick="hangupNoContact()" title="No answer — next number">
+          <button class="mojo-disp-btn" onclick="hangupNextNumber()" title="Try next phone number for this contact">
             No Contact<br><span style="font-size:9px;opacity:.8">(Next Number)</span><span class="mojo-key">2</span>
           </button>
           <button class="mojo-disp-btn" onclick="hangupNoContact()" title="No answer — next record">
@@ -6823,6 +6823,49 @@ function assignContactGroup(groupId, pillsContainerId) {
 // ============================================================
 
 // ── No-contact hangup (no conversation, continue dialing) ──
+function hangupNextNumber() {
+  // No Contact (Next Number) — mark THIS phone as noanswer, keep contact pending
+  // so the dialer queues up the next phone on the same person.
+  if (state.activeLineId === null) return;
+  const line = state.lines[state.activeLineId - 1];
+  if (line.timerInt) clearInterval(line.timerInt);
+  const contact = line.contact;
+  const phoneEntry = line.phoneEntry;
+
+  if (contact && phoneEntry) {
+    phoneEntry.status = 'noanswer';
+    // Check if there are still pending phones on this contact
+    const remainingPending = (contact.phones || []).filter(p => p.status === 'pending');
+    if (remainingPending.length > 0) {
+      // Keep contact pending so the dialer picks it up again with the next phone
+      contact.status = 'pending';
+      contact.disposition = null;
+    } else {
+      // No more phones — treat same as No Contact
+      contact.status = 'noanswer';
+      contact.disposition = 'No Contact';
+    }
+    state.stats.calls++;
+    addToLog(contact, 'noanswer', line.timerVal);
+    saveCallRecord(contact, phoneEntry, 'No Contact (Next Number)', line.timerVal, '');
+    saveContacts();
+    updateStatsUI();
+  }
+
+  line.status = 'idle';
+  line.contact = null;
+  line.phoneEntry = null;
+  line.timerVal = 0;
+  state.activeLineId = null;
+  if (state.activeTimerInt) clearInterval(state.activeTimerInt);
+  updateLineUI(line);
+  clearActiveCall();
+  renderQueue();
+  const remaining = (contact?.phones || []).filter(p => p.status === 'pending').length;
+  toast(remaining > 0 ? `📵 No contact — trying next number (${remaining} left)` : '📵 No contact — no more numbers', 'gray');
+  resumeAfterDisposition();
+}
+
 function hangupNoContact() {
   if (state.activeLineId === null) return;
   const line = state.lines[state.activeLineId - 1];
@@ -7512,7 +7555,7 @@ document.addEventListener('keydown', function(e) {
       break;
     case '2':
       e.preventDefault();
-      hangupNoContact();
+      hangupNextNumber();
       break;
     case '3':
       e.preventDefault();
