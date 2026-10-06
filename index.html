@@ -1884,6 +1884,7 @@
   <div class="topbar-spacer"></div>
 
   <div class="session-controls">
+    <button class="btn btn-ghost btn-icon" onclick="openClaudeSummary()" title="Share with Claude" id="btnClaude" style="font-size:15px">🤖</button>
     <button class="btn btn-ghost btn-icon" onclick="showAddContactModal()" title="Add Contact">➕</button>
     <button class="btn btn-ghost btn-icon" onclick="showImportModal()" title="Import Contacts">📋</button>
     <button class="btn btn-ghost btn-icon" onclick="showSettingsModal()" title="Settings">⚙️</button>
@@ -7588,6 +7589,187 @@ document.addEventListener('keydown', function(e) {
 });
 
 document.addEventListener('DOMContentLoaded', init);
+
+// ═══════════════════════════════════════════════════════
+// CLAUDE SUMMARY — mirrors Mojo Dialer MCP data format
+// ═══════════════════════════════════════════════════════
+
+let _claudeRange = 'today';
+
+function openClaudeSummary() {
+  document.getElementById('claudeModal').classList.remove('hidden');
+  setClaudeRange('today');
+}
+
+function closeClaudeModal() {
+  document.getElementById('claudeModal').classList.add('hidden');
+}
+
+function setClaudeRange(range) {
+  _claudeRange = range;
+  ['today','week','all'].forEach(r => {
+    const el = document.getElementById('cr' + r.charAt(0).toUpperCase() + r.slice(1));
+    if (el) el.style.background = r === range ? 'var(--accent)' : '';
+    if (el) el.style.color = r === range ? '#fff' : '';
+  });
+  document.getElementById('claudeSummaryText').value = generateClaudeSummary(range);
+}
+
+function copyClaudeSummary() {
+  const el = document.getElementById('claudeSummaryText');
+  el.select();
+  navigator.clipboard.writeText(el.value).catch(() => document.execCommand('copy'));
+  const fb = document.getElementById('claudeCopyFeedback');
+  fb.style.display = 'inline';
+  setTimeout(() => fb.style.display = 'none', 2000);
+}
+
+function generateClaudeSummary(range) {
+  try {
+    const records  = JSON.parse(localStorage.getItem('powerdial_call_records') || '[]');
+    const sessions = JSON.parse(localStorage.getItem('powerdial_session_reports') || '[]');
+    const now      = new Date();
+
+    // Date filter
+    function inRange(dateStr) {
+      const d = new Date(dateStr);
+      if (range === 'today') {
+        return d.toDateString() === now.toDateString();
+      } else if (range === 'week') {
+        const weekAgo = new Date(now); weekAgo.setDate(weekAgo.getDate() - 7);
+        return d >= weekAgo;
+      }
+      return true; // all
+    }
+
+    const filtered  = records.filter(r => inRange(r.date));
+    const filtSess  = sessions.filter(s => inRange(s.date));
+
+    // ── Stats ──
+    const totalCalls     = filtered.length;
+    const connected      = filtered.filter(r => !['No Contact','No Answer','noanswer','Left VM','voicemail','Voicemail','Bad Number','DNC'].includes(r.outcome)).length;
+    const leftVM         = filtered.filter(r => ['Left VM','voicemail','Voicemail'].includes(r.outcome)).length;
+    const appts          = filtered.filter(r => ['Appointment','Hot Lead','Interested'].includes(r.outcome)).length;
+    const contactRate    = totalCalls ? Math.round(connected / totalCalls * 100) : 0;
+    const totalSecs      = filtSess.reduce((s, r) => s + (r.durationSecs || 0), 0);
+    const hrs            = totalSecs / 3600;
+    const cph            = hrs > 0 ? Math.round(totalCalls / hrs) : 0;
+
+    const rangeLabel = range === 'today' ? 'Today (' + now.toLocaleDateString() + ')'
+                     : range === 'week'  ? 'Last 7 Days'
+                     : 'All Time';
+
+    // ── Format output (mirrors Mojo MCP structure) ──
+    let out = '';
+
+    out += '=== POWERDIAL ACCOUNT ===\n';
+    out += 'Agent: ' + (state.settings?.agentName || 'PowerDial User') + '\n';
+    out += 'Generated: ' + now.toLocaleString() + '\n';
+    out += 'Range: ' + rangeLabel + '\n\n';
+
+    out += '=== DIALING STATISTICS ===\n';
+    out += 'Total Calls:    ' + totalCalls + '\n';
+    out += 'Contacts:       ' + connected + '\n';
+    out += 'Left VM:        ' + leftVM + '\n';
+    out += 'Appointments:   ' + appts + '\n';
+    out += 'Contact Rate:   ' + contactRate + '%\n';
+    out += 'Sessions:       ' + filtSess.length + '\n';
+    out += 'Dial Time:      ' + formatDurSecs(totalSecs) + '\n';
+    out += 'Calls/Hour:     ' + (cph || '—') + '\n\n';
+
+    // ── Session reports ──
+    out += '=== DIAL SESSIONS ===\n';
+    if (filtSess.length === 0) {
+      out += 'No sessions in this range.\n';
+    } else {
+      filtSess.slice(0, 20).forEach((s, i) => {
+        const d = new Date(s.date);
+        out += (i + 1) + '. ' + d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+        out += ' — ' + s.calls + ' calls, ' + s.connected + ' contacts, ' + s.appts + ' appts';
+        out += ', ' + formatDurSecs(s.durationSecs) + '\n';
+      });
+    }
+    out += '\n';
+
+    // ── Call details ──
+    out += '=== CALL DETAILS (' + filtered.length + ' calls) ===\n';
+    if (filtered.length === 0) {
+      out += 'No calls in this range.\n';
+    } else {
+      filtered.slice(0, 100).forEach((r, i) => {
+        const d = new Date(r.date);
+        const time = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        const dur  = r.duration ? formatDurSecs(r.duration) : '—';
+        out += (i + 1) + '. ' + d.toLocaleDateString() + ' ' + time;
+        out += ' | ' + (r.contactName || '—');
+        out += ' | ' + (r.phone || '—');
+        out += ' | ' + (r.outcome || '—');
+        out += ' | ' + dur;
+        if (r.notes) out += ' | Notes: ' + r.notes.replace(/\n/g, ' ');
+        out += '\n';
+      });
+      if (filtered.length > 100) out += '... and ' + (filtered.length - 100) + ' more\n';
+    }
+    out += '\n';
+
+    // ── Queue snapshot ──
+    const pending = (state.contacts || []).filter(c => c.status === 'pending').length;
+    const called  = (state.contacts || []).filter(c => c.status !== 'pending').length;
+    const total   = (state.contacts || []).length;
+    out += '=== QUEUE SNAPSHOT ===\n';
+    out += 'Total contacts: ' + total + '\n';
+    out += 'Pending:        ' + pending + '\n';
+    out += 'Called:         ' + called + '\n';
+    (state.lists || []).forEach(l => {
+      const lc = (state.contacts || []).filter(c => c.listId === l.id);
+      const lp = lc.filter(c => c.status === 'pending').length;
+      out += '  List "' + l.name + '": ' + lc.length + ' total, ' + lp + ' pending\n';
+    });
+
+    return out;
+  } catch(e) {
+    return 'Error generating summary: ' + e.message;
+  }
+}
+
+function formatDurSecs(secs) {
+  if (!secs) return '0:00';
+  const m = Math.floor(secs / 60);
+  const s = Math.floor(secs % 60);
+  return m + ':' + String(s).padStart(2, '0');
+}
+
 </script>
+
+<!-- ===== CLAUDE SUMMARY MODAL ===== -->
+<div id="claudeModal" class="modal-overlay hidden" onclick="if(event.target===this)closeClaudeModal()">
+  <div class="modal-box" style="max-width:640px;width:95%">
+    <div class="modal-header">
+      <span style="font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px">
+        🤖 PowerDial → Claude
+      </span>
+      <button class="modal-close" onclick="closeClaudeModal()">✕</button>
+    </div>
+    <div style="padding:0 20px 8px;font-size:12px;color:var(--text-muted)">
+      Copy this and paste it into Claude to ask questions about your dialing activity — stats, calls, sessions, anything.
+    </div>
+    <div style="padding:0 20px 16px">
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <button class="btn btn-ghost" style="font-size:12px;padding:4px 10px" onclick="setClaudeRange('today')" id="crToday">Today</button>
+        <button class="btn btn-ghost" style="font-size:12px;padding:4px 10px" onclick="setClaudeRange('week')" id="crWeek">This Week</button>
+        <button class="btn btn-ghost" style="font-size:12px;padding:4px 10px" onclick="setClaudeRange('all')" id="crAll">All Time</button>
+      </div>
+      <textarea id="claudeSummaryText" readonly
+        style="width:100%;height:340px;resize:vertical;font-family:monospace;font-size:11px;
+               background:var(--surface);border:1px solid var(--border);border-radius:8px;
+               padding:12px;color:var(--text-main);box-sizing:border-box;line-height:1.5"></textarea>
+      <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+        <button class="btn btn-primary" style="flex:1" onclick="copyClaudeSummary()">📋 Copy to Clipboard</button>
+        <span id="claudeCopyFeedback" style="font-size:12px;color:var(--green);display:none">✅ Copied!</span>
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
