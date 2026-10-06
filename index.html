@@ -6923,6 +6923,30 @@ function saveCallRecord(contact, phoneEntry, outcome, duration, notes) {
     // Keep last 2000 records
     if (existing.length > 2000) existing.length = 2000;
     localStorage.setItem('powerdial_call_records', JSON.stringify(existing));
+    // Sync to Railway server for Claude MCP
+    try {
+      const backendUrl = (state.settings && state.settings.backendUrl) ? state.settings.backendUrl : '';
+      if (backendUrl) {
+        fetch(backendUrl + '/api/claude/sync/call', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({
+            record_id: String(record.id),
+            date: record.date,
+            session_id: String(record.sessionId),
+            contact_name: record.contactName,
+            phone: record.phone,
+            phone_label: record.phoneLabel,
+            city: record.city,
+            state: record.state,
+            outcome: record.outcome,
+            duration_secs: Math.round(record.duration || 0),
+            notes: record.notes,
+            group_name: record.groupName
+          })
+        }).catch(function(){});
+      }
+    } catch(e2) {}
   } catch(e) {}
 }
 
@@ -6948,6 +6972,28 @@ function saveSessionReport() {
     existing.unshift(report);
     if (existing.length > 200) existing.length = 200;
     localStorage.setItem('powerdial_session_reports', JSON.stringify(existing));
+    // Sync to Railway server for Claude MCP
+    try {
+      const backendUrl = (state.settings && state.settings.backendUrl) ? state.settings.backendUrl : '';
+      if (backendUrl) {
+        fetch(backendUrl + '/api/claude/sync/session', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({
+            session_id: String(report.id),
+            date: report.date,
+            end_time: report.endTime,
+            duration_secs: report.durationSecs,
+            calls: report.calls,
+            connected: report.connected,
+            vm: report.vm,
+            appts: report.appts,
+            callbacks: report.callbacks,
+            contact_rate: report.contactRate
+          })
+        }).catch(function(){});
+      }
+    } catch(e2) {}
   } catch(e) {}
 }
 

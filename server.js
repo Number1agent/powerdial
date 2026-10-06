@@ -26,6 +26,44 @@ if (pgPool) {
     )
   `).then(() => console.log('[DB] expired_contacts table ready'))
     .catch(err => console.error('[DB] Table creation error:', err.message));
+
+  pgPool.query(`
+    CREATE TABLE IF NOT EXISTS call_records (
+      id BIGSERIAL PRIMARY KEY,
+      record_id TEXT UNIQUE,
+      date TIMESTAMPTZ,
+      session_id TEXT,
+      contact_name TEXT,
+      phone TEXT,
+      phone_label TEXT,
+      city TEXT,
+      state TEXT,
+      outcome TEXT,
+      duration_secs INT,
+      notes TEXT,
+      group_name TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `).then(() => console.log('[DB] call_records table ready'))
+    .catch(err => console.error('[DB] call_records table error:', err.message));
+
+  pgPool.query(`
+    CREATE TABLE IF NOT EXISTS session_reports (
+      id BIGSERIAL PRIMARY KEY,
+      session_id TEXT UNIQUE,
+      date TIMESTAMPTZ,
+      end_time TIMESTAMPTZ,
+      duration_secs INT,
+      calls INT,
+      connected INT,
+      vm INT,
+      appts INT,
+      callbacks INT,
+      contact_rate INT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `).then(() => console.log('[DB] session_reports table ready'))
+    .catch(err => console.error('[DB] session_reports table error:', err.message));
 } else {
   console.warn('[DB] No DATABASE_URL — expireds will be in-memory only');
 }
@@ -568,6 +606,199 @@ app.delete('/api/expireds/clear', async (req, res) => {
   expiredQueueFallback = [];
   res.json({ success: true, cleared });
 });
+
+
+// ═══════════════════════════════════════════════════════════════════
+// CLAUDE MCP ENDPOINTS — mirrors Mojo Dialer MCP integration
+// Auth: Bearer token via POWERDIAL_CLAUDE_KEY env var
+// ═══════════════════════════════════════════════════════════════════
+
+function claudeAuth(req, res, next) {
+  const key = process.env.POWERDIAL_CLAUDE_KEY;
+  if (!key) return next(); // no key set = open (dev mode)
+  const auth = req.headers['authorization'] || '';
+  if (auth !== `Bearer ${key}`) return res.status(401).json({ error: 'Unauthorized' });
+  next();
+}
+
+function sinceDate(range) {
+  const now = new Date();
+  if (range === 'today') {
+    const d = new Date(now); d.setHours(0,0,0,0); return d;
+  } else if (range === 'week') {
+    const d = new Date(now); d.setDate(d.getDate() - 7); return d;
+  } else if (range === 'month') {
+    const d = new Date(now); d.setDate(d.getDate() - 30); return d;
+  }
+  return new Date(0); // all time
+}
+
+// POST /api/claude/sync/call — browser pushes each call record
+app.post('/api/claude/sync/call', async (req, res) => {
+  if (!pgPool) return res.json({ ok: false, reason: 'no_db' });
+  const r = req.body;
+  if (!r || !r.id) return res.status(400).json({ error: 'Missing record' });
+  try {
+    await pgPool.query(`
+      INSERT INTO call_records
+        (record_id, date, session_id, contact_name, phone, phone_label, city, state, outcome, duration_secs, notes, group_name)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+      ON CONFLICT (record_id) DO NOTHING
+    `, [
+      String(r.id), r.date ? new Date(r.date) : new Date(),
+      r.sessionId, r.contactName, r.phone, r.phoneLabel,
+      r.city, r.state, r.outcome, r.duration || 0, r.notes || '', r.groupName || ''
+    ]);
+    res.json({ ok: true });
+  } catch(err) {
+    console.error('[Claude sync call]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/claude/sync/session — browser pushes each session report
+app.post('/api/claude/sync/session', async (req, res) => {
+  if (!pgPool) return res.json({ ok: false, reason: 'no_db' });
+  const s = req.body;
+  if (!s || !s.id) return res.status(400).json({ error: 'Missing session' });
+  try {
+    await pgPool.query(`
+      INSERT INTO session_reports
+        (session_id, date, end_time, duration_secs, calls, connected, vm, appts, callbacks, contact_rate)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+      ON CONFLICT (session_id) DO NOTHING
+    `, [
+      String(s.id), s.date ? new Date(s.date) : new Date(),
+      s.endTime ? new Date(s.endTime) : null,
+      s.durationSecs || 0, s.calls || 0, s.connected || 0,
+      s.vm || 0, s.appts || 0, s.callbacks || 0, s.contactRate || 0
+    ]);
+    res.json({ ok: true });
+  } catch(err) {
+    console.error('[Claude sync session]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/claude/account
+app.get('/api/claude/account', claudeAuth, (req, res) => {
+  res.json({
+    agent: 'Jose Cruz',
+    brokerage: 'Douglas Elliman',
+    dialer: 'PowerDial',
+    url: process.env.PUBLIC_URL || 'https://powerdial-production-85ab.up.railway.app',
+    dbConnected: !!pgPool,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// GET /api/claude/stats?range=today|week|month|all
+app.get('/api/claude/stats', claudeAuth, async (req, res) => {
+  if (!pgPool) return res.status(503).json({ error: 'No database connected' });
+  const since = sinceDate(req.query.range || 'today');
+  try {
+    const { rows } = await pgPool.query(`
+      SELECT
+        COUNT(*) AS total_calls,
+        SUM(CASE WHEN outcome NOT IN ('No Contact','No Answer','noanswer','Left VM','voicemail','Voicemail','Bad Number','DNC') THEN 1 ELSE 0 END) AS contacts,
+        SUM(CASE WHEN outcome IN ('Left VM','voicemail','Voicemail') THEN 1 ELSE 0 END) AS voicemails,
+        SUM(CASE WHEN outcome IN ('Appointment','Hot Lead','Interested') THEN 1 ELSE 0 END) AS appointments,
+        SUM(CASE WHEN outcome = 'Callback' THEN 1 ELSE 0 END) AS callbacks,
+        SUM(duration_secs) AS total_seconds,
+        COUNT(DISTINCT session_id) AS session_count
+      FROM call_records WHERE date >= $1
+    `, [since]);
+    const r = rows[0];
+    const totalCalls = parseInt(r.total_calls) || 0;
+    const contacts   = parseInt(r.contacts) || 0;
+    const totalSecs  = parseInt(r.total_seconds) || 0;
+    const hrs        = totalSecs / 3600;
+    res.json({
+      range: req.query.range || 'today',
+      since: since.toISOString(),
+      totalCalls,
+      contacts,
+      voicemails:   parseInt(r.voicemails) || 0,
+      appointments: parseInt(r.appointments) || 0,
+      callbacks:    parseInt(r.callbacks) || 0,
+      contactRate:  totalCalls ? Math.round(contacts / totalCalls * 100) : 0,
+      sessionCount: parseInt(r.session_count) || 0,
+      totalDialTime: formatSecs(totalSecs),
+      callsPerHour: hrs > 0 ? Math.round(totalCalls / hrs) : 0
+    });
+  } catch(err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/claude/calls?range=today|week|month|all&limit=100
+app.get('/api/claude/calls', claudeAuth, async (req, res) => {
+  if (!pgPool) return res.status(503).json({ error: 'No database connected' });
+  const since = sinceDate(req.query.range || 'today');
+  const limit = Math.min(parseInt(req.query.limit) || 100, 500);
+  try {
+    const { rows } = await pgPool.query(`
+      SELECT record_id, date, contact_name, phone, phone_label, city, state,
+             outcome, duration_secs, notes, group_name, session_id
+      FROM call_records WHERE date >= $1
+      ORDER BY date DESC LIMIT $2
+    `, [since, limit]);
+    res.json({
+      range: req.query.range || 'today',
+      count: rows.length,
+      calls: rows.map(r => ({
+        date: r.date,
+        contact: r.contact_name,
+        phone: r.phone,
+        label: r.phone_label,
+        city: r.city,
+        state: r.state,
+        outcome: r.outcome,
+        duration: formatSecs(r.duration_secs),
+        notes: r.notes,
+        list: r.group_name,
+        sessionId: r.session_id
+      }))
+    });
+  } catch(err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/claude/sessions?range=today|week|month|all
+app.get('/api/claude/sessions', claudeAuth, async (req, res) => {
+  if (!pgPool) return res.status(503).json({ error: 'No database connected' });
+  const since = sinceDate(req.query.range || 'week');
+  try {
+    const { rows } = await pgPool.query(`
+      SELECT session_id, date, end_time, duration_secs, calls, connected, vm, appts, callbacks, contact_rate
+      FROM session_reports WHERE date >= $1 ORDER BY date DESC
+    `, [since]);
+    res.json({
+      range: req.query.range || 'week',
+      count: rows.length,
+      sessions: rows.map(s => ({
+        date: s.date,
+        endTime: s.end_time,
+        duration: formatSecs(s.duration_secs),
+        calls: s.calls,
+        contacts: s.connected,
+        voicemails: s.vm,
+        appointments: s.appts,
+        callbacks: s.callbacks,
+        contactRate: s.contact_rate + '%'
+      }))
+    });
+  } catch(err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+function formatSecs(secs) {
+  if (!secs) return '0:00';
+  const m = Math.floor(secs / 60), s = Math.floor(secs % 60);
+  return m + ':' + String(s).padStart(2, '0');
+}
 
 // ─── Health Check ─────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
