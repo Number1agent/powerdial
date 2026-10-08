@@ -4138,12 +4138,17 @@ function _runImportFromMapping(raw, headers) {
 
   // List assignment
   const importAsExpireds2 = document.getElementById('importAsExpireds2')?.checked;
-  const listNameInput = (document.getElementById('importListName2')?.value || '').trim();
+  let listNameInput = (document.getElementById('importListName2')?.value || '').trim();
+  // Auto-name if blank so we NEVER do a full wipe
+  if (!listNameInput && !importAsExpireds2) {
+    const d = new Date();
+    listNameInput = `Import ${d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}`;
+  }
   let listId = null;
   if (importAsExpireds2) {
     const expList = initExpiredsList();
     listId = expList.id;
-  } else if (listNameInput) {
+  } else {
     let existing = state.lists.find(l => l.name.toLowerCase() === listNameInput.toLowerCase());
     if (!existing) existing = createList(listNameInput);
     listId = existing.id;
@@ -4156,16 +4161,14 @@ function _runImportFromMapping(raw, headers) {
   const dncFlagged = tagged.filter(c => c.isDNC).length;
 
   if (state.session) stopSession();
-  if (listId) {
-    if (importAsExpireds2) {
-      // Expireds: always append, never wipe existing
-      state.contacts = [...state.contacts, ...tagged];
-    } else {
-      state.contacts = state.contacts.filter(c => c.listId !== listId);
-      state.contacts = [...state.contacts, ...tagged];
-    }
+  // listId is always set now — never do a full wipe
+  if (importAsExpireds2) {
+    // Expireds: always append
+    state.contacts = [...state.contacts, ...tagged];
   } else {
-    state.contacts = tagged;
+    // Named list: replace only that list's contacts, keep everything else
+    state.contacts = state.contacts.filter(c => c.listId !== listId);
+    state.contacts = [...state.contacts, ...tagged];
   }
   state.queue = [...state.contacts];
   state.currentIdx = 0;
@@ -4268,7 +4271,11 @@ function _importContactsInner() {
 
   // Handle list assignment
   const importAsExpireds = document.getElementById('importAsExpireds')?.checked;
-  const listNameInput = (document.getElementById('importListName')?.value || '').trim();
+  let listNameInput = (document.getElementById('importListName')?.value || '').trim();
+  if (!listNameInput) {
+    const d = new Date();
+    listNameInput = `Import ${d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}`;
+  }
   let listId = null;
   if (importAsExpireds) {
     const expList = initExpiredsList();
