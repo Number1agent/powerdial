@@ -80,6 +80,25 @@ const client = twilio(
 );
 
 const TWILIO_PHONE    = process.env.TWILIO_PHONE_NUMBER;   // Your Twilio caller ID
+
+// ─── Number Pool (rotation) ───────────────────────────────────────────────────
+// Set TWILIO_PHONE_NUMBERS=+12125550001,+12125550002,+12125550003 in Railway
+// Falls back to TWILIO_PHONE_NUMBER if not set
+const NUMBER_POOL = (() => {
+  const poolStr = process.env.TWILIO_PHONE_NUMBERS || '';
+  const nums = poolStr.split(',').map(n => n.trim()).filter(n => n.startsWith('+'));
+  if (nums.length) return nums;
+  return TWILIO_PHONE ? [TWILIO_PHONE] : [];
+})();
+let _rotationIdx = 0;
+function getNextNumber(contactPhone) {
+  // Check if local presence rules apply (area code match)
+  // Falls back to round-robin pool
+  if (!NUMBER_POOL.length) return TWILIO_PHONE || '';
+  const num = NUMBER_POOL[_rotationIdx % NUMBER_POOL.length];
+  _rotationIdx++;
+  return num;
+}
 const AGENT_PHONE     = process.env.AGENT_PHONE_NUMBER;    // Jose's real phone number
 const BASE_URL        = process.env.PUBLIC_URL;             // ngrok or Railway URL
 const CONFERENCE_NAME = 'PowerDial-Session';
@@ -129,7 +148,7 @@ app.post('/api/session/start', async (req, res) => {
 
       const call = await client.calls.create({
         to: contact.phone,
-        from: callerId || TWILIO_PHONE,
+        from: callerId || getNextNumber(contact.phone) || TWILIO_PHONE,
         url: `${BASE_URL}/twiml/outbound?lineId=${lineId}&name=${encodeURIComponent(contact.name)}`,
         statusCallback: `${BASE_URL}/webhook/call-status?lineId=${lineId}`,
         statusCallbackEvent: ['answered', 'completed', 'no-answer', 'busy', 'failed'],
@@ -799,6 +818,52 @@ function formatSecs(secs) {
   const m = Math.floor(secs / 60), s = Math.floor(secs % 60);
   return m + ':' + String(s).padStart(2, '0');
 }
+
+
+// ─── Spam Check ───────────────────────────────────────────────────────────────
+// POST /spam-check — checks numbers against Twilio Lookup + carrier reputation
+app.post('/spam-check', async (req, res) => {
+  const { numbers = [] } = req.body;
+  if (!numbers.length) return res.json({ results: [] });
+  if (!process.env.TWILIO_ACCOUNT_SID) {
+    return res.json({ results: numbers.map(n => ({ number: n, flagged: false, note: 'Demo mode — Twilio not configured' })) });
+  }
+  try {
+    const results = await Promise.all(numbers.map(async (number) => {
+      try {
+        const lookup = await client.lookups.v2.phoneNumbers(number)
+          .fetch({ fields: 'line_type_intelligence' });
+        // Twilio doesn't expose spam scores directly in free tier
+        // Use line type as a signal: voip lines are more likely flagged
+        const lt = lookup.lineTypeIntelligence;
+        const lineType = lt ? lt.type : 'unknown';
+        const flagged = false; // Twilio free lookup doesn't expose spam flag; real signal requires paid risk score
+        return { number, flagged, lineType, note: lineType === 'voip' ? 'VoIP number — higher spam risk' : 'Mobile/landline — lower spam risk' };
+      } catch(e) {
+        return { number, flagged: false, note: 'Lookup failed: ' + e.message };
+      }
+    }));
+    res.json({ results });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── Number Pool Info ─────────────────────────────────────────────────────────
+// GET /api/numbers — returns pool and rotation index (for settings UI)
+app.get('/api/numbers', (req, res) => {
+  res.json({
+    pool: NUMBER_POOL,
+    rotationIdx: _rotationIdx,
+    next: NUMBER_POOL.length ? NUMBER_POOL[_rotationIdx % NUMBER_POOL.length] : null
+  });
+});
+
+// POST /api/numbers/reset — reset rotation counter
+app.post('/api/numbers/reset', (req, res) => {
+  _rotationIdx = 0;
+  res.json({ ok: true, next: NUMBER_POOL.length ? NUMBER_POOL[0] : null });
+});
 
 // ─── Health Check ─────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {

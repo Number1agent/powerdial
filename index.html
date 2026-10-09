@@ -2632,6 +2632,13 @@
         <div style="margin-top:12px;padding:10px;background:var(--bg-3);border-radius:6px;font-size:11px;color:var(--text-muted)">
           ℹ️ Buy numbers for each area code in your Twilio console. Suggested: 212 (Manhattan), 845 (Dutchess), 914 (Yonkers/Westchester), 718/347 (Bronx/Brooklyn)
         </div>
+
+        <div style="height:1px;background:var(--border);margin:16px 0"></div>
+        <div class="stab-section-title">🔄 Number Rotation Pool</div>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Round-robins calls across multiple numbers to reduce spam flagging. Set <code style="background:var(--bg-3);padding:1px 4px;border-radius:3px">TWILIO_PHONE_NUMBERS</code> in Railway Variables as a comma-separated list (e.g. <code style="background:var(--bg-3);padding:1px 4px;border-radius:3px">+12125550001,+12125550002</code>). Local presence area code rules take priority over rotation.</p>
+        <div id="numberPoolStatus" style="font-size:12px;color:var(--text-muted);padding:8px;background:var(--bg-3);border-radius:6px;margin-bottom:8px">Loading pool status…</div>
+        <button class="btn btn-ghost" style="width:100%;font-size:12px" onclick="loadNumberPool()">🔄 Refresh Pool Status</button>
+        <button class="btn btn-ghost" style="width:100%;font-size:12px;margin-top:6px" onclick="resetRotation()">↩️ Reset Rotation Counter</button>
       </div>
 
       <!-- ACTION PLANS -->
@@ -2995,7 +3002,7 @@ function switchSettingsTab(name) {
     if (pane) pane.style.display = t === name ? '' : 'none';
   });
   if (name === 'sms') renderSmsTemplateList();
-  if (name === 'presence') renderPresenceList();
+  if (name === 'presence') { renderPresenceList(); loadNumberPool(); }
   if (name === 'plans') renderActionPlanList();
   if (name === 'rules') renderListRuleList();
   if (name === 'recording') renderVmLibraryList();
@@ -3686,6 +3693,44 @@ async function checkSpamReputation() {
     statusEl.textContent = '❌ Check failed: ' + e.message;
     statusEl.style.color = 'var(--red)';
   }
+}
+
+// ============================================================
+//  NUMBER POOL / ROTATION
+// ============================================================
+async function loadNumberPool() {
+  const el = document.getElementById('numberPoolStatus');
+  if (!el) return;
+  if (state.demoMode) {
+    el.innerHTML = '🟡 Demo mode — number pool not available.';
+    return;
+  }
+  try {
+    const res = await fetch(state.settings.backendUrl + '/api/numbers');
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    if (!data.pool || !data.pool.length) {
+      el.innerHTML = '⚠️ No numbers in pool. Set <code>TWILIO_PHONE_NUMBERS</code> in Railway Variables.';
+    } else {
+      el.innerHTML = `<strong>${data.pool.length} number${data.pool.length > 1 ? 's' : ''} in pool:</strong><br>` +
+        data.pool.map((n, i) => {
+          const isNext = i === (data.rotationIdx % data.pool.length);
+          return `${isNext ? '▶️' : '◻️'} <code>${n}</code>${isNext ? ' <em>(next)</em>' : ''}`;
+        }).join('<br>') +
+        `<br><span style="color:var(--text-muted);font-size:11px">${data.rotationIdx} calls rotated so far</span>`;
+    }
+  } catch(e) {
+    el.textContent = '❌ ' + e.message;
+  }
+}
+
+async function resetRotation() {
+  if (state.demoMode) { toast('⚠️ Demo mode', 'yellow'); return; }
+  try {
+    await fetch(state.settings.backendUrl + '/api/numbers/reset', { method: 'POST' });
+    toast('✅ Rotation counter reset', 'green');
+    loadNumberPool();
+  } catch(e) { toast('❌ ' + e.message, 'red'); }
 }
 
 // ============================================================
