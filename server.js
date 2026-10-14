@@ -304,10 +304,12 @@ app.all('/twiml/outbound', (req, res) => {
 // ─── TwiML: Hold music (conference waitUrl) ───────────────────────────────────
 app.all('/twiml/hold', (req, res) => {
   res.set('Content-Type', 'text/xml');
-  // 60-second pause — Twilio re-fetches after it completes, creating a loop
+  // Twilio Conference waitUrl only supports <Play> and <Say> — <Pause> is silently
+  // dropped and rapid re-fetches can terminate the waiting participant.
+  // loop="0" repeats indefinitely until the conference starts (agent gets connected).
   res.send(`<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Pause length="60"/>
+  <Say voice="Polly.Joanna" loop="0">Please hold. Your call will be connected shortly.</Say>
 </Response>`);
 });
 
