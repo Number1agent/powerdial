@@ -329,7 +329,7 @@ app.all('/twiml/agent', (req, res) => {
     waitUrl="https://twimlets.com/holdmusic?Bucket=com.twilio.music.softrock"
     waitMethod="GET"
     beep="false"
-    startConferenceOnEnter="false"
+    startConferenceOnEnter="true"
     endConferenceOnExit="true"
     maxParticipants="4">
     ${CONFERENCE_NAME}-Agent
@@ -440,7 +440,13 @@ async function bridgeAgentToLine(lineId) {
   await client.calls(sessionState.agentCallSid).update({
     twiml: `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Conference beep="false" record="record-from-start" recordingStatusCallback="${BASE_URL}/webhook/recording" maxParticipants="4">
+  <Conference
+    beep="false"
+    startConferenceOnEnter="true"
+    endConferenceOnExit="false"
+    record="record-from-start"
+    recordingStatusCallback="${BASE_URL}/webhook/recording"
+    maxParticipants="4">
     ${CONFERENCE_NAME}-Line${lineId}
   </Conference>
 </Response>`
