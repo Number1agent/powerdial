@@ -102,6 +102,8 @@ function getNextNumber(contactPhone) {
 const AGENT_PHONE     = process.env.AGENT_PHONE_NUMBER;    // Jose's real phone number
 const BASE_URL        = process.env.PUBLIC_URL;             // ngrok or Railway URL
 const CONFERENCE_NAME = 'PowerDial-Session';
+const TWILIO_API_KEY    = process.env.TWILIO_API_KEY;
+const TWILIO_API_SECRET = process.env.TWILIO_API_SECRET;
 
 // ─── In-Memory State ──────────────────────────────────────────────────────────
 let sessionState = {
@@ -183,6 +185,24 @@ app.get('/api/agent-ready', (req, res) => {
     agentCallSid: sessionState.agentCallSid,
     conferenceSid: sessionState.conferenceSid
   });
+
+// GET /api/token — generates a short-lived Twilio Access Token for the browser Twilio.Device
+app.get('/api/token', (req, res) => {
+  if (!TWILIO_API_KEY || !TWILIO_API_SECRET) {
+    return res.status(400).json({ error: 'TWILIO_API_KEY and TWILIO_API_SECRET not configured.' });
+  }
+  const { AccessToken } = twilio.jwt;
+  const { VoiceGrant }  = AccessToken;
+  const token = new AccessToken(
+    process.env.TWILIO_ACCOUNT_SID,
+    TWILIO_API_KEY,
+    TWILIO_API_SECRET,
+    { identity: 'powerdial-agent', ttl: 3600 }
+  );
+  token.addGrant(new VoiceGrant({ incomingAllow: true }));
+  res.json({ token: token.toJwt(), identity: 'powerdial-agent' });
+});
+
 });
 
 // ─── Route: Start Dial Session ────────────────────────────────────────────────
@@ -235,8 +255,13 @@ app.post('/api/session/start', async (req, res) => {
   sessionState.conferenceRoom = conferenceRoom;
 
   try {
+    // Use WebRTC (browser Twilio.Device) when API keys are configured — no PSTN carrier, no silence timeout
+    const agentTo = (TWILIO_API_KEY && TWILIO_API_SECRET)
+      ? 'client:powerdial-agent'
+      : (agentPhone || AGENT_PHONE);
+    console.log(`[Agent] Dialing agent via ${agentTo === 'client:powerdial-agent' ? 'WebRTC (browser)' : 'PSTN'}`);
     const agentCall = await client.calls.create({
-      to: agentPhone || AGENT_PHONE,
+      to: agentTo,
       from: TWILIO_PHONE,
       url: `${BASE_URL}/twiml/agent?room=${encodeURIComponent(conferenceRoom)}`,
       statusCallback: `${BASE_URL}/webhook/agent-status`,

@@ -1847,6 +1847,7 @@
   .obj-btn { width:100%; padding:7px 10px; background:var(--bg-3); border:1px solid var(--border); border-radius:6px; color:var(--text-primary); font-size:12px; font-weight:600; cursor:pointer; text-align:left; transition:background 0.1s; }
   .obj-btn:hover { background:var(--bg-4); border-color:var(--accent); color:var(--accent); }
 </style>
+<script src="https://sdk.twilio.com/js/voice/releases/2.9.0/twilio.min.js"></script>
 </head>
 <body>
 
@@ -1891,7 +1892,7 @@
     <button id="btnPause" class="btn btn-pause hidden" onclick="togglePause()">⏸ Pause</button>
     <button id="btnStop" class="btn btn-danger hidden" onclick="stopSession()">⏹ End Session</button>
     <button id="btnResume" class="btn btn-accent hidden" onclick="resumeSession()" title="Continue from where you left off">↩ Resume</button>
-    <button id="btnCallMe" class="btn btn-secondary" onclick="callMeFirst()" title="Call your phone first, then click Start Session" style="background:#6b7280;border-color:#6b7280;">📞 Call Me First</button>
+    <span id="headsetStatus" style="font-size:0.82rem;font-weight:600;padding:4px 12px;color:#f59e0b;align-self:center;white-space:nowrap;" title="WebRTC headset status">🎧 Connecting…</span>
     <button id="btnStart" class="btn btn-primary" onclick="startSession()">▶ Start Session</button>
   </div>
 </div>
@@ -5923,6 +5924,8 @@ function stopSession() {
   if (pill) { pill.style.display = 'none'; pill.classList.remove('live'); }
   if (cphPill) cphPill.style.display = 'none';
   state.sessionStartTime = null;
+  // Disconnect WebRTC device if active
+  if (twilioActiveCall) { twilioActiveCall.disconnect(); twilioActiveCall = null; }
   // Drop all lines
   state.lines.forEach(l => { if (l.status !== 'idle') dropLine(l.id, true); });
   clearActiveCall();
@@ -7697,9 +7700,60 @@ async function init() {
 
   setTimeout(() => {
     toast(state.demoMode ? '🎬 Demo Mode — Set backend URL in ⚙️ Settings for live calls' : '✅ Backend configured — ready for live calls', state.demoMode ? 'accent' : 'green');
+    initTwilioDevice();
   }, 500);
 }
 
+
+
+// ─── Twilio WebRTC Device ────────────────────────────────────────────────────
+let twilioDevice   = null;
+let twilioActiveCall = null;
+
+function updateHeadsetUI(st) {
+  const el = document.getElementById('headsetStatus');
+  if (!el) return;
+  const map = {
+    connecting: { text: '🎧 Connecting…', color: '#f59e0b' },
+    ready:      { text: '🎧 Ready',        color: '#22c55e' },
+    active:     { text: '🎧 On Call',      color: '#3b82f6' },
+    error:      { text: '🎧 Error',        color: '#ef4444' },
+    off:        { text: '🎧 Off',          color: '#6b7280' }
+  };
+  const s = map[st] || map.off;
+  el.textContent = s.text;
+  el.style.color = s.color;
+}
+
+async function initTwilioDevice() {
+  // Skip in demo mode or if Twilio SDK not loaded
+  if (state.demoMode || typeof Twilio === 'undefined') { updateHeadsetUI('off'); return; }
+  try {
+    const r = await fetch(`${state.settings.backendUrl || ''}/api/token`);
+    if (!r.ok) { updateHeadsetUI('off'); return; } // API keys not configured — PSTN fallback
+    const { token } = await r.json();
+    if (!token) { updateHeadsetUI('off'); return; }
+
+    twilioDevice = new Twilio.Device(token, { edge: 'roaming', logLevel: 1 });
+
+    twilioDevice.on('registered',   () => updateHeadsetUI('ready'));
+    twilioDevice.on('unregistered', () => updateHeadsetUI('off'));
+    twilioDevice.on('error',        () => updateHeadsetUI('error'));
+    twilioDevice.on('incoming', call => {
+      twilioActiveCall = call;
+      updateHeadsetUI('active');
+      call.accept();
+      call.on('disconnect', () => { twilioActiveCall = null; updateHeadsetUI('ready'); });
+    });
+
+    updateHeadsetUI('connecting');
+    await twilioDevice.register();
+  } catch(e) {
+    console.warn('[WebRTC] initTwilioDevice error:', e.message);
+    updateHeadsetUI('off');
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 // ── Mojo-style active-call keyboard shortcuts ────────────────────────────────
 // 1 = Contact (spoke to them)  2 = No Contact Next #  3 = No Contact Next Record
