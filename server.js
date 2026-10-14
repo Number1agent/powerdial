@@ -328,8 +328,6 @@ app.all('/twiml/agent', (req, res) => {
     beep="false"
     startConferenceOnEnter="false"
     endConferenceOnExit="true"
-    waitUrl="${BASE_URL}/twiml/hold"
-    waitMethod="GET"
     maxParticipants="10">${room}</Conference>
 </Response>`);
 });
