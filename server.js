@@ -144,7 +144,8 @@ app.post('/api/session/start', async (req, res) => {
   const conferenceRoom = 'PowerDial-' + Date.now();
 
   sessionState.active = true;
-  sessionState.pendingContacts = contacts.slice(0, 3);
+  // Preserve per-contact callerId (local presence match sent by the frontend)
+  sessionState.pendingContacts = contacts.slice(0, 3).map(c => ({ ...c, callerId: c.callerId || null }));
   sessionState.pendingCallerId = callerId || null;
   sessionState.conferenceRoom = conferenceRoom;
 
@@ -447,7 +448,8 @@ app.post('/webhook/agent-status', async (req, res) => {
       try {
         const call = await client.calls.create({
           to: contact.phone,
-          from: callerId || getNextNumber(contact.phone) || TWILIO_PHONE,
+          // Priority: per-contact local presence number → global caller ID → pool → default
+          from: contact.callerId || callerId || getNextNumber(contact.phone) || TWILIO_PHONE,
           url: `${BASE_URL}/twiml/outbound?lineId=${lineId}&name=${encodeURIComponent(contact.name)}&room=${encodeURIComponent(sessionState.conferenceRoom || CONFERENCE_NAME)}`,
           statusCallback: `${BASE_URL}/webhook/call-status?lineId=${lineId}`,
           statusCallbackEvent: ['answered', 'completed', 'no-answer', 'busy', 'failed'],
