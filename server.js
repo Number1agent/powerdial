@@ -117,7 +117,8 @@ let sessionState = {
   callLog: [],
   pendingContacts: [],   // Contacts to dial once agent answers
   pendingCallerId: null, // Caller ID to use for those calls
-  conferenceRoom: null   // Unique conference room name per session
+  conferenceRoom: null,  // Unique conference room name per session
+  conferenceSid: null    // Twilio conference SID — set when agent joins
 };
 
 // ─── Helper: Update a Line ────────────────────────────────────────────────────
@@ -281,15 +282,21 @@ app.post('/api/session/end', async (req, res) => {
 });
 
 // ─── TwiML: Outbound lead call ────────────────────────────────────────────────
-// Called by Twilio when it connects to a lead's phone.
-// Lead hears hold music via <Play loop="0"> — no Conference yet.
-// When the lead answers, /webhook/call-status redirects BOTH the lead AND the agent
-// into a fresh conference simultaneously, avoiding the "not-started conference timeout" bug.
+// Lead waits in the same conference (startConferenceOnEnter="false") with hold music.
+// The conference is already active (agent started it), so the lead doesn't see it as
+// "unstarted". When the lead answers, /webhook/call-status:
+//   1. Redirects the lead TwiML to startConferenceOnEnter="true" (bridges them in), AND
+//   2. Takes the agent off participant-hold so both can hear each other.
 app.all('/twiml/outbound', (req, res) => {
+  const room = req.query.room || req.body.room || sessionState.conferenceRoom || CONFERENCE_NAME;
   res.set('Content-Type', 'text/xml');
   res.send(`<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Play loop="0">https://com.twilio.music.classical.s3.amazonaws.com/BusyStrings.mp3</Play>
+  <Conference
+    startConferenceOnEnter="false"
+    endConferenceOnExit="false"
+    beep="false"
+    maxParticipants="10">${room}</Conference>
 </Response>`);
 });
 
@@ -307,19 +314,55 @@ app.all('/twiml/hold', (req, res) => {
 });
 
 // ─── TwiML: Agent phone ───────────────────────────────────────────────────────
-// Called when Twilio dials Jose's phone.
-// Agent hears a confirmation Say, then continuous hold music via <Play loop="0">.
-// NO Conference here — agent is NOT placed in a conference while waiting.
-// When a lead answers, /webhook/call-status redirects both the agent and the lead
-// into the conference simultaneously. This avoids the "unstarted conference timeout" bug
-// where Twilio drops participants waiting in a conference that never officially starts.
+// Agent is placed in the conference immediately with startConferenceOnEnter="true"
+// (so the conference is "active" right away — no unstarted-conference timeout).
+// A statusCallback fires when the agent joins; the handler puts them on participant
+// hold with hold music via the Twilio participant API.
+// When a lead answers, we redirect the LEAD into the conference and take the agent
+// off hold — no Play→Conference media transition that could drop the agent's call.
 app.all('/twiml/agent', (req, res) => {
+  const room = req.query.room || req.body.room || sessionState.conferenceRoom || CONFERENCE_NAME;
   res.set('Content-Type', 'text/xml');
   res.send(`<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Say voice="Polly.Joanna">PowerDial connected. Leads are dialing now.</Say>
-  <Play loop="0">https://com.twilio.music.classical.s3.amazonaws.com/BusyStrings.mp3</Play>
+  <Conference
+    beep="false"
+    startConferenceOnEnter="true"
+    endConferenceOnExit="true"
+    statusCallback="${BASE_URL}/webhook/conference-events"
+    statusCallbackEvent="participant-join"
+    statusCallbackMethod="POST"
+    maxParticipants="10">${room}</Conference>
 </Response>`);
+});
+
+// ─── Webhook: Conference Events ──────────────────────────────────────────────
+// Fires when the agent joins the conference. Stores the conferenceSid and
+// immediately puts the agent on participant-hold with hold music so they
+// don't hear silence while leads are dialing.
+app.post('/webhook/conference-events', async (req, res) => {
+  const { StatusCallbackEvent, ConferenceSid, CallSid } = req.body;
+  console.log(`[Conference] Event: ${StatusCallbackEvent} | SID: ${ConferenceSid} | Call: ${CallSid}`);
+
+  if (StatusCallbackEvent === 'participant-join' && CallSid === sessionState.agentCallSid) {
+    sessionState.conferenceSid = ConferenceSid;
+    try {
+      await client.conferences(ConferenceSid)
+        .participants(CallSid)
+        .update({
+          hold: true,
+          holdUrl: `${BASE_URL}/twiml/hold`,
+          holdMethod: 'GET'
+        });
+      console.log(`[Agent] Placed on hold in conference ${ConferenceSid} — leads dialing`);
+    } catch (e) {
+      console.error(`[Agent] Hold setup error: ${e.message}`);
+    }
+  }
+
+  res.set('Content-Type', 'text/xml');
+  res.send('<Response/>');
 });
 
 // ─── TwiML: Voicemail Drop ────────────────────────────────────────────────────
@@ -368,27 +411,28 @@ app.post('/webhook/call-status', async (req, res) => {
 
       const room = sessionState.conferenceRoom || CONFERENCE_NAME;
 
-      // Redirect BOTH the lead and the agent into the conference simultaneously.
-      // Agent has been in <Play loop="0"> hold — definitely in-progress, safe to redirect.
-      // Lead was just answered — also in-progress. Both join with startConferenceOnEnter="true"
-      // so the conference starts the moment either one joins.
-      const confTwiml = (endOnExit) =>
-        `<?xml version="1.0" encoding="UTF-8"?><Response><Conference startConferenceOnEnter="true" endConferenceOnExit="${endOnExit}" beep="false" maxParticipants="10">${room}</Conference></Response>`;
+      // Bridge: redirect the LEAD into the conference (startConferenceOnEnter=true),
+      // then take the AGENT off participant-hold. The agent never leaves the conference
+      // so there's no media-transition drop risk.
+      client.calls(CallSid).update({
+        twiml: `<?xml version="1.0" encoding="UTF-8"?><Response><Conference startConferenceOnEnter="true" endConferenceOnExit="false" beep="false" maxParticipants="10">${room}</Conference></Response>`
+      }).then(() => {
+        console.log(`[Line ${lineId}] Lead bridged into ${room}`);
+      }).catch(e => {
+        console.error(`[Line ${lineId}] Lead bridge error: ${e.message}`);
+        setLine(lineId, { status: 'idle', callSid: null });
+        sessionState.connectedLine = null;
+      });
 
-      client.calls(CallSid).update({ twiml: confTwiml('false') })
-        .then(() => console.log(`[Line ${lineId}] Lead redirected into ${room}`))
-        .catch(e => {
-          console.error(`[Line ${lineId}] Lead bridge error: ${e.message}`);
-          setLine(lineId, { status: 'idle', callSid: null });
-          sessionState.connectedLine = null;
-        });
-
-      if (sessionState.agentCallSid) {
-        client.calls(sessionState.agentCallSid).update({ twiml: confTwiml('true') })
-          .then(() => console.log(`[Line ${lineId}] Agent redirected into ${room} — bridge complete`))
-          .catch(e => console.error(`[Line ${lineId}] Agent bridge error: ${e.message}`));
+      // Take agent off hold so they can hear the lead
+      if (sessionState.conferenceSid && sessionState.agentCallSid) {
+        client.conferences(sessionState.conferenceSid)
+          .participants(sessionState.agentCallSid)
+          .update({ hold: false })
+          .then(() => console.log(`[Line ${lineId}] Agent taken off hold — bridge complete`))
+          .catch(e => console.error(`[Line ${lineId}] Agent hold-release error: ${e.message}`));
       } else {
-        console.warn(`[Line ${lineId}] Agent SID missing — cannot bridge agent`);
+        console.warn(`[Line ${lineId}] conferenceSid or agentCallSid missing — bridge may fail`);
       }
 
       // Cancel other ringing lines
