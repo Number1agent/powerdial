@@ -114,7 +114,9 @@ let sessionState = {
   agentCallSid: null,    // The call connecting agent to conference
   connectedLine: null,   // Which lineId is connected to agent
   conference: null,
-  callLog: []
+  callLog: [],
+  pendingContacts: [],   // Contacts to dial once agent answers
+  pendingCallerId: null  // Caller ID to use for those calls
 };
 
 // ─── Helper: Update a Line ────────────────────────────────────────────────────
@@ -138,46 +140,24 @@ app.post('/api/session/start', async (req, res) => {
   }
 
   sessionState.active = true;
-  const calls = [];
+  sessionState.pendingContacts = contacts.slice(0, 3);
+  sessionState.pendingCallerId = callerId || null;
 
   try {
-    // Dial each contact and put them in the conference (waiting with music)
-    for (let i = 0; i < Math.min(contacts.length, 3); i++) {
-      const contact = contacts[i];
-      const lineId = i + 1;
-
-      const call = await client.calls.create({
-        to: contact.phone,
-        from: callerId || getNextNumber(contact.phone) || TWILIO_PHONE,
-        url: `${BASE_URL}/twiml/outbound?lineId=${lineId}&name=${encodeURIComponent(contact.name)}`,
-        statusCallback: `${BASE_URL}/webhook/call-status?lineId=${lineId}`,
-        statusCallbackEvent: ['answered', 'completed', 'no-answer', 'busy', 'failed'],
-        statusCallbackMethod: 'POST',
-        // AMD intentionally disabled — causes 3-7s silence on answer, leads hang up.
-        // Handle voicemails manually: click "Left VM" → system drops pre-recorded message.
-      });
-
-      setLine(lineId, {
-        callSid: call.sid,
-        status: 'ringing',
-        contact: contact
-      });
-
-      calls.push({ lineId, sid: call.sid, contact });
-    }
-
-    // Also call the agent's phone and drop them into the same conference (on hold until needed)
+    // Step 1: Call agent FIRST. Leads are dialed once agent answers (webhook/agent-status).
+    // This prevents "Call is not in-progress" bridge errors when leads answer before agent.
     const agentCall = await client.calls.create({
       to: agentPhone || AGENT_PHONE,
       from: TWILIO_PHONE,
       url: `${BASE_URL}/twiml/agent`,
       statusCallback: `${BASE_URL}/webhook/agent-status`,
-      statusCallbackEvent: ['answered', 'completed'],
+      statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
       statusCallbackMethod: 'POST'
     });
     sessionState.agentCallSid = agentCall.sid;
+    console.log('[Agent] Dialing agent, will dial leads once agent answers...');
 
-    res.json({ success: true, calls });
+    res.json({ success: true, calls: [] });
 
   } catch (err) {
     console.error('Dial error:', err);
@@ -428,10 +408,43 @@ app.post('/webhook/recording', (req, res) => {
 });
 
 // ─── Webhook: Agent Status ────────────────────────────────────────────────────
-app.post('/webhook/agent-status', (req, res) => {
+app.post('/webhook/agent-status', async (req, res) => {
   const { CallStatus } = req.body;
   console.log(`[Agent] Status: ${CallStatus}`);
-  if (CallStatus === 'completed') sessionState.agentCallSid = null;
+
+  if (CallStatus === 'in-progress') {
+    // Agent answered — NOW dial the leads
+    const contacts = sessionState.pendingContacts || [];
+    const callerId = sessionState.pendingCallerId;
+    sessionState.pendingContacts = [];
+    sessionState.pendingCallerId = null;
+
+    console.log(`[Agent] Ready — dialing ${contacts.length} lead(s)`);
+    for (let i = 0; i < contacts.length; i++) {
+      const contact = contacts[i];
+      const lineId = i + 1;
+      try {
+        const call = await client.calls.create({
+          to: contact.phone,
+          from: callerId || getNextNumber(contact.phone) || TWILIO_PHONE,
+          url: `${BASE_URL}/twiml/outbound?lineId=${lineId}&name=${encodeURIComponent(contact.name)}`,
+          statusCallback: `${BASE_URL}/webhook/call-status?lineId=${lineId}`,
+          statusCallbackEvent: ['answered', 'completed', 'no-answer', 'busy', 'failed'],
+          statusCallbackMethod: 'POST'
+        });
+        setLine(lineId, { callSid: call.sid, status: 'ringing', contact });
+        console.log(`[Line ${lineId}] Dialing ${contact.name} (${contact.phone})`);
+      } catch (e) {
+        console.error(`[Line ${lineId}] Dial error:`, e.message);
+      }
+    }
+  }
+
+  if (CallStatus === 'completed') {
+    sessionState.agentCallSid = null;
+    sessionState.pendingContacts = [];
+  }
+
   res.set('Content-Type', 'text/xml');
   res.send('<Response/>');
 });
