@@ -148,6 +148,13 @@ app.post('/api/call-agent', async (req, res) => {
   sessionState.conferenceRoom = conferenceRoom;
   sessionState.agentReady = false;
   sessionState.conferenceSid = null;
+  // Clear any leftover contacts/lines from a previous session so agent-status
+  // webhook cannot accidentally dial stale contacts when this call answers.
+  sessionState.pendingContacts = [];
+  sessionState.pendingCallerId = null;
+  sessionState.active = false;
+  sessionState.connectedLine = null;
+  sessionState.lines.forEach(l => Object.assign(l, { callSid: null, status: 'idle', contact: null }));
 
   try {
     const agentCall = await client.calls.create({
