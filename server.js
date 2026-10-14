@@ -116,7 +116,8 @@ let sessionState = {
   conference: null,
   callLog: [],
   pendingContacts: [],   // Contacts to dial once agent answers
-  pendingCallerId: null  // Caller ID to use for those calls
+  pendingCallerId: null, // Caller ID to use for those calls
+  conferenceRoom: null   // Unique conference room name per session
 };
 
 // ─── Helper: Update a Line ────────────────────────────────────────────────────
@@ -139,9 +140,13 @@ app.post('/api/session/start', async (req, res) => {
     return res.status(400).json({ error: 'No contacts provided' });
   }
 
+  // Unique room per session — prevents inheriting a stale Twilio conference from a previous Railway deployment
+  const conferenceRoom = 'PowerDial-' + Date.now();
+
   sessionState.active = true;
   sessionState.pendingContacts = contacts.slice(0, 3);
   sessionState.pendingCallerId = callerId || null;
+  sessionState.conferenceRoom = conferenceRoom;
 
   try {
     // Step 1: Call agent FIRST. Leads are dialed once agent answers (webhook/agent-status).
@@ -149,7 +154,7 @@ app.post('/api/session/start', async (req, res) => {
     const agentCall = await client.calls.create({
       to: agentPhone || AGENT_PHONE,
       from: TWILIO_PHONE,
-      url: `${BASE_URL}/twiml/agent`,
+      url: `${BASE_URL}/twiml/agent?room=${encodeURIComponent(conferenceRoom)}`,
       statusCallback: `${BASE_URL}/webhook/agent-status`,
       statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
       statusCallbackMethod: 'POST'
@@ -278,17 +283,20 @@ app.post('/api/session/end', async (req, res) => {
 // Called by Twilio when it connects to a lead's phone
 app.all('/twiml/outbound', (req, res) => {
   const lineId = req.query.lineId || req.body.lineId;
+  const room = req.query.room || req.body.room || sessionState.conferenceRoom || CONFERENCE_NAME;
 
   res.set('Content-Type', 'text/xml');
-  // No Pause, no hold music fetch — lead enters conference immediately on answer.
-  // startConferenceOnEnter=false keeps them waiting silently until agent bridges in.
+  // Lead waits with hold music. When they answer, /webhook/call-status redirects their
+  // call to startConferenceOnEnter=true, which bridges them to the waiting agent.
   res.send(`<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Conference
     startConferenceOnEnter="false"
     endConferenceOnExit="false"
+    waitUrl="${BASE_URL}/twiml/hold"
+    waitMethod="GET"
     beep="false"
-    maxParticipants="10">${CONFERENCE_NAME}</Conference>
+    maxParticipants="10">${room}</Conference>
 </Response>`);
 });
 
@@ -306,16 +314,21 @@ app.all('/twiml/hold', (req, res) => {
 // ─── TwiML: Agent phone ───────────────────────────────────────────────────────
 // Called when Twilio dials Jose's phone
 app.all('/twiml/agent', (req, res) => {
+  const room = req.query.room || req.body.room || sessionState.conferenceRoom || CONFERENCE_NAME;
   res.set('Content-Type', 'text/xml');
-  // Agent starts on hold — when a lead connects, we bridge them
+  // Agent waits with hold music (startConferenceOnEnter=false).
+  // Conference only truly starts when a live lead is redirected in with startConferenceOnEnter=true.
+  // This prevents silence-based carrier drops and stale-conference bugs.
   res.send(`<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say voice="Polly.Joanna">PowerDial connected. Dialing leads now.</Say>
+  <Say voice="Polly.Joanna">PowerDial connected. Leads are dialing now.</Say>
   <Conference
     beep="false"
-    startConferenceOnEnter="true"
+    startConferenceOnEnter="false"
     endConferenceOnExit="true"
-    maxParticipants="10">${CONFERENCE_NAME}</Conference>
+    waitUrl="${BASE_URL}/twiml/hold"
+    waitMethod="GET"
+    maxParticipants="10">${room}</Conference>
 </Response>`);
 });
 
@@ -358,12 +371,27 @@ app.post('/webhook/call-status', async (req, res) => {
   const newStatus = statusMap[CallStatus] || CallStatus;
 
   if (CallStatus === 'in-progress') {
-    // Lead answered! Bridge agent to this conference
+    // Lead answered!
     if (!sessionState.connectedLine) {
       sessionState.connectedLine = lineId;
       setLine(lineId, { status: 'connected' });
 
-      // Drop other ringing lines — lead is already in the shared conference with agent
+      const room = sessionState.conferenceRoom || CONFERENCE_NAME;
+
+      // Redirect the LEAD (not the agent) to startConferenceOnEnter=true.
+      // This starts the conference and connects the agent (who is waiting with hold music).
+      // Redirecting the lead avoids the 21220 "call not in-progress" race condition.
+      client.calls(CallSid).update({
+        twiml: `<?xml version="1.0" encoding="UTF-8"?><Response><Conference startConferenceOnEnter="true" endConferenceOnExit="false" beep="false" maxParticipants="10">${room}</Conference></Response>`
+      }).then(() => {
+        console.log(`[Line ${lineId}] Lead bridged into ${room} — agent connected`);
+      }).catch(e => {
+        console.error(`[Line ${lineId}] Bridge error: ${e.message}`);
+        setLine(lineId, { status: 'idle', callSid: null });
+        sessionState.connectedLine = null;
+      });
+
+      // Cancel other ringing lines
       sessionState.lines.forEach(l => {
         if (l.lineId !== lineId && l.status === 'ringing' && l.callSid) {
           client.calls(l.callSid).update({ status: 'completed' }).catch(()=>{});
@@ -371,7 +399,7 @@ app.post('/webhook/call-status', async (req, res) => {
         }
       });
     } else {
-      // Agent already on another call — put this lead on hold music, then hang up
+      // Agent already connected — hang up this lead
       client.calls(CallSid).update({
         twiml: `<Response><Say>Thank you for answering. Our agent will call you back shortly.</Say><Hangup/></Response>`
       }).catch(()=>{});
@@ -421,7 +449,7 @@ app.post('/webhook/agent-status', async (req, res) => {
         const call = await client.calls.create({
           to: contact.phone,
           from: callerId || getNextNumber(contact.phone) || TWILIO_PHONE,
-          url: `${BASE_URL}/twiml/outbound?lineId=${lineId}&name=${encodeURIComponent(contact.name)}`,
+          url: `${BASE_URL}/twiml/outbound?lineId=${lineId}&name=${encodeURIComponent(contact.name)}&room=${encodeURIComponent(sessionState.conferenceRoom || CONFERENCE_NAME)}`,
           statusCallback: `${BASE_URL}/webhook/call-status?lineId=${lineId}`,
           statusCallbackEvent: ['answered', 'completed', 'no-answer', 'busy', 'failed'],
           statusCallbackMethod: 'POST'
