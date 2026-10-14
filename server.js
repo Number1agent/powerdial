@@ -118,7 +118,8 @@ let sessionState = {
   pendingContacts: [],   // Contacts to dial once agent answers
   pendingCallerId: null, // Caller ID to use for those calls
   conferenceRoom: null,  // Unique conference room name per session
-  conferenceSid: null    // Twilio conference SID — set when agent joins
+  conferenceSid: null,   // Twilio conference SID — set when agent joins
+  agentReady: false      // true after agent is on hold in conference (Call Me flow)
 };
 
 // ─── Helper: Update a Line ────────────────────────────────────────────────────
@@ -131,6 +132,52 @@ function getLine(lineId) {
   return sessionState.lines.find(l => l.lineId === lineId);
 }
 
+// ─── Route: Call Agent (pre-session "Call Me" button) ────────────────────────
+// POST /api/call-agent
+// Calls Jose's phone and parks him in conference on hold — WITHOUT dialing leads.
+// Once agent is on hold (agentReady=true), clicking "Start Session" dials leads immediately.
+app.post('/api/call-agent', async (req, res) => {
+  const { agentPhone } = req.body;
+
+  // If agent is already in conference, do nothing
+  if (sessionState.agentReady && sessionState.conferenceSid) {
+    return res.json({ success: true, already: true, message: 'Agent already connected' });
+  }
+
+  const conferenceRoom = 'PowerDial-' + Date.now();
+  sessionState.conferenceRoom = conferenceRoom;
+  sessionState.agentReady = false;
+  sessionState.conferenceSid = null;
+
+  try {
+    const agentCall = await client.calls.create({
+      to: agentPhone || AGENT_PHONE,
+      from: TWILIO_PHONE,
+      url: `${BASE_URL}/twiml/agent?room=${encodeURIComponent(conferenceRoom)}`,
+      statusCallback: `${BASE_URL}/webhook/agent-status`,
+      statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
+      statusCallbackMethod: 'POST'
+    });
+    sessionState.agentCallSid = agentCall.sid;
+    console.log('[Agent] Dialing agent (Call Me) — waiting for agent to pick up...');
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[Agent] Call Me error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Route: Agent Ready Status Poll ──────────────────────────────────────────
+// GET /api/agent-ready
+// Frontend polls this to know when agent is on hold in conference.
+app.get('/api/agent-ready', (req, res) => {
+  res.json({
+    agentReady: sessionState.agentReady,
+    agentCallSid: sessionState.agentCallSid,
+    conferenceSid: sessionState.conferenceSid
+  });
+});
+
 // ─── Route: Start Dial Session ────────────────────────────────────────────────
 // POST /api/session/start
 // Body: { contacts: [{name, phone}], callerId, agentPhone, vmUrl }
@@ -141,18 +188,46 @@ app.post('/api/session/start', async (req, res) => {
     return res.status(400).json({ error: 'No contacts provided' });
   }
 
-  // Unique room per session — prevents inheriting a stale Twilio conference from a previous Railway deployment
-  const conferenceRoom = 'PowerDial-' + Date.now();
-
   sessionState.active = true;
   // Preserve per-contact callerId (local presence match sent by the frontend)
-  sessionState.pendingContacts = contacts.slice(0, 3).map(c => ({ ...c, callerId: c.callerId || null }));
+  const pendingContacts = contacts.slice(0, 3).map(c => ({ ...c, callerId: c.callerId || null }));
+
+  // ── "Call Me" flow: agent already on hold in conference ──────────────────────
+  // If the agent clicked "Call Me" first and is already parked on hold,
+  // skip calling them again — just dial the leads directly into the same conference.
+  if (sessionState.agentReady && sessionState.conferenceSid && sessionState.conferenceRoom) {
+    console.log('[Session] Agent already ready — dialing leads immediately into', sessionState.conferenceRoom);
+    const room = sessionState.conferenceRoom;
+    const results = [];
+    for (let i = 0; i < pendingContacts.length; i++) {
+      const contact = pendingContacts[i];
+      const lineId = i + 1;
+      try {
+        const call = await client.calls.create({
+          to: contact.phone,
+          from: contact.callerId || callerId || getNextNumber(contact.phone) || TWILIO_PHONE,
+          url: `${BASE_URL}/twiml/outbound?lineId=${lineId}&name=${encodeURIComponent(contact.name)}&room=${encodeURIComponent(room)}`,
+          statusCallback: `${BASE_URL}/webhook/call-status?lineId=${lineId}`,
+          statusCallbackEvent: ['answered', 'completed', 'no-answer', 'busy', 'failed'],
+          statusCallbackMethod: 'POST'
+        });
+        setLine(lineId, { callSid: call.sid, status: 'ringing', contact });
+        console.log(`[Line ${lineId}] Dialing ${contact.name} (${contact.phone})`);
+        results.push({ lineId, sid: call.sid });
+      } catch (e) {
+        console.error(`[Line ${lineId}] Dial error:`, e.message);
+      }
+    }
+    return res.json({ success: true, calls: results });
+  }
+
+  // ── Classic flow: call agent first, leads dial from agent-status webhook ─────
+  const conferenceRoom = 'PowerDial-' + Date.now();
+  sessionState.pendingContacts = pendingContacts;
   sessionState.pendingCallerId = callerId || null;
   sessionState.conferenceRoom = conferenceRoom;
 
   try {
-    // Step 1: Call agent FIRST. Leads are dialed once agent answers (webhook/agent-status).
-    // This prevents "Call is not in-progress" bridge errors when leads answer before agent.
     const agentCall = await client.calls.create({
       to: agentPhone || AGENT_PHONE,
       from: TWILIO_PHONE,
@@ -163,9 +238,7 @@ app.post('/api/session/start', async (req, res) => {
     });
     sessionState.agentCallSid = agentCall.sid;
     console.log('[Agent] Dialing agent, will dial leads once agent answers...');
-
     res.json({ success: true, calls: [] });
-
   } catch (err) {
     console.error('Dial error:', err);
     res.status(500).json({ error: err.message });
@@ -277,6 +350,11 @@ app.post('/api/session/end', async (req, res) => {
   sessionState.lines.forEach(l => Object.assign(l, { callSid: null, status: 'idle', contact: null }));
   sessionState.agentCallSid = null;
   sessionState.connectedLine = null;
+  sessionState.agentReady = false;
+  sessionState.conferenceSid = null;
+  sessionState.conferenceRoom = null;
+  sessionState.pendingContacts = [];
+  sessionState.pendingCallerId = null;
 
   res.json({ success: true });
 });
@@ -355,7 +433,8 @@ app.post('/webhook/conference-events', async (req, res) => {
           holdUrl: `${BASE_URL}/twiml/hold`,
           holdMethod: 'GET'
         });
-      console.log(`[Agent] Placed on hold in conference ${ConferenceSid} — leads dialing`);
+      sessionState.agentReady = true;
+      console.log(`[Agent] Placed on hold in conference ${ConferenceSid} — agentReady=true`);
     } catch (e) {
       console.error(`[Agent] Hold setup error: ${e.message}`);
     }

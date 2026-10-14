@@ -1891,6 +1891,7 @@
     <button id="btnPause" class="btn btn-pause hidden" onclick="togglePause()">⏸ Pause</button>
     <button id="btnStop" class="btn btn-danger hidden" onclick="stopSession()">⏹ End Session</button>
     <button id="btnResume" class="btn btn-accent hidden" onclick="resumeSession()" title="Continue from where you left off">↩ Resume</button>
+    <button id="btnCallMe" class="btn btn-secondary" onclick="callMeFirst()" title="Call your phone first, then click Start Session" style="background:#6b7280;border-color:#6b7280;">📞 Call Me First</button>
     <button id="btnStart" class="btn btn-primary" onclick="startSession()">▶ Start Session</button>
   </div>
 </div>
@@ -5754,6 +5755,69 @@ function updateProgress() {
 // ============================================================
 //  SESSION CONTROL
 // ============================================================
+// ─── "Call Me First" — park agent on hold before leads dial ─────────────────
+// Calls Jose's phone and puts him in conference on hold. When agentReady=true,
+// clicking Start Session dials leads directly into the same conference.
+let _callMePollInterval = null;
+
+async function callMeFirst() {
+  const btn = document.getElementById('btnCallMe');
+  const btnStart = document.getElementById('btnStart');
+  const base = getBackendBase ? getBackendBase() : (window.BACKEND_URL || '');
+
+  if (btn.dataset.ready === 'true') {
+    // Already ready — just flash and let user click Start Session
+    toast('✅ Already connected — click Start Session', 'green');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '📞 Calling...';
+  btn.style.background = '#f59e0b';
+  btn.style.borderColor = '#f59e0b';
+
+  try {
+    const resp = await fetch(`${base}/api/call-agent`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agentPhone: state.settings.myPhone })
+    });
+    const data = await resp.json();
+    if (!data.success) throw new Error(data.error || 'Failed');
+
+    toast('📲 Calling your phone — pick up and wait...', 'yellow');
+
+    // Poll for agentReady
+    if (_callMePollInterval) clearInterval(_callMePollInterval);
+    _callMePollInterval = setInterval(async () => {
+      try {
+        const r = await fetch(`${base}/api/agent-ready`);
+        const d = await r.json();
+        if (d.agentReady) {
+          clearInterval(_callMePollInterval);
+          _callMePollInterval = null;
+          btn.textContent = '✅ Ready — Call Me Connected';
+          btn.style.background = '#16a34a';
+          btn.style.borderColor = '#16a34a';
+          btn.dataset.ready = 'true';
+          btn.disabled = false;
+          if (btnStart) {
+            btnStart.style.boxShadow = '0 0 0 3px rgba(34,197,94,0.5)';
+          }
+          toast('✅ You're connected — click Start Session to dial leads!', 'green');
+        }
+      } catch (_) {}
+    }, 2000);
+
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = '📞 Call Me First';
+    btn.style.background = '#6b7280';
+    btn.style.borderColor = '#6b7280';
+    toast('❌ Call Me failed: ' + err.message, 'red');
+  }
+}
+
 function startSession() {
   if (!state.contacts.length) { toast('⚠️ Import contacts first', 'yellow'); showImportModal(); return; }
 
