@@ -375,10 +375,12 @@ app.post('/api/session/end', async (req, res) => {
 app.all('/twiml/outbound', (req, res) => {
   const room = req.query.room || req.body.room || sessionState.conferenceRoom || CONFERENCE_NAME;
   res.set('Content-Type', 'text/xml');
+  // Lead starts the conference — agent is already waiting with hold music.
+  // When this lead answers, hold music stops and agent + lead are connected.
   res.send(`<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Conference
-    startConferenceOnEnter="false"
+    startConferenceOnEnter="true"
     endConferenceOnExit="false"
     beep="false"
     maxParticipants="10">${room}</Conference>
@@ -399,24 +401,25 @@ app.all('/twiml/hold', (req, res) => {
 });
 
 // ─── TwiML: Agent phone ───────────────────────────────────────────────────────
-// Agent is placed in the conference immediately with startConferenceOnEnter="true"
-// (so the conference is "active" right away — no unstarted-conference timeout).
-// A statusCallback fires when the agent joins; the handler puts them on participant
-// hold with hold music via the Twilio participant API.
-// When a lead answers, we redirect the LEAD into the conference and take the agent
-// off hold — no Play→Conference media transition that could drop the agent's call.
+// Agent joins with startConferenceOnEnter="false" — Twilio plays built-in hold
+// music automatically, with no media transitions that could drop a PSTN call.
+// When the first lead answers (startConferenceOnEnter="true"), Twilio starts the
+// conference and seamlessly connects the waiting agent — no hold API needed.
 app.all('/twiml/agent', (req, res) => {
   const room = req.query.room || req.body.room || sessionState.conferenceRoom || CONFERENCE_NAME;
   res.set('Content-Type', 'text/xml');
+  // Agent waits in conference with startConferenceOnEnter=false so Twilio plays
+  // its built-in hold music automatically — no hold API, no media transitions.
+  // The first lead to answer (startConferenceOnEnter=true) starts the conference,
+  // and the agent transitions from hold music to the live call seamlessly.
   res.send(`<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say voice="Polly.Joanna">PowerDial connected. Leads are dialing now.</Say>
   <Conference
     beep="false"
-    startConferenceOnEnter="true"
+    startConferenceOnEnter="false"
     endConferenceOnExit="true"
     statusCallback="${BASE_URL}/webhook/conference-events"
-    statusCallbackEvent="participant-join"
+    statusCallbackEvent="participant-join participant-leave"
     statusCallbackMethod="POST"
     maxParticipants="10">${room}</Conference>
 </Response>`);
@@ -432,18 +435,21 @@ app.post('/webhook/conference-events', async (req, res) => {
 
   if (StatusCallbackEvent === 'participant-join' && CallSid === sessionState.agentCallSid) {
     sessionState.conferenceSid = ConferenceSid;
-    try {
-      await client.conferences(ConferenceSid)
-        .participants(CallSid)
-        .update({
-          hold: true,
-          holdUrl: `${BASE_URL}/twiml/hold`,
-          holdMethod: 'GET'
-        });
-      sessionState.agentReady = true;
-      console.log(`[Agent] Placed on hold in conference ${ConferenceSid} — agentReady=true`);
-    } catch (e) {
-      console.error(`[Agent] Hold setup error: ${e.message}`);
+    sessionState.agentReady = true;
+    console.log(`[Agent] Waiting in conference ${ConferenceSid} with hold music — agentReady=true`);
+  }
+
+  // If a LEAD joins the conference but we already have a connectedLine (race condition):
+  // remove the extra participant so they don't interrupt the active conversation.
+  if (StatusCallbackEvent === 'participant-join' &&
+      CallSid !== sessionState.agentCallSid &&
+      sessionState.connectedLine) {
+    const joiningLine = sessionState.lines.find(l => l.callSid === CallSid);
+    if (joiningLine && joiningLine.lineId !== sessionState.connectedLine) {
+      console.log(`[Conference] Extra lead joined — removing (line ${joiningLine?.lineId})`);
+      client.conferences(ConferenceSid).participants(CallSid).remove().catch(e =>
+        console.error(`[Conference] Remove extra participant error: ${e.message}`)
+      );
     }
   }
 
@@ -495,31 +501,10 @@ app.post('/webhook/call-status', async (req, res) => {
       sessionState.connectedLine = lineId;
       setLine(lineId, { status: 'connected' });
 
-      const room = sessionState.conferenceRoom || CONFERENCE_NAME;
-
-      // Bridge: redirect the LEAD into the conference (startConferenceOnEnter=true),
-      // then take the AGENT off participant-hold. The agent never leaves the conference
-      // so there's no media-transition drop risk.
-      client.calls(CallSid).update({
-        twiml: `<?xml version="1.0" encoding="UTF-8"?><Response><Conference startConferenceOnEnter="true" endConferenceOnExit="false" beep="false" maxParticipants="10">${room}</Conference></Response>`
-      }).then(() => {
-        console.log(`[Line ${lineId}] Lead bridged into ${room}`);
-      }).catch(e => {
-        console.error(`[Line ${lineId}] Lead bridge error: ${e.message}`);
-        setLine(lineId, { status: 'idle', callSid: null });
-        sessionState.connectedLine = null;
-      });
-
-      // Take agent off hold so they can hear the lead
-      if (sessionState.conferenceSid && sessionState.agentCallSid) {
-        client.conferences(sessionState.conferenceSid)
-          .participants(sessionState.agentCallSid)
-          .update({ hold: false })
-          .then(() => console.log(`[Line ${lineId}] Agent taken off hold — bridge complete`))
-          .catch(e => console.error(`[Line ${lineId}] Agent hold-release error: ${e.message}`));
-      } else {
-        console.warn(`[Line ${lineId}] conferenceSid or agentCallSid missing — bridge may fail`);
-      }
+      // Lead joined with startConferenceOnEnter=true — Twilio automatically starts the
+      // conference and connects them with the waiting agent; no calls.update() or
+      // participant hold release needed.
+      console.log(`[Line ${lineId}] Lead answered — conference started, agent connected`);
 
       // Cancel other ringing lines
       sessionState.lines.forEach(l => {
