@@ -417,7 +417,9 @@ app.all('/twiml/agent', (req, res) => {
   <Conference
     beep="false"
     startConferenceOnEnter="false"
-    endConferenceOnExit="true"
+    endConferenceOnExit="false"
+    waitUrl="${BASE_URL}/twiml/hold"
+    waitUrlMethod="GET"
     statusCallback="${BASE_URL}/webhook/conference-events"
     statusCallbackEvent="participant-join participant-leave"
     statusCallbackMethod="POST"
@@ -550,6 +552,12 @@ app.post('/webhook/agent-status', async (req, res) => {
   console.log(`[Agent] Status: ${CallStatus}`);
 
   if (CallStatus === 'in-progress') {
+    // Agent answered — mark ready so "Call Me First" flow knows they're on the phone
+    if (!sessionState.agentReady) {
+      sessionState.agentReady = true;
+      console.log('[Agent] Marked agentReady=true from call answer (agent-status webhook)');
+    }
+
     // Agent answered — NOW dial the leads
     const contacts = sessionState.pendingContacts || [];
     const callerId = sessionState.pendingCallerId;
