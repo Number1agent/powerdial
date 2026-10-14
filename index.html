@@ -5763,7 +5763,7 @@ let _callMePollInterval = null;
 async function callMeFirst() {
   const btn = document.getElementById('btnCallMe');
   const btnStart = document.getElementById('btnStart');
-  const base = getBackendBase ? getBackendBase() : (window.BACKEND_URL || '');
+  const base = state.settings.backendUrl;
 
   if (btn.dataset.ready === 'true') {
     // Already ready — just flash and let user click Start Session
