@@ -288,7 +288,7 @@ app.all('/twiml/outbound', (req, res) => {
     startConferenceOnEnter="false"
     endConferenceOnExit="false"
     beep="false"
-    maxParticipants="4">${CONFERENCE_NAME}-Line${lineId}</Conference>
+    maxParticipants="10">${CONFERENCE_NAME}</Conference>
 </Response>`);
 });
 
@@ -310,12 +310,12 @@ app.all('/twiml/agent', (req, res) => {
   // Agent starts on hold — when a lead connects, we bridge them
   res.send(`<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say voice="Polly.Joanna">PowerDial connected. You will be bridged when a lead answers.</Say>
+  <Say voice="Polly.Joanna">PowerDial connected. Dialing leads now.</Say>
   <Conference
     beep="false"
     startConferenceOnEnter="true"
     endConferenceOnExit="true"
-    maxParticipants="4">${CONFERENCE_NAME}-Agent</Conference>
+    maxParticipants="10">${CONFERENCE_NAME}</Conference>
 </Response>`);
 });
 
@@ -363,19 +363,13 @@ app.post('/webhook/call-status', async (req, res) => {
       sessionState.connectedLine = lineId;
       setLine(lineId, { status: 'connected' });
 
-      // Move agent from Agent conference to the lead's conference
-      try {
-        await bridgeAgentToLine(lineId);
-        // Drop other ringing lines
-        sessionState.lines.forEach(l => {
-          if (l.lineId !== lineId && l.status === 'ringing' && l.callSid) {
-            client.calls(l.callSid).update({ status: 'completed' }).catch(()=>{});
-            setLine(l.lineId, { status: 'idle', callSid: null });
-          }
-        });
-      } catch (e) {
-        console.error('Bridge error:', e);
-      }
+      // Drop other ringing lines — lead is already in the shared conference with agent
+      sessionState.lines.forEach(l => {
+        if (l.lineId !== lineId && l.status === 'ringing' && l.callSid) {
+          client.calls(l.callSid).update({ status: 'completed' }).catch(()=>{});
+          setLine(l.lineId, { status: 'idle', callSid: null });
+        }
+      });
     } else {
       // Agent already on another call — put this lead on hold music, then hang up
       client.calls(CallSid).update({
