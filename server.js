@@ -317,6 +317,17 @@ app.all('/twiml/outbound', (req, res) => {
 </Response>`);
 });
 
+
+// ─── TwiML: Hold music (conference waitUrl) ───────────────────────────────────
+app.all('/twiml/hold', (req, res) => {
+  res.set('Content-Type', 'text/xml');
+  // 60-second pause — Twilio re-fetches after it completes, creating a loop
+  res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Pause length="60"/>
+</Response>`);
+});
+
 // ─── TwiML: Agent phone ───────────────────────────────────────────────────────
 // Called when Twilio dials Jose's phone
 app.all('/twiml/agent', (req, res) => {
