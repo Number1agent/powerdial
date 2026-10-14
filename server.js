@@ -308,12 +308,7 @@ app.all('/twiml/outbound', (req, res) => {
     startConferenceOnEnter="false"
     endConferenceOnExit="false"
     beep="false"
-    waitUrl=""
-    record="record-from-start"
-    recordingStatusCallback="${BASE_URL}/webhook/recording"
-    maxParticipants="4">
-    ${CONFERENCE_NAME}-Line${lineId}
-  </Conference>
+    maxParticipants="4">${CONFERENCE_NAME}-Line${lineId}</Conference>
 </Response>`);
 });
 
@@ -337,14 +332,10 @@ app.all('/twiml/agent', (req, res) => {
 <Response>
   <Say voice="Polly.Joanna">PowerDial connected. You will be bridged when a lead answers.</Say>
   <Conference
-    waitUrl="${BASE_URL}/twiml/hold"
-    waitMethod="GET"
     beep="false"
     startConferenceOnEnter="true"
     endConferenceOnExit="true"
-    maxParticipants="4">
-    ${CONFERENCE_NAME}-Agent
-  </Conference>
+    maxParticipants="4">${CONFERENCE_NAME}-Agent</Conference>
 </Response>`);
 });
 
@@ -455,11 +446,7 @@ async function bridgeAgentToLine(lineId) {
     beep="false"
     startConferenceOnEnter="true"
     endConferenceOnExit="false"
-    record="record-from-start"
-    recordingStatusCallback="${BASE_URL}/webhook/recording"
-    maxParticipants="4">
-    ${CONFERENCE_NAME}-Line${lineId}
-  </Conference>
+    maxParticipants="4">${CONFERENCE_NAME}-Line${lineId}</Conference>
 </Response>`
   });
 }
