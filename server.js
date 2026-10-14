@@ -326,7 +326,7 @@ app.all('/twiml/agent', (req, res) => {
 <Response>
   <Say voice="Polly.Joanna">PowerDial connected. You will be bridged when a lead answers.</Say>
   <Conference
-    waitUrl="https://twimlets.com/holdmusic?Bucket=com.twilio.music.softrock"
+    waitUrl="${BASE_URL}/twiml/hold"
     waitMethod="GET"
     beep="false"
     startConferenceOnEnter="true"
