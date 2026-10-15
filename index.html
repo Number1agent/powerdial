@@ -2569,8 +2569,6 @@
           <input class="input-field" id="settingBackend" placeholder="https://your-server.railway.app" type="url"></div>
         <div class="input-group"><div class="input-label">Your Phone (rings when a lead answers)</div>
           <input class="input-field" id="settingMyPhone" placeholder="+19145550000" type="tel"></div>
-        <div class="input-group"><div class="input-label">Dial-In Number (Twilio number you call to join conference)</div>
-          <input class="input-field" id="settingDialInNumber" placeholder="+18005550000" type="tel"><div style="font-size:11px;color:var(--text-muted);margin-top:4px">Set this Twilio number's Voice webhook → POST [Railway URL]/twiml/agent-dialin</div></div>
         <div class="input-group"><div class="input-label">Default Caller ID (Twilio number)</div>
           <input class="input-field" id="settingCallerId" placeholder="+18455550000" type="tel"></div>
         <div class="input-group"><div class="input-label">Voicemail Drop URL (.mp3)</div>
@@ -3021,7 +3019,6 @@ function switchSettingsTab(name) {
 function showSettingsModal() {
   document.getElementById('settingBackend').value = state.settings.backendUrl;
   document.getElementById('settingMyPhone').value = state.settings.myPhone;
-  document.getElementById('settingDialInNumber').value = state.settings.dialInNumber || '';
   document.getElementById('settingCallerId').value = state.settings.callerId;
   document.getElementById('settingVMUrl').value = state.settings.vmUrl;
   document.getElementById('settingDelay').value = state.settings.delay;
@@ -3041,7 +3038,6 @@ function showSettingsModal() {
 function saveSettings() {
   state.settings.backendUrl = document.getElementById('settingBackend').value.trim();
   state.settings.myPhone = document.getElementById('settingMyPhone').value.trim();
-  state.settings.dialInNumber = document.getElementById('settingDialInNumber').value.trim();
   state.settings.callerId = document.getElementById('settingCallerId').value.trim();
   state.settings.vmUrl = document.getElementById('settingVMUrl').value.trim();
   state.settings.delay = parseInt(document.getElementById('settingDelay').value) || 3;
@@ -7718,24 +7714,57 @@ async function init() {
 // ─── Agent Connection: Dial-In OR WebRTC ───────────────────────────────────
 let _dialInPollInterval = null;
 
+// startAgentConnection: if myPhone is set, show "📞 Call Me" button.
+// Clicking it calls /api/call-agent → Twilio calls your phone, parks you in
+// conference. Poll until agentReady=true, then Start Session dials leads.
+// If no myPhone is set, fall back to WebRTC browser mode.
 function startAgentConnection() {
-  const dialInNum = state.settings.dialInNumber;
-  if (dialInNum) {
-    startDialInMode(dialInNum);
+  const myPhone = state.settings.myPhone;
+  if (myPhone && !state.demoMode) {
+    showCallMeButton(myPhone);
   } else {
     initTwilioDevice();
   }
 }
 
-function startDialInMode(number) {
+function showCallMeButton(phone) {
   const el = document.getElementById('headsetStatus');
   if (!el) return;
-  el.textContent = '📲 Call ' + number;
+  el.textContent = '📞 Call Me';
+  el.style.color = '#3b82f6';
+  el.style.cursor = 'pointer';
+  el.title = 'Click — Twilio will call ' + phone + ', answer and wait, then press Start Session';
+  el.onclick = () => triggerCallMe(phone);
+}
+
+async function triggerCallMe(phone) {
+  const el = document.getElementById('headsetStatus');
+  const base = state.settings.backendUrl || '';
+  if (!base) { toast('Set backend URL in Settings first', 'red'); return; }
+  el.textContent = '📞 Calling…';
   el.style.color = '#f59e0b';
-  el.onclick = () => {
-    if (navigator.clipboard) navigator.clipboard.writeText(number).catch(()=>{});
-    toast('📋 Dial ' + number + ' from your phone, then press ▶ Start Session', 'accent', 6000);
-  };
+  el.onclick = null;
+  try {
+    const r = await fetch(base + '/api/call-agent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agentPhone: phone })
+    });
+    const d = await r.json();
+    if (!d.success) throw new Error(d.error || 'Failed');
+    el.textContent = '📞 Ringing…';
+    toast('📞 Calling ' + phone + ' — answer, then press ▶ Start Session', 'accent', 8000);
+    pollForAgentReady();
+  } catch(e) {
+    el.textContent = '📞 Call Me';
+    el.style.color = '#ef4444';
+    toast('Call Me failed: ' + e.message, 'red');
+    setTimeout(() => showCallMeButton(phone), 3000);
+  }
+}
+
+function pollForAgentReady() {
+  const el = document.getElementById('headsetStatus');
   if (_dialInPollInterval) clearInterval(_dialInPollInterval);
   _dialInPollInterval = setInterval(async () => {
     try {
@@ -7747,11 +7776,13 @@ function startDialInMode(number) {
       if (d.agentReady) {
         clearInterval(_dialInPollInterval);
         _dialInPollInterval = null;
-        el.textContent = '✅ Agent Connected';
+        el.textContent = '✅ Connected — Start Session';
         el.style.color = '#22c55e';
+        el.style.cursor = 'default';
+        el.onclick = null;
       }
     } catch(e) {}
-  }, 2500);
+  }, 2000);
 }
 
 let twilioDevice   = null;
