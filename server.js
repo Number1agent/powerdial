@@ -413,11 +413,13 @@ app.all('/twiml/outbound', (req, res) => {
   // When this lead answers, hold music stops and agent + lead are connected.
   res.send(`<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Conference
-    startConferenceOnEnter="true"
-    endConferenceOnExit="false"
-    beep="false"
-    maxParticipants="10">${room}</Conference>
+  <Dial>
+    <Conference
+      startConferenceOnEnter="true"
+      endConferenceOnExit="false"
+      beep="false"
+      maxParticipants="10">${room}</Conference>
+  </Dial>
 </Response>`);
 });
 
@@ -449,14 +451,16 @@ app.all('/twiml/agent', (req, res) => {
   // and the agent transitions from hold music to the live call seamlessly.
   res.send(`<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Conference
-    beep="false"
-    startConferenceOnEnter="false"
-    endConferenceOnExit="false"
-    statusCallback="${BASE_URL}/webhook/conference-events"
-    statusCallbackEvent="join leave"
-    statusCallbackMethod="POST"
-    maxParticipants="10">${room}</Conference>
+  <Dial>
+    <Conference
+      beep="false"
+      startConferenceOnEnter="false"
+      endConferenceOnExit="false"
+      statusCallback="${BASE_URL}/webhook/conference-events"
+      statusCallbackEvent="join leave"
+      statusCallbackMethod="POST"
+      maxParticipants="10">${room}</Conference>
+  </Dial>
 </Response>`);
 });
 
