@@ -187,6 +187,12 @@ app.get('/api/agent-ready', (req, res) => {
   });
 
 // GET /api/token — generates a short-lived Twilio Access Token for the browser Twilio.Device
+
+// Serve Twilio Voice SDK browser bundle from local node_modules
+app.get('/twilio-voice.js', (req, res) => {
+  res.sendFile(require('path').resolve('./node_modules/@twilio/voice-sdk/dist/twilio.min.js'));
+});
+
 app.get('/api/token', (req, res) => {
   if (!TWILIO_API_KEY || !TWILIO_API_SECRET) {
     return res.status(400).json({ error: 'TWILIO_API_KEY and TWILIO_API_SECRET not configured.' });
