@@ -6316,6 +6316,12 @@ function lineMachine(line) {
 }
 
 function lineDone(line, outcome, silent = false) {
+  // Always hang up the Twilio call — even for dropped/vm_dropped so ringing lines
+  // are terminated on the backend and don't ghost-connect after disposition.
+  const _ldBase = state.settings.backendUrl;
+  if (_ldBase && line.callSid) {
+    fetch(`${_ldBase}/api/lines/${line.id}/hangup`, { method: 'POST' }).catch(() => {});
+  }
   if (line.timerInt) clearInterval(line.timerInt);
   if (!['vm_dropped','dropped'].includes(outcome)) {
     if (line.contact && line.phoneEntry) {
