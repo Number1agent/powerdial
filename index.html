@@ -1892,7 +1892,7 @@
     <button id="btnPause" class="btn btn-pause hidden" onclick="togglePause()">⏸ Pause</button>
     <button id="btnStop" class="btn btn-danger hidden" onclick="stopSession()">⏹ End Session</button>
     <button id="btnResume" class="btn btn-accent hidden" onclick="resumeSession()" title="Continue from where you left off">↩ Resume</button>
-    <span id="headsetStatus" style="font-size:0.82rem;font-weight:600;padding:4px 12px;color:#f59e0b;align-self:center;white-space:nowrap;" title="WebRTC headset status">🎧 Connecting…</span>
+    <span id="headsetStatus" style="font-size:0.82rem;font-weight:600;padding:4px 12px;color:#f59e0b;align-self:center;white-space:nowrap;cursor:pointer;" title="Click to show dial-in number">🎧 Connecting…</span>
     <button id="btnStart" class="btn btn-primary" onclick="startSession()">▶ Start Session</button>
   </div>
 </div>
@@ -2569,6 +2569,8 @@
           <input class="input-field" id="settingBackend" placeholder="https://your-server.railway.app" type="url"></div>
         <div class="input-group"><div class="input-label">Your Phone (rings when a lead answers)</div>
           <input class="input-field" id="settingMyPhone" placeholder="+19145550000" type="tel"></div>
+        <div class="input-group"><div class="input-label">Dial-In Number (Twilio number you call to join conference)</div>
+          <input class="input-field" id="settingDialInNumber" placeholder="+18005550000" type="tel"><div style="font-size:11px;color:var(--text-muted);margin-top:4px">Set this Twilio number's Voice webhook → POST [Railway URL]/twiml/agent-dialin</div></div>
         <div class="input-group"><div class="input-label">Default Caller ID (Twilio number)</div>
           <input class="input-field" id="settingCallerId" placeholder="+18455550000" type="tel"></div>
         <div class="input-group"><div class="input-label">Voicemail Drop URL (.mp3)</div>
@@ -2823,6 +2825,7 @@ const state = {
   settings: {
     backendUrl: '',
     myPhone: '',
+    dialInNumber: '',
     callerId: '',
     vmUrl: '',
     vmLibrary: [],
@@ -3018,6 +3021,7 @@ function switchSettingsTab(name) {
 function showSettingsModal() {
   document.getElementById('settingBackend').value = state.settings.backendUrl;
   document.getElementById('settingMyPhone').value = state.settings.myPhone;
+  document.getElementById('settingDialInNumber').value = state.settings.dialInNumber || '';
   document.getElementById('settingCallerId').value = state.settings.callerId;
   document.getElementById('settingVMUrl').value = state.settings.vmUrl;
   document.getElementById('settingDelay').value = state.settings.delay;
@@ -3037,6 +3041,7 @@ function showSettingsModal() {
 function saveSettings() {
   state.settings.backendUrl = document.getElementById('settingBackend').value.trim();
   state.settings.myPhone = document.getElementById('settingMyPhone').value.trim();
+  state.settings.dialInNumber = document.getElementById('settingDialInNumber').value.trim();
   state.settings.callerId = document.getElementById('settingCallerId').value.trim();
   state.settings.vmUrl = document.getElementById('settingVMUrl').value.trim();
   state.settings.delay = parseInt(document.getElementById('settingDelay').value) || 3;
@@ -5926,6 +5931,9 @@ function stopSession() {
   state.sessionStartTime = null;
   // Disconnect WebRTC device if active
   if (twilioActiveCall) { twilioActiveCall.disconnect(); twilioActiveCall = null; }
+  if (_dialInPollInterval) { clearInterval(_dialInPollInterval); _dialInPollInterval = null; }
+  // Reset headset status for next session
+  const hel = document.getElementById("headsetStatus"); if (hel) startAgentConnection();
   // Drop all lines
   state.lines.forEach(l => { if (l.status !== 'idle') dropLine(l.id, true); });
   clearActiveCall();
@@ -7700,13 +7708,52 @@ async function init() {
 
   setTimeout(() => {
     toast(state.demoMode ? '🎬 Demo Mode — Set backend URL in ⚙️ Settings for live calls' : '✅ Backend configured — ready for live calls', state.demoMode ? 'accent' : 'green');
-    initTwilioDevice();
+    startAgentConnection();
   }, 500);
 }
 
 
 
 // ─── Twilio WebRTC Device ────────────────────────────────────────────────────
+// ─── Agent Connection: Dial-In OR WebRTC ───────────────────────────────────
+let _dialInPollInterval = null;
+
+function startAgentConnection() {
+  const dialInNum = state.settings.dialInNumber;
+  if (dialInNum) {
+    startDialInMode(dialInNum);
+  } else {
+    initTwilioDevice();
+  }
+}
+
+function startDialInMode(number) {
+  const el = document.getElementById('headsetStatus');
+  if (!el) return;
+  el.textContent = '📲 Call ' + number;
+  el.style.color = '#f59e0b';
+  el.onclick = () => {
+    if (navigator.clipboard) navigator.clipboard.writeText(number).catch(()=>{});
+    toast('📋 Dial ' + number + ' from your phone, then press ▶ Start Session', 'accent', 6000);
+  };
+  if (_dialInPollInterval) clearInterval(_dialInPollInterval);
+  _dialInPollInterval = setInterval(async () => {
+    try {
+      const base = state.settings.backendUrl || '';
+      if (!base) return;
+      const r = await fetch(base + '/api/agent-ready');
+      if (!r.ok) return;
+      const d = await r.json();
+      if (d.agentReady) {
+        clearInterval(_dialInPollInterval);
+        _dialInPollInterval = null;
+        el.textContent = '✅ Agent Connected';
+        el.style.color = '#22c55e';
+      }
+    } catch(e) {}
+  }, 2500);
+}
+
 let twilioDevice   = null;
 let twilioActiveCall = null;
 

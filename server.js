@@ -450,13 +450,47 @@ app.all('/twiml/agent', (req, res) => {
     beep="false"
     startConferenceOnEnter="false"
     endConferenceOnExit="false"
-    waitUrl="${BASE_URL}/twiml/hold"
-    waitUrlMethod="GET"
+
+
     statusCallback="${BASE_URL}/webhook/conference-events"
     statusCallbackEvent="participant-join participant-leave"
     statusCallbackMethod="POST"
     maxParticipants="10">${room}</Conference>
 </Response>`);
+});
+
+// ─── TwiML: Agent Dial-In (agent calls Twilio number to join conference) ──────
+// Configure any Twilio phone number Voice webhook → POST ${BASE_URL}/twiml/agent-dialin
+// Agent calls that number from their phone, gets parked in the conference.
+// Frontend polls /api/agent-ready — when agentReady=true, Start Session dials leads.
+app.all('/twiml/agent-dialin', (req, res) => {
+  const inboundCallSid = req.body.CallSid || req.query.CallSid || null;
+
+  if (!sessionState.agentReady) {
+    const conferenceRoom = 'PowerDial-' + Date.now();
+    sessionState.conferenceRoom  = conferenceRoom;
+    sessionState.agentReady      = false;
+    sessionState.conferenceSid   = null;
+    sessionState.agentCallSid    = inboundCallSid;
+    sessionState.pendingContacts = [];
+    sessionState.pendingCallerId = null;
+    sessionState.active          = false;
+    sessionState.connectedLine   = null;
+    sessionState.lines.forEach(l => Object.assign(l, { callSid: null, status: 'idle', contact: null }));
+    console.log('[Agent] Dial-in from ' + (req.body.From || 'unknown') + ' — parked in', conferenceRoom);
+  }
+
+  const room = sessionState.conferenceRoom;
+  res.set('Content-Type', 'text/xml');
+  res.send('<' + '?xml version="1.0" encoding="UTF-8"?' + '>' +
+    '<Response><Conference' +
+    ' beep="false"' +
+    ' startConferenceOnEnter="false"' +
+    ' endConferenceOnExit="false"' +
+    ' statusCallback="' + BASE_URL + '/webhook/conference-events"' +
+    ' statusCallbackEvent="participant-join participant-leave"' +
+    ' statusCallbackMethod="POST"' +
+    ' maxParticipants="10">' + room + '</Conference></Response>');
 });
 
 // ─── Webhook: Conference Events ──────────────────────────────────────────────
