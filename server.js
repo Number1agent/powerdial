@@ -309,6 +309,8 @@ app.post('/api/lines/:lineId/hangup', async (req, res) => {
   try {
     await client.calls(line.callSid).update({ status: 'completed' });
     setLine(lineId, { status: 'idle', callSid: null, contact: null });
+    // Clear connectedLine so the next lead can connect
+    if (sessionState.connectedLine === lineId) sessionState.connectedLine = null;
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

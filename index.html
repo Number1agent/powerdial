@@ -6369,6 +6369,12 @@ function hangupActive() {
   const contact = line.contact;
   const phoneEntry = line.phoneEntry;
 
+  // Hang up the actual Twilio call so backend clears connectedLine
+  const _huaBase = state.settings.backendUrl;
+  if (_huaBase && line.callSid) {
+    fetch(`${_huaBase}/api/lines/${line.id}/hangup`, { method: 'POST' }).catch(() => {});
+  }
+
   // Save for dispose()
   state._pendingContact = contact;
   state._pendingPhoneEntry = phoneEntry;
@@ -6666,7 +6672,8 @@ function processBackendEvents(data) {
       }
     }
     if (line.status === lineData.status) return;
-    if (lineData.status === 'connected') lineConnected(line);
+    // Guard: don't re-trigger lineConnected if frontend already cleared line.contact
+    if (lineData.status === 'connected') { if (line.contact) lineConnected(line); }
     else if (lineData.status === 'voicemail') lineVoicemail(line);
     else if (lineData.status === 'noanswer' || lineData.status === 'busy') lineDone(line, lineData.status);
   });
@@ -6953,6 +6960,11 @@ function hangupNextNumber() {
   if (state.activeLineId === null) return;
   const line = state.lines[state.activeLineId - 1];
   if (line.timerInt) clearInterval(line.timerInt);
+  // Hang up the actual Twilio call so backend clears connectedLine
+  const _hnnBase = state.settings.backendUrl;
+  if (_hnnBase && line.callSid) {
+    fetch(`${_hnnBase}/api/lines/${line.id}/hangup`, { method: 'POST' }).catch(() => {});
+  }
   const contact = line.contact;
   const phoneEntry = line.phoneEntry;
 
@@ -6994,6 +7006,11 @@ function hangupNoContact() {
   if (state.activeLineId === null) return;
   const line = state.lines[state.activeLineId - 1];
   if (line.timerInt) clearInterval(line.timerInt);
+  // Hang up the actual Twilio call so backend clears connectedLine
+  const _hncBase = state.settings.backendUrl;
+  if (_hncBase && line.callSid) {
+    fetch(`${_hncBase}/api/lines/${line.id}/hangup`, { method: 'POST' }).catch(() => {});
+  }
   const contact = line.contact;
   const phoneEntry = line.phoneEntry;
 
