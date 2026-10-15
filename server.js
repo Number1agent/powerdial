@@ -506,10 +506,16 @@ app.post('/webhook/conference-events', async (req, res) => {
   const { StatusCallbackEvent, ConferenceSid, CallSid } = req.body;
   console.log(`[Conference] Event: ${StatusCallbackEvent} | SID: ${ConferenceSid} | Call: ${CallSid}`);
 
-  if (StatusCallbackEvent === 'participant-join' && CallSid === sessionState.agentCallSid) {
-    sessionState.conferenceSid = ConferenceSid;
-    sessionState.agentReady = true;
-    console.log(`[Agent] Waiting in conference ${ConferenceSid} with hold music — agentReady=true`);
+  if (StatusCallbackEvent === 'participant-join') {
+    const sidMatch = CallSid === sessionState.agentCallSid;
+    console.log(`[Conference] join | CallSid: ${CallSid} | agentCallSid: ${sessionState.agentCallSid} | match: ${sidMatch}`);
+    // Set conferenceSid if SIDs match OR if agent is already ready and conference not yet recorded
+    // (Twilio may assign a child SID when <Dial><Conference> executes, differing from the parent call SID)
+    if (sidMatch || (sessionState.agentReady && !sessionState.conferenceSid)) {
+      sessionState.conferenceSid = ConferenceSid;
+      sessionState.agentReady = true;
+      console.log(`[Agent] Parked in conference ${ConferenceSid} — agentReady=true, conferenceSid set`);
+    }
   }
 
   // If a LEAD joins the conference but we already have a connectedLine (race condition):
