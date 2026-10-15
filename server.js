@@ -188,23 +188,10 @@ app.get('/api/agent-ready', (req, res) => {
 
 // GET /api/token — generates a short-lived Twilio Access Token for the browser Twilio.Device
 
-// Serve Twilio Voice SDK browser bundle from local node_modules
+// Serve Twilio Voice SDK (committed to repo — no CDN dependency)
 app.get('/twilio-voice.js', (req, res) => {
-  const path = require('path');
-  // Try both common locations in the package
-  const candidates = [
-    path.join(__dirname, 'node_modules/@twilio/voice-sdk/dist/twilio.min.js'),
-    path.join(__dirname, 'node_modules/@twilio/voice-sdk/dist/twilio.js'),
-    path.join(__dirname, 'node_modules/@twilio/voice-sdk/lib/twilio.js'),
-  ];
-  const fs = require('fs');
-  const found = candidates.find(p => fs.existsSync(p));
-  if (!found) {
-    console.error('[SDK] twilio-voice.js not found in:', candidates);
-    return res.status(404).send('SDK not found');
-  }
   res.type('application/javascript');
-  res.sendFile(found);
+  res.sendFile(require('path').join(__dirname, 'twilio-voice.min.js'));
 });
 
 app.get('/api/token', (req, res) => {
