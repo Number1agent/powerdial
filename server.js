@@ -100,7 +100,9 @@ function getNextNumber(contactPhone) {
   return num;
 }
 const AGENT_PHONE     = process.env.AGENT_PHONE_NUMBER;    // Jose's real phone number
-const BASE_URL        = process.env.PUBLIC_URL;             // ngrok or Railway URL
+const BASE_URL        = process.env.PUBLIC_URL
+  || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : null)
+  || 'https://powerdial-production-85ab.up.railway.app'; // Railway URL fallback
 const CONFERENCE_NAME = 'PowerDial-Session';
 const TWILIO_API_KEY    = process.env.TWILIO_API_KEY;
 const TWILIO_API_SECRET = process.env.TWILIO_API_SECRET;
@@ -450,8 +452,6 @@ app.all('/twiml/agent', (req, res) => {
     beep="false"
     startConferenceOnEnter="false"
     endConferenceOnExit="false"
-
-
     statusCallback="${BASE_URL}/webhook/conference-events"
     statusCallbackEvent="participant-join participant-leave"
     statusCallbackMethod="POST"
@@ -1115,5 +1115,6 @@ app.listen(PORT, () => {
   console.log(`   Frontend: http://localhost:${PORT}`);
   console.log(`   Health:   http://localhost:${PORT}/health`);
   console.log(`   Mode:     ${process.env.TWILIO_ACCOUNT_SID ? '✅ Live (Twilio connected)' : '⚠️  No Twilio credentials'}`);
-  if (!process.env.PUBLIC_URL) console.log(`   ⚠️  PUBLIC_URL not set — run ngrok and set it in .env`);
+  console.log(`   BASE_URL: ${BASE_URL}`);
+  if (!process.env.PUBLIC_URL) console.log(`   ⚠️  PUBLIC_URL not set — using Railway fallback`);
 });
