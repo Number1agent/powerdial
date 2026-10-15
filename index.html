@@ -7773,13 +7773,15 @@ function pollForAgentReady() {
       const r = await fetch(base + '/api/agent-ready');
       if (!r.ok) return;
       const d = await r.json();
-      if (d.agentReady) {
+      if (d.agentReady && d.conferenceSid) {
         clearInterval(_dialInPollInterval);
         _dialInPollInterval = null;
         el.textContent = '✅ Connected — Start Session';
         el.style.color = '#22c55e';
         el.style.cursor = 'default';
         el.onclick = null;
+      } else if (d.agentReady && !d.conferenceSid) {
+        el.textContent = '⏳ Connecting to conference…';
       }
     } catch(e) {}
   }, 2000);

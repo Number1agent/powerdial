@@ -488,14 +488,14 @@ app.all('/twiml/agent-dialin', (req, res) => {
   const room = sessionState.conferenceRoom;
   res.set('Content-Type', 'text/xml');
   res.send('<' + '?xml version="1.0" encoding="UTF-8"?' + '>' +
-    '<Response><Conference' +
+    '<Response><Dial><Conference' +
     ' beep="false"' +
     ' startConferenceOnEnter="false"' +
     ' endConferenceOnExit="false"' +
     ' statusCallback="' + BASE_URL + '/webhook/conference-events"' +
     ' statusCallbackEvent="join leave"' +
     ' statusCallbackMethod="POST"' +
-    ' maxParticipants="10">' + room + '</Conference></Response>');
+    ' maxParticipants="10">' + room + '</Conference></Dial></Response>');
 });
 
 // ─── Webhook: Conference Events ──────────────────────────────────────────────
@@ -672,11 +672,13 @@ async function bridgeAgentToLine(lineId) {
   await client.calls(sessionState.agentCallSid).update({
     twiml: `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Conference
-    beep="false"
-    startConferenceOnEnter="true"
-    endConferenceOnExit="false"
-    maxParticipants="4">${CONFERENCE_NAME}-Line${lineId}</Conference>
+  <Dial>
+    <Conference
+      beep="false"
+      startConferenceOnEnter="true"
+      endConferenceOnExit="false"
+      maxParticipants="4">${CONFERENCE_NAME}-Line${lineId}</Conference>
+  </Dial>
 </Response>`
   });
 }
