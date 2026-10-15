@@ -186,7 +186,8 @@ app.get('/api/agent-ready', (req, res) => {
     conferenceSid: sessionState.conferenceSid
   });
 
-// GET /api/token — generates a short-lived Twilio Access Token for the browser Twilio.Device
+});
+
 
 // Serve Twilio Voice SDK (committed to repo — no CDN dependency)
 app.get('/twilio-voice.js', (req, res) => {
@@ -194,6 +195,7 @@ app.get('/twilio-voice.js', (req, res) => {
   res.sendFile(require('path').join(__dirname, 'twilio-voice.min.js'));
 });
 
+// GET /api/token — generates a short-lived Twilio Access Token for the browser Twilio.Device
 app.get('/api/token', (req, res) => {
   if (!TWILIO_API_KEY || !TWILIO_API_SECRET) {
     return res.status(400).json({ error: 'TWILIO_API_KEY and TWILIO_API_SECRET not configured.' });
@@ -208,8 +210,6 @@ app.get('/api/token', (req, res) => {
   );
   token.addGrant(new VoiceGrant({ incomingAllow: true }));
   res.json({ token: token.toJwt(), identity: 'powerdial-agent' });
-});
-
 });
 
 // ─── Route: Start Dial Session ────────────────────────────────────────────────
