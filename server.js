@@ -441,6 +441,7 @@ app.all('/twiml/hold', (req, res) => {
 // conference and seamlessly connects the waiting agent — no hold API needed.
 app.all('/twiml/agent', (req, res) => {
   const room = req.query.room || req.body.room || sessionState.conferenceRoom || CONFERENCE_NAME;
+  console.log('[TwiML/agent] Fetched by Twilio | room:', room, '| CallSid:', req.body.CallSid || req.query.CallSid);
   res.set('Content-Type', 'text/xml');
   // Agent waits in conference with startConferenceOnEnter=false so Twilio plays
   // its built-in hold music automatically — no hold API, no media transitions.
@@ -453,7 +454,7 @@ app.all('/twiml/agent', (req, res) => {
     startConferenceOnEnter="false"
     endConferenceOnExit="false"
     statusCallback="${BASE_URL}/webhook/conference-events"
-    statusCallbackEvent="participant-join participant-leave"
+    statusCallbackEvent="join leave"
     statusCallbackMethod="POST"
     maxParticipants="10">${room}</Conference>
 </Response>`);
@@ -488,7 +489,7 @@ app.all('/twiml/agent-dialin', (req, res) => {
     ' startConferenceOnEnter="false"' +
     ' endConferenceOnExit="false"' +
     ' statusCallback="' + BASE_URL + '/webhook/conference-events"' +
-    ' statusCallbackEvent="participant-join participant-leave"' +
+    ' statusCallbackEvent="join leave"' +
     ' statusCallbackMethod="POST"' +
     ' maxParticipants="10">' + room + '</Conference></Response>');
 });
