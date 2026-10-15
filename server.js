@@ -190,7 +190,21 @@ app.get('/api/agent-ready', (req, res) => {
 
 // Serve Twilio Voice SDK browser bundle from local node_modules
 app.get('/twilio-voice.js', (req, res) => {
-  res.sendFile(require('path').resolve('./node_modules/@twilio/voice-sdk/dist/twilio.min.js'));
+  const path = require('path');
+  // Try both common locations in the package
+  const candidates = [
+    path.join(__dirname, 'node_modules/@twilio/voice-sdk/dist/twilio.min.js'),
+    path.join(__dirname, 'node_modules/@twilio/voice-sdk/dist/twilio.js'),
+    path.join(__dirname, 'node_modules/@twilio/voice-sdk/lib/twilio.js'),
+  ];
+  const fs = require('fs');
+  const found = candidates.find(p => fs.existsSync(p));
+  if (!found) {
+    console.error('[SDK] twilio-voice.js not found in:', candidates);
+    return res.status(404).send('SDK not found');
+  }
+  res.type('application/javascript');
+  res.sendFile(found);
 });
 
 app.get('/api/token', (req, res) => {
