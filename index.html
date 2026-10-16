@@ -3058,7 +3058,7 @@ function saveSettings() {
   // Save action plans and list rules from rendered inputs
   saveActionPlansFromUI();
   saveListRulesFromUI();
-  state.demoMode = !state.settings.backendUrl;
+  state.demoMode = false; // backendUrl empty = same origin (Railway co-hosted)
   localStorage.setItem('powerdial_settings', JSON.stringify(state.settings));
   localStorage.setItem('powerdial_actionPlans', JSON.stringify(state.actionPlans));
   localStorage.setItem('powerdial_listRules', JSON.stringify(state.listRules));
@@ -6318,8 +6318,8 @@ function lineMachine(line) {
 function lineDone(line, outcome, silent = false) {
   // Always hang up the Twilio call — even for dropped/vm_dropped so ringing lines
   // are terminated on the backend and don't ghost-connect after disposition.
-  const _ldBase = state.settings.backendUrl;
-  if (_ldBase && line.callSid) {
+  const _ldBase = state.settings.backendUrl || '';
+  if (line.callSid) {
     fetch(`${_ldBase}/api/lines/${line.id}/hangup`, { method: 'POST' }).catch(() => {});
   }
   if (line.timerInt) clearInterval(line.timerInt);
@@ -6377,8 +6377,8 @@ function hangupActive() {
   const phoneEntry = line.phoneEntry;
 
   // Hang up the actual Twilio call so backend clears connectedLine
-  const _huaBase = state.settings.backendUrl;
-  if (_huaBase && line.callSid) {
+  const _huaBase = state.settings.backendUrl || '';
+  if (line.callSid) {
     fetch(`${_huaBase}/api/lines/${line.id}/hangup`, { method: 'POST' }).catch(() => {});
   }
 
@@ -6656,7 +6656,7 @@ let pollInterval = null;
 function startEventPolling() {
   if (pollInterval) clearInterval(pollInterval);
   pollInterval = setInterval(async () => {
-    if (!state.session || !state.settings.backendUrl) { clearInterval(pollInterval); return; }
+    if (!state.session) { clearInterval(pollInterval); return; }
     try {
       const resp = await fetch(`${state.settings.backendUrl}/api/session/status`);
       const data = await resp.json();
@@ -6968,8 +6968,8 @@ function hangupNextNumber() {
   const line = state.lines[state.activeLineId - 1];
   if (line.timerInt) clearInterval(line.timerInt);
   // Hang up the actual Twilio call so backend clears connectedLine
-  const _hnnBase = state.settings.backendUrl;
-  if (_hnnBase && line.callSid) {
+  const _hnnBase = state.settings.backendUrl || '';
+  if (line.callSid) {
     fetch(`${_hnnBase}/api/lines/${line.id}/hangup`, { method: 'POST' }).catch(() => {});
   }
   const contact = line.contact;
@@ -7014,8 +7014,8 @@ function hangupNoContact() {
   const line = state.lines[state.activeLineId - 1];
   if (line.timerInt) clearInterval(line.timerInt);
   // Hang up the actual Twilio call so backend clears connectedLine
-  const _hncBase = state.settings.backendUrl;
-  if (_hncBase && line.callSid) {
+  const _hncBase = state.settings.backendUrl || '';
+  if (line.callSid) {
     fetch(`${_hncBase}/api/lines/${line.id}/hangup`, { method: 'POST' }).catch(() => {});
   }
   const contact = line.contact;
@@ -7669,7 +7669,7 @@ async function init() {
     // Ensure smsTemplates array is preserved (merge doesn't deep-copy arrays)
     if (saved.smsTemplates) state.settings.smsTemplates = saved.smsTemplates;
     if (saved.localPresence) state.settings.localPresence = saved.localPresence;
-    state.demoMode = !state.settings.backendUrl;
+    state.demoMode = false; // Railway co-hosted: empty backendUrl = same origin, always real mode
   } catch(e) {}
   // Load action plans and list rules
   try { state.actionPlans = JSON.parse(localStorage.getItem('powerdial_actionPlans') || '[]'); } catch(e) {}
