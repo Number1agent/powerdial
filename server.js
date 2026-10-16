@@ -143,10 +143,14 @@ function getLine(lineId) {
 app.post('/api/call-agent', async (req, res) => {
   const { agentPhone } = req.body;
 
-  // If agent is already in conference, do nothing
-  if (sessionState.agentReady && sessionState.conferenceSid) {
+  // Only skip re-dialing if agent callSid is still live — guards against ghost state
+  // where agentReady=true but the previous call already ended (agentCallSid=null).
+  if (sessionState.agentReady && sessionState.conferenceSid && sessionState.agentCallSid) {
     return res.json({ success: true, already: true, message: 'Agent already connected' });
   }
+  // Reset any stale ghost state before making a fresh call
+  sessionState.agentReady = false;
+  sessionState.conferenceSid = null;
 
   const conferenceRoom = 'PowerDial-' + Date.now();
   sessionState.conferenceRoom = conferenceRoom;
