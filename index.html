@@ -5406,6 +5406,7 @@ function isCallableNow(contact) {
 }
 
 async function dialNextSet() {
+  _nextSetScheduled = false; // reset so checkAllDone() can schedule the next set
   if (!state.session || state.paused) return;
   if (state.activeLineId !== null) return; // already on a call
 
@@ -5552,6 +5553,7 @@ async function dialRealSingle(line, contact, phoneEntry) {
 //  LINE STATE TRANSITIONS
 // ============================================================
 function lineConnected(line) {
+  if (!line.contact) return;  // race: contact cleared before poll fired
   if (line.timerInt) clearInterval(line.timerInt);
   line.status = 'connected';
   if (line.phoneEntry) line.phoneEntry.status = 'connected';
@@ -5627,12 +5629,16 @@ function lineDone(line, outcome, silent = false) {
   checkAllDone();
 }
 
+let _nextSetScheduled = false;
 function checkAllDone() {
   if (state.activeLineId !== null) return; // still on a call
   const allIdle = state.lines.every(l => l.status === 'idle' || l.status === 'noanswer');
   if (!allIdle) return;
   if (!state.session || state.paused) return;
+  if (_nextSetScheduled) return;
+  _nextSetScheduled = true;
   setTimeout(() => {
+    _nextSetScheduled = false;
     if (!state.session || state.paused || state.activeLineId !== null) return;
     renderQueue();
     dialNextSet();
@@ -5834,15 +5840,15 @@ function disposeBadNumber() {
 }
 
 function disposeContinue() {
-  // Brief conversation — no action needed. Log it as a contact, mark pending so they
-  // can come back up in the queue, then move on immediately.
+  // Brief conversation — no action needed. Log it as a contact, mark as contacted
+  // (terminal — not 'pending') so the contact is NOT re-dialed this session.
   const contact = state._pendingContact || state.contacts.find(c => ['dialing','connected','voicemail'].includes(c.status));
   const phoneEntry = state._pendingPhoneEntry || (contact?.phones || []).find(p => ['dialing','connected','voicemail'].includes(p.status));
 
   if (contact) {
-    contact.status = 'pending';
+    contact.status = 'contact';
     contact.disposition = 'Contact';
-    if (phoneEntry) phoneEntry.status = 'pending';
+    if (phoneEntry) phoneEntry.status = 'contact';
     state.stats.connected++;
     const notesEl = document.getElementById('callNotes');
     const noteText = notesEl?.value?.trim() || '';
@@ -5940,13 +5946,21 @@ function startEventPolling() {
 }
 
 function processBackendEvents(data) {
-  // Process line status updates from backend
+  // Only act on lines that still have a contact assigned (cleared on hangup/done).
+  // Only transition from "active" states to prevent stale backend reports from
+  // re-firing lineVoicemail/lineConnected after the line has already been processed.
+  const activeStates = ['ringing', 'connected', 'voicemail', 'machine'];
   data.lines?.forEach(lineData => {
     const line = state.lines[lineData.lineId - 1];
-    if (!line || line.status === lineData.status) return;
-    if (lineData.status === 'connected') lineConnected(line);
-    else if (lineData.status === 'voicemail') lineVoicemail(line);
-    else if (lineData.status === 'noanswer' || lineData.status === 'busy') lineDone(line, lineData.status);
+    if (!line || !line.contact) return;          // line already cleared — skip
+    if (line.status === lineData.status) return; // no change
+    if (lineData.status === 'connected') {
+      if (activeStates.includes(line.status)) lineConnected(line);
+    } else if (lineData.status === 'voicemail') {
+      if (activeStates.includes(line.status) && line.status !== 'voicemail') lineVoicemail(line);
+    } else if (lineData.status === 'noanswer' || lineData.status === 'busy') {
+      if (activeStates.includes(line.status)) lineDone(line, lineData.status);
+    }
   });
 }
 
