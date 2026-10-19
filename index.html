@@ -6,30 +6,30 @@
 <title>PowerDial — Triple Line Dialer</title>
 <style>
   :root {
-    --bg-0: #f0f4f8;
-    --bg-1: #ffffff;
-    --bg-2: #f8fafc;
-    --bg-3: #eef2f7;
-    --bg-4: #e2e8f0;
-    --border: #cbd5e1;
-    --border-light: #e2e8f0;
-    --text-primary: #0f172a;
-    --text-secondary: #475569;
-    --text-muted: #94a3b8;
+    --bg-0: #050912;
+    --bg-1: #080e1c;
+    --bg-2: #0c1426;
+    --bg-3: #101d34;
+    --bg-4: #162540;
+    --border: #1e3050;
+    --border-light: #2a4268;
+    --text-primary: #e8f4ff;
+    --text-secondary: #7fa8d4;
+    --text-muted: #3d6a94;
     --accent: #0ea5e9;
-    --accent-hover: #0284c7;
-    --accent-dim: rgba(14,165,233,0.10);
-    --green: #10b981;
-    --green-dim: rgba(16,185,129,0.10);
-    --red: #ef4444;
-    --red-dim: rgba(239,68,68,0.10);
-    --yellow: #f59e0b;
-    --yellow-dim: rgba(245,158,11,0.10);
-    --orange: #f97316;
-    --orange-dim: rgba(249,115,22,0.10);
-    --blue: #3b82f6;
-    --blue-dim: rgba(59,130,246,0.10);
-    --cyan: #06b6d4;
+    --accent-hover: #38bdf8;
+    --accent-dim: rgba(14,165,233,0.15);
+    --green: #00e676;
+    --green-dim: rgba(0,230,118,0.12);
+    --red: #ff3d71;
+    --red-dim: rgba(255,61,113,0.14);
+    --yellow: #ffc400;
+    --yellow-dim: rgba(255,196,0,0.14);
+    --orange: #ff6b35;
+    --orange-dim: rgba(255,107,53,0.14);
+    --blue: #60a5fa;
+    --blue-dim: rgba(96,165,250,0.14);
+    --cyan: #00e5ff;
     --radius: 10px;
     --radius-sm: 6px;
   }
@@ -47,9 +47,9 @@
 
   /* ===== TOP BAR ===== */
   .topbar {
-    background: #ffffff;
-    border-bottom: 2px solid #0ea5e9;
-    box-shadow: 0 2px 12px rgba(14,165,233,0.15);
+    background: linear-gradient(90deg, #060d1e 0%, #0a1628 50%, #060d1e 100%);
+    border-bottom: 1px solid rgba(14,165,233,0.25);
+    box-shadow: 0 1px 20px rgba(14,165,233,0.08);
     padding: 0 16px;
     height: 52px;
     display: flex;
@@ -61,39 +61,48 @@
   .logo {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 16px;
+    gap: 9px;
+    font-size: 17px;
     font-weight: 800;
-    color: var(--accent);
+    letter-spacing: -0.3px;
+    color: #ffffff;
     margin-right: 8px;
   }
   .logo-icon {
-    width: 28px; height: 28px;
+    width: 30px; height: 30px;
     background: linear-gradient(135deg, #0ea5e9, #0284c7);
-    box-shadow: 0 0 12px rgba(14,165,233,0.5);
-    border-radius: 7px;
+    border-radius: 8px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 15px;
+    font-size: 16px;
+    box-shadow: 0 0 12px rgba(14,165,233,0.5);
   }
   .stat-pill {
     display: flex;
     align-items: center;
     gap: 6px;
-    background: var(--bg-3);
-    border: 1px solid var(--border);
+    background: rgba(14,165,233,0.06);
+    border: 1px solid rgba(14,165,233,0.18);
     border-radius: 20px;
-    padding: 4px 10px;
-    font-size: 13px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
     color: var(--text-secondary);
   }
   .stat-pill .val {
-    font-weight: 700;
-    font-size: 14px;
+    font-weight: 800;
+    font-size: 15px;
     color: var(--text-primary);
+    text-transform: none;
+    letter-spacing: 0;
   }
+  .stat-pill.green { background: rgba(0,230,118,0.06); border-color: rgba(0,230,118,0.2); }
   .stat-pill.green .val { color: var(--green); }
+  .stat-pill.yellow { background: rgba(255,196,0,0.06); border-color: rgba(255,196,0,0.2); }
   .stat-pill.yellow .val { color: var(--yellow); }
   .stat-pill.accent .val { color: var(--accent); }
+  .stat-pill.red { background: rgba(255,61,113,0.06); border-color: rgba(255,61,113,0.2); }
   .stat-pill.red .val { color: var(--red); }
 
   .topbar-spacer { flex: 1; }
@@ -116,8 +125,15 @@
     background: linear-gradient(135deg, #0ea5e9, #0284c7);
     color: white;
     box-shadow: 0 0 16px rgba(14,165,233,0.4);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
   }
-  .btn-primary:hover { background: linear-gradient(135deg, #38bdf8, #0ea5e9); box-shadow: 0 0 24px rgba(14,165,233,0.6); }
+  .btn-primary:hover {
+    background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+    box-shadow: 0 0 24px rgba(14,165,233,0.6);
+    transform: translateY(-1px);
+  }
   .btn-danger {
     background: var(--red);
     color: white;
@@ -165,40 +181,42 @@
   .main {
     flex: 1;
     display: grid;
-    grid-template-columns: minmax(220px, 430px) 1fr minmax(160px, 280px);
+    grid-template-columns: 430px 1fr 280px;
     gap: 0;
     overflow: hidden;
   }
 
   /* ===== PANELS ===== */
   .panel {
-    background: var(--bg-1);
-    border-right: 1px solid var(--border);
+    background: #060d1a;
+    border-right: 1px solid rgba(14,165,233,0.12);
     display: flex;
     flex-direction: column;
     overflow: hidden;
   }
-  .panel.right { border-right: none; border-left: 1px solid var(--border); }
+  .panel.right { border-right: none; border-left: 1px solid rgba(14,165,233,0.12); }
   .panel-header {
     padding: 12px 14px 10px;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid rgba(14,165,233,0.1);
+    background: rgba(14,165,233,0.03);
     display: flex; align-items: center; gap: 8px;
     flex-shrink: 0;
   }
   .panel-title {
-    font-size: 12px;
-    font-weight: 700;
+    font-size: 11px;
+    font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--text-muted);
+    letter-spacing: 0.12em;
+    color: var(--accent);
   }
   .panel-badge {
-    background: var(--accent-dim);
+    background: rgba(14,165,233,0.15);
     color: var(--accent);
+    border: 1px solid rgba(14,165,233,0.3);
     border-radius: 20px;
-    padding: 1px 7px;
+    padding: 1px 8px;
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 800;
     margin-left: auto;
   }
   .panel-body { flex: 1; overflow-y: auto; padding: 8px; }
@@ -225,27 +243,34 @@
   }
 
   .line-card {
-    background: var(--bg-2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
+    background: linear-gradient(160deg, #0c1626 0%, #08111f 100%);
+    border: 1px solid rgba(14,165,233,0.2);
+    border-radius: 12px;
     padding: 14px;
     position: relative;
-    transition: all 0.2s;
+    transition: all 0.25s;
     min-height: 140px;
     display: flex;
     flex-direction: column;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04);
   }
-  .line-card.idle { opacity: 0.6; }
-  .line-card.ringing { border-color: var(--yellow); background: var(--bg-2); }
+  .line-card.idle { opacity: 0.55; }
+  .line-card.ringing {
+    border-color: var(--yellow);
+    background: linear-gradient(160deg, #151208 0%, #0c0e05 100%);
+    box-shadow: 0 0 20px rgba(255,196,0,0.15);
+  }
   .line-card.ringing .line-status-bar { background: var(--yellow-dim); }
-  .line-card.connected { border-color: var(--green); }
+  .line-card.connected {
+    border-color: var(--green);
+    background: linear-gradient(160deg, #071812 0%, #04100b 100%);
+    box-shadow: 0 0 24px rgba(0,230,118,0.2);
+  }
   .line-card.connected .line-status-bar { background: var(--green-dim); }
-  .line-card.noanswer { border-color: var(--border-light); }
-  .line-card.voicemail { border-color: var(--orange); }
+  .line-card.noanswer { border-color: var(--border-light); opacity: 0.7; }
+  .line-card.voicemail { border-color: var(--orange); box-shadow: 0 0 16px rgba(255,107,53,0.15); }
   .line-card.voicemail .line-status-bar { background: var(--orange-dim); }
-  .line-card.machine { border-color: #7c3aed; }
-  .line-card.machine .line-status-bar { background: rgba(124,58,237,0.15); }
-  .line-card.busy { border-color: var(--red); }
+  .line-card.busy { border-color: var(--red); box-shadow: 0 0 16px rgba(255,61,113,0.15); }
   .line-card.busy .line-status-bar { background: var(--red-dim); }
 
   .line-top {
@@ -356,189 +381,40 @@
   /* ===== ACTIVE CALL PANEL ===== */
   .active-call-area {
     flex: 1;
-    padding: 0;
+    padding: 12px 14px 14px;
     display: flex;
     flex-direction: column;
-    gap: 0;
+    gap: 10px;
     overflow: hidden;
   }
 
-  /* Live call banner — green bar at top */
-  .live-call-banner {
-    display: none;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    background: #16a34a;
-    color: #fff;
-    padding: 8px 16px;
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    flex-shrink: 0;
-  }
-  .live-call-banner.visible { display: flex; }
-  .live-call-banner .lcb-timer { font-family: 'SF Mono', monospace; font-size: 14px; }
-  .live-call-banner .lcb-name { font-size: 14px; }
-  .live-call-banner .lcb-phone { opacity: 0.85; font-size: 13px; }
-
-  /* Mojo-style two-column layout */
   .active-call-card {
     background: #ffffff;
-    border-top: 2px solid #22c55e;
-    display: flex;
-    flex-direction: row;
-    flex: 1;
-    overflow: hidden;
-    box-shadow: 0 4px 24px rgba(34,197,94,0.12);
-  }
-
-  /* Left main contact panel */
-  .mojo-main {
-    flex: 1;
-    min-width: 0; /* allow shrink so mojo-disp-bar stays visible at narrow widths */
+    border: 2px solid #22c55e;
+    border-radius: var(--radius);
+    padding: 18px;
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
-    padding: 14px 16px;
-    gap: 0;
+    gap: 12px;
+    box-shadow: 0 4px 24px rgba(34,197,94,0.18);
   }
-
-  /* Right disposition sidebar */
-  .mojo-disp-bar {
-    width: 160px;
-    flex-shrink: 0;
-    background: #1a1a2e;
-    border-left: 1px solid #2a2a40;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: 8px 6px 10px;
-    overflow-y: auto;
+  .active-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
   }
-  .mojo-disp-btn {
-    width: 100%;
-    padding: 7px 8px;
-    border-radius: 6px;
-    border: none;
-    background: #c0392b;
-    color: #fff;
-    font-size: 11px;
-    font-weight: 700;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    transition: background 0.12s;
-    text-align: left;
-    line-height: 1.3;
-  }
-  .mojo-disp-btn:hover { background: #e74c3c; }
-  .mojo-disp-btn .mojo-key {
-    background: rgba(0,0,0,0.35);
-    color: #fff;
-    border-radius: 3px;
-    padding: 1px 5px;
-    font-size: 10px;
-    font-weight: 800;
-    flex-shrink: 0;
-    margin-left: auto;
-  }
-  .mojo-disp-btn.mojo-dark {
-    background: #2d2d4a;
-    color: #c0c0e8;
-  }
-  .mojo-disp-btn.mojo-dark:hover { background: #3a3a5a; color: #fff; }
-  .mojo-disp-btn.mojo-dnc { background: #7f1d1d; color: #fca5a5; }
-  .mojo-disp-btn.mojo-dnc:hover { background: #991b1b; color: #fff; }
-  .mojo-disp-btn.mojo-stop { background: #991b1b; color: #fff; justify-content: center; }
-  .mojo-disp-btn.mojo-stop:hover { background: #b91c1c; }
-  .mojo-disp-divider {
-    height: 1px; background: #2a2a40; margin: 2px 0;
-  }
-  .mojo-hotkey-row {
-    display: flex; gap: 4px; align-items: center;
-    padding: 4px 2px 0;
-    font-size: 9px; color: #555577; justify-content: center;
-  }
-
-  /* Contact name / header */
   .active-contact-name {
-    font-size: 22px;
+    font-size: 28px;
     font-weight: 800;
     color: #111111;
     line-height: 1.15;
-    letter-spacing: -0.3px;
-    margin-bottom: 2px;
+    letter-spacing: -0.5px;
   }
   .active-contact-sub {
-    font-size: 13px;
-    color: #666;
-    margin-bottom: 8px;
+    font-size: 16px;
+    color: #444444;
+    margin-top: 4px;
     font-weight: 500;
   }
   .active-contact-sub span { color: #5b4fff; font-weight: 700; }
-
-  /* Action bar (Appointment / Task / Maps / Zillow) */
-  .mojo-action-bar {
-    display: flex; gap: 6px; flex-wrap: wrap;
-    margin-bottom: 10px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #e8e8f0;
-  }
-  .mojo-action-btn {
-    display: inline-flex; align-items: center; gap: 4px;
-    padding: 5px 10px;
-    border-radius: 6px;
-    border: 1px solid #ddd;
-    background: #f7f7fa;
-    color: #333;
-    font-size: 11px;
-    font-weight: 600;
-    cursor: pointer;
-    text-decoration: none;
-    transition: background 0.12s;
-    white-space: nowrap;
-  }
-  .mojo-action-btn:hover { background: #eeeef6; }
-  .mojo-action-btn.green { background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; }
-  .mojo-action-btn.green:hover { background: #dcfce7; }
-  .mojo-action-btn.blue { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
-  .mojo-action-btn.blue:hover { background: #dbeafe; }
-
-  /* Phones list */
-  .mojo-phones-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
-  .mojo-phone-row {
-    display: flex; align-items: center; gap: 8px;
-    padding: 5px 8px; border-radius: 6px; border: 1px solid #e8e8f0;
-    background: #f9f9fc; font-size: 13px;
-  }
-  .mojo-phone-row.active-phone {
-    background: #f0fdf4; border-color: #22c55e; color: #15803d; font-weight: 700;
-  }
-  .mojo-phone-num { flex: 1; font-weight: 600; font-family: 'SF Mono', monospace; font-size: 13px; }
-  .mojo-phone-label { font-size: 10px; color: #888; font-weight: 500; }
-  .mojo-phone-row.active-phone .mojo-phone-label { color: #16a34a; }
-
-  /* Email row */
-  .mojo-email-row {
-    display: flex; align-items: center; gap: 6px;
-    font-size: 12px; color: #2563eb; margin-bottom: 8px;
-  }
-  .mojo-email-row a { color: #2563eb; text-decoration: none; }
-  .mojo-email-row a:hover { text-decoration: underline; }
-
-  /* Meta row (list, type) */
-  .mojo-meta-row {
-    display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;
-    font-size: 11px; color: #666;
-  }
-  .mojo-meta-chip {
-    background: #f0f0f8; border: 1px solid #ddd; border-radius: 4px;
-    padding: 2px 7px; font-size: 11px; color: #555; font-weight: 500;
-  }
-
-  .active-header { display: none; }
   .zillow-btn {
     font-size: 12px;
     font-weight: 700;
@@ -560,24 +436,23 @@
 
   /* Property info panel */
   .prop-panel {
-    background: var(--bg-3);
-    border: 1px solid var(--border);
+    background: #f7f8fc;
+    border: 1px solid #dde0ee;
     border-radius: 8px;
-    padding: 10px 12px;
+    padding: 12px 14px;
     display: flex;
     flex-direction: column;
-    gap: 7px;
-    margin-top: 8px;
+    gap: 8px;
   }
   .prop-address-main {
-    font-size: 14px;
+    font-size: 17px;
     font-weight: 700;
-    color: var(--text-primary);
+    color: #111122;
     line-height: 1.3;
   }
   .prop-address-city {
-    font-size: 12px;
-    color: var(--text-secondary);
+    font-size: 14px;
+    color: #444466;
     margin-top: 1px;
   }
   .prop-links {
@@ -590,9 +465,9 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
-    padding: 3px 9px;
+    padding: 4px 10px;
     border-radius: 20px;
     text-decoration: none;
     border: 1px solid;
@@ -600,19 +475,18 @@
     white-space: nowrap;
   }
   .prop-link:hover { opacity: 0.75; }
-  .prop-link-zillow  { background: rgba(0,106,255,0.12); color: #60a5fa; border-color: rgba(96,165,250,0.3); }
-  .prop-link-maps    { background: rgba(52,168,83,0.12); color: var(--green); border-color: rgba(46,204,113,0.3); }
-  .prop-link-street  { background: rgba(251,191,36,0.12); color: var(--yellow); border-color: rgba(251,191,36,0.3); }
-  .prop-link-records { background: rgba(124,111,255,0.12); color: var(--accent); border-color: rgba(124,111,255,0.3); }
+  .prop-link-zillow  { background: #006aff12; color: #006aff; border-color: #006aff35; }
+  .prop-link-maps    { background: #34a85312; color: #1a7a40; border-color: #34a85335; }
+  .prop-link-street  { background: #f9ab0012; color: #b07800; border-color: #f9ab0035; }
+  .prop-link-records { background: #7c3aed12; color: #6d28d9; border-color: #7c3aed35; }
   .prop-meta-row {
     display: flex;
-    gap: 10px;
-    font-size: 11px;
-    color: var(--text-muted);
+    gap: 14px;
+    font-size: 12px;
+    color: #666688;
     flex-wrap: wrap;
-    align-items: center;
   }
-  .prop-meta-row strong { color: var(--text-secondary); }
+  .prop-meta-row strong { color: #222244; }
   /* Property data grid (Mojo-style 2-col) */
   .prop-data-grid {
     display: grid;
@@ -625,14 +499,14 @@
     align-items: baseline;
     gap: 4px;
     font-size: 12px;
-    color: var(--text-secondary);
+    color: #444466;
     line-height: 1.5;
   }
-  .prop-data-item .pdl { color: var(--text-muted); min-width: 62px; flex-shrink: 0; }
-  .prop-data-item .pdv { font-weight: 600; color: var(--text-primary); }
-  .prop-data-item.avm-item .pdl { color: var(--green); }
-  .prop-data-item.avm-item .pdv { color: var(--green); font-size: 14px; font-weight: 700; }
-  .prop-data-item.units-item .pdv { color: var(--accent); font-weight: 700; }
+  .prop-data-item .pdl { color: #888899; min-width: 62px; flex-shrink: 0; }
+  .prop-data-item .pdv { font-weight: 600; color: #111133; }
+  .prop-data-item.avm-item .pdl { color: #1a7a40; }
+  .prop-data-item.avm-item .pdv { color: #15803d; font-size: 14px; font-weight: 700; }
+  .prop-data-item.units-item .pdv { color: #7c3aed; font-weight: 700; }
   .active-timer-big {
     font-size: 28px;
     font-weight: 800;
@@ -789,28 +663,30 @@
     gap: 9px;
     padding: 8px 10px;
     cursor: pointer;
-    border-bottom: 1px solid var(--border);
-    transition: background 0.1s;
+    border-bottom: 1px solid rgba(14,165,233,0.07);
+    transition: all 0.12s;
     position: relative;
+    border-left: 3px solid transparent;
   }
-  .contact-item:hover { background: var(--bg-2); }
-  .contact-item.active-contact { background: rgba(34,197,94,0.08); border-left: 3px solid var(--green); }
-  .contact-item.called { opacity: 0.5; }
-  .contact-item.calling { background: rgba(245,158,11,0.08); border-left: 3px solid var(--yellow); }
+  .contact-item:hover { background: rgba(14,165,233,0.05); border-left-color: rgba(14,165,233,0.3); }
+  .contact-item.active-contact { background: rgba(0,230,118,0.08); border-left-color: var(--green); }
+  .contact-item.called { opacity: 0.4; }
+  .contact-item.calling { background: rgba(255,196,0,0.08); border-left-color: var(--yellow); }
 
   .contact-avatar {
     width: 34px; height: 34px;
-    border-radius: 6px;
+    border-radius: 8px;
     display: flex; align-items: center; justify-content: center;
     font-size: 13px;
-    font-weight: 700;
+    font-weight: 800;
     flex-shrink: 0;
     margin-top: 1px;
-    background: var(--bg-4);
-    color: var(--text-secondary);
+    background: rgba(14,165,233,0.12);
+    color: var(--accent);
+    border: 1px solid rgba(14,165,233,0.2);
   }
-  .contact-avatar.buyer { background: #1e3a5f; color: #60a5fa; }
-  .contact-avatar.seller { background: #3b1a00; color: #fb923c; }
+  .contact-avatar.buyer { background: rgba(96,165,250,0.12); color: #60a5fa; border-color: rgba(96,165,250,0.2); }
+  .contact-avatar.seller { background: rgba(255,107,53,0.12); color: var(--orange); border-color: rgba(255,107,53,0.2); }
 
   .contact-info { flex: 1; overflow: hidden; min-width: 0; }
   .contact-name {
@@ -1002,8 +878,6 @@
     overflow-x: auto;
     flex-shrink: 0;
     scrollbar-width: none;
-    background: var(--bg-3);
-    border-bottom: 1px solid var(--border);
   }
   .list-tabs-row::-webkit-scrollbar { display: none; }
   .list-tab {
@@ -1013,18 +887,17 @@
     padding: 3px 9px;
     border-radius: 20px;
     border: 1px solid var(--border);
-    background: #ffffff;
-    color: var(--text-secondary);
+    background: var(--bg-3);
+    color: var(--text-muted);
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;
     white-space: nowrap;
     transition: all 0.15s;
     flex-shrink: 0;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
   }
-  .list-tab:hover { border-color: var(--accent); color: var(--text-primary); }
-  .list-tab.active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+  .list-tab:hover { border-color: var(--border-light); color: var(--text-primary); }
+  .list-tab.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(108,99,255,0.35); }
   .list-tab .list-count { font-size: 11px; opacity: 0.7; }
   .list-tab .list-del { margin-left: 3px; opacity: 0; font-size: 13px; line-height: 1; }
   .list-tab:hover .list-del { opacity: 0.5; }
@@ -1052,8 +925,8 @@
   .mojo-sidebar {
     width: 150px;
     flex-shrink: 0;
-    background: #e8eef5;
-    border-right: 2px solid var(--border);
+    background: var(--bg-0);
+    border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
     overflow-y: auto;
@@ -1086,7 +959,7 @@
   .sidebar-section-label {
     font-size: 9px;
     font-weight: 700;
-    color: #64748b;
+    color: var(--text-muted);
     letter-spacing: 0.08em;
     padding: 8px 10px 4px;
     text-transform: uppercase;
@@ -1098,7 +971,7 @@
     justify-content: space-between;
     padding: 6px 10px;
     font-size: 12px;
-    color: #334155;
+    color: var(--text-secondary);
     cursor: pointer;
     border-left: 3px solid transparent;
     transition: all 0.1s;
@@ -1106,8 +979,8 @@
     min-height: 28px;
     flex-shrink: 0;
   }
-  .sidebar-item:hover { background: #d4dfe8; color: #0f172a; }
-  .sidebar-item.active { background: #dbeafe; color: var(--accent); border-left-color: var(--accent); font-weight: 600; }
+  .sidebar-item:hover { background: rgba(14,165,233,0.06); color: var(--text-primary); }
+  .sidebar-item.active { background: rgba(14,165,233,0.1); color: #fff; border-left-color: var(--accent); font-weight: 700; box-shadow: inset 0 0 0 1px rgba(14,165,233,0.15); }
   .sidebar-item .si-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
   .sidebar-item .si-count { font-size: 11px; background: var(--bg-4); border-radius: 10px; padding: 1px 5px; flex-shrink: 0; opacity: 0.8; }
   .sidebar-item.active .si-count { background: var(--accent-dim); color: var(--accent); opacity: 1; }
@@ -1142,7 +1015,6 @@
     flex-direction: column;
     gap: 6px;
     border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
     background: var(--bg-1);
     flex-shrink: 0;
   }
@@ -1848,7 +1720,6 @@
   .obj-btn { width:100%; padding:7px 10px; background:var(--bg-3); border:1px solid var(--border); border-radius:6px; color:var(--text-primary); font-size:12px; font-weight:600; cursor:pointer; text-align:left; transition:background 0.1s; }
   .obj-btn:hover { background:var(--bg-4); border-color:var(--accent); color:var(--accent); }
 </style>
-<script src="/twilio-voice.min.js"></script>
 </head>
 <body>
 
@@ -1886,14 +1757,11 @@
   <div class="topbar-spacer"></div>
 
   <div class="session-controls">
-    <button class="btn btn-ghost btn-icon" onclick="openClaudeSummary()" title="Share with Claude" id="btnClaude" style="font-size:15px">🤖</button>
-    <button class="btn btn-ghost btn-icon" onclick="showAddContactModal()" title="Add Contact">➕</button>
     <button class="btn btn-ghost btn-icon" onclick="showImportModal()" title="Import Contacts">📋</button>
     <button class="btn btn-ghost btn-icon" onclick="showSettingsModal()" title="Settings">⚙️</button>
     <button id="btnPause" class="btn btn-pause hidden" onclick="togglePause()">⏸ Pause</button>
     <button id="btnStop" class="btn btn-danger hidden" onclick="stopSession()">⏹ End Session</button>
     <button id="btnResume" class="btn btn-accent hidden" onclick="resumeSession()" title="Continue from where you left off">↩ Resume</button>
-    <span id="headsetStatus" style="font-size:0.82rem;font-weight:600;padding:4px 12px;color:#f59e0b;align-self:center;white-space:nowrap;cursor:pointer;" title="Click to show dial-in number">🎧 Connecting…</span>
     <button id="btnStart" class="btn btn-primary" onclick="startSession()">▶ Start Session</button>
   </div>
 </div>
@@ -2011,6 +1879,12 @@
         <div class="sidebar-section-label">GROUPS</div>
         <div id="sidebarGroups"></div>
         <div class="sidebar-new-list" onclick="promptNewGroup()">＋ New group</div>
+
+        <div class="sidebar-section-label">EXPIREDS</div>
+        <div class="mojo-all-btn" id="expiredsBtn" onclick="loadExpiredsTab()" style="margin:4px 8px;border-radius:8px;font-size:12px;padding:7px 10px">
+          <span>📋 Today's Expireds</span>
+          <span class="mojo-count" id="expiredsCount">…</span>
+        </div>
       </div>
 
       <!-- Queue area -->
@@ -2020,18 +1894,7 @@
             <span class="search-icon">🔍</span>
             <input type="text" id="queueSearch" placeholder="Search contacts..." oninput="renderQueue()" />
           </div>
-          <!-- Status tab filters -->
-          <div class="queue-filter-row">
-            <button class="queue-tab active" id="tab-all" onclick="setQueueTab('all')">All</button>
-            <button class="queue-tab" id="tab-pending" onclick="setQueueTab('pending')">Pending</button>
-            <button class="queue-tab" id="tab-called" onclick="setQueueTab('called')">Called</button>
-            <button class="queue-tab" id="tab-hot" onclick="setQueueTab('hot')">🔥 Hot</button>
-            <button class="queue-tab" id="tab-interested" onclick="setQueueTab('interested')">🌟 Warm</button>
-            <button class="queue-tab" id="tab-callback" onclick="setQueueTab('callback')">📅 CB</button>
-          </div>
-          <!-- City chips hidden from toolbar; city filtering done via sidebar "Organize by city" -->
-          <div id="cityFilterRow" style="display:none"></div>
-          <div id="bulkBar" style="display:none;padding:5px 8px;border-top:1px solid var(--border);background:var(--bg-3);align-items:center;gap:6px;flex-wrap:wrap">
+          <div id="bulkBar" style="display:none;padding:5px 8px;border-top:1px solid var(--border);background:var(--bg-3);display:none;align-items:center;gap:6px;flex-wrap:wrap">
             <span id="bulkCount" style="font-size:11px;color:var(--text-secondary);flex:1"></span>
             <button class="btn btn-ghost" style="font-size:11px;padding:3px 10px" onclick="bulkAssignToList()">📁 Move to List</button>
             <button class="btn btn-ghost" style="font-size:11px;padding:3px 10px" onclick="bulkAssignToGroup()">🏷️ Add to Group</button>
@@ -2045,9 +1908,7 @@
           </div>
         </div>
         <div class="import-bar">
-          <button class="btn btn-ghost" style="font-size:11px" onclick="showAddContactModal()">➕ Add</button>
           <button class="btn btn-ghost" style="font-size:11px" onclick="showImportModal()">📥 Import</button>
-          <button class="btn btn-ghost" style="font-size:11px" id="retryBtn" onclick="retryNoAnswers()" title="Reset no-answer contacts back to pending so they get redialed">🔁 Retry NAs</button>
           <button class="btn btn-ghost btn-icon" title="Clear queue" onclick="clearQueue()">🗑</button>
         </div>
       </div>
@@ -2125,110 +1986,49 @@
 
     <!-- Active Call Panel -->
     <div class="active-call-area" id="activeCallArea">
-      <!-- Live call banner -->
-      <div class="live-call-banner" id="liveCallBanner">
-        <span style="font-size:11px;background:rgba(0,0,0,0.25);border-radius:3px;padding:2px 6px">LIVE</span>
-        <span class="lcb-timer" id="activeTimer">0:00</span>
-        <span class="lcb-name" id="activeName">—</span>
-        <span class="lcb-phone" id="activeSub">—</span>
-        <span id="recBadge" class="rec-badge" style="display:none">⏺ REC</span>
-      </div>
-
       <div class="active-call-card" id="activeCallCard" style="display:none">
-
-        <!-- LEFT: main contact panel -->
-        <div class="mojo-main">
-
-          <!-- Action bar -->
-          <div class="mojo-action-bar">
-            <button class="mojo-action-btn green" onclick="openAppointmentModal && openAppointmentModal(state._dispContact)">📅 Appointment</button>
-            <button class="mojo-action-btn" onclick="openTaskModal && openTaskModal(state._dispContact)">✅ Task</button>
-            <button class="mojo-action-btn" onclick="openFollowUpModal && openFollowUpModal(state._dispContact)">📞 Follow Up Call</button>
-            <a id="mojoMapsLink" class="mojo-action-btn blue" href="#" target="_blank" rel="noopener">📍 Google Maps</a>
-            <a id="mojoZillowLink" class="mojo-action-btn blue" href="#" target="_blank" rel="noopener">🏠 Zillow</a>
+        <div class="active-header">
+          <div style="flex:1;min-width:0">
+            <div class="active-contact-name" id="activeName">—</div>
+            <div class="active-contact-sub" id="activeSub">—</div>
           </div>
-
-          <!-- Contact name -->
-          <div class="active-contact-name" id="mojoContactName">—</div>
-          <div style="font-size:12px;color:#888;margin-bottom:8px" id="mojoContactOwner"></div>
-
-          <!-- Address -->
-          <div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:10px" id="mojoAddrBlock">
-            <span style="color:#888;font-size:13px">📍</span>
-            <div>
-              <div style="font-size:13px;font-weight:600;color:#222" id="propAddrMain"></div>
-              <div style="font-size:12px;color:#666" id="propAddrCity"></div>
+          <div style="text-align:right;flex-shrink:0;margin-left:10px">
+            <div class="active-timer-big" id="activeTimer">0:00</div>
+            <div class="active-timer-label" style="display:flex;align-items:center;justify-content:flex-end;gap:5px">
+              Connected
+              <span id="recBadge" class="rec-badge" style="display:none">⏺ REC</span>
             </div>
           </div>
+        </div>
 
-          <!-- Phones -->
-          <div style="font-size:10px;font-weight:700;letter-spacing:.07em;color:#888;text-transform:uppercase;margin-bottom:4px">Phones</div>
-          <div class="mojo-phones-list" id="mojoPhonesEl"></div>
-
-          <!-- Email -->
-          <div class="mojo-email-row" id="mojoEmailRow" style="display:none">
-            <span>✉️</span>
-            <a id="mojoEmailLink" href="#">—</a>
+        <!-- Property Info Panel (Mojo-style) -->
+        <div class="prop-panel" id="propPanel" style="display:none">
+          <div>
+            <div class="prop-address-main" id="propAddrMain"></div>
+            <div class="prop-address-city" id="propAddrCity"></div>
           </div>
+          <div class="prop-data-grid" id="propDataGrid" style="display:none"></div>
+          <div class="prop-meta-row" id="propMeta"></div>
+          <div class="prop-links" id="propLinks"></div>
+        </div>
 
-          <!-- Meta chips (List, Type) -->
-          <div class="mojo-meta-row" id="mojoMetaRow"></div>
-
-          <!-- Property data grid -->
-          <div class="prop-panel" id="propPanel" style="display:none;margin-top:4px;background:#f9f9fc;border:1px solid #e0e0ee">
-            <div class="prop-data-grid" id="propDataGrid" style="display:none"></div>
-            <div class="prop-meta-row" id="propMeta"></div>
-            <div class="prop-links" id="propLinks"></div>
-          </div>
-
-          <!-- Tags / groups -->
-          <div class="active-tags" id="activeTags" style="margin-top:8px"></div>
-          <div id="activeCallGroupRow" style="display:none;padding:8px 0 4px;border-top:1px solid #e8e8f0;margin-top:8px">
-            <div style="font-size:10px;font-weight:600;letter-spacing:.06em;color:#888;text-transform:uppercase;margin-bottom:6px">Assign to Group</div>
-            <div id="activeCallGroupPills" style="display:flex;flex-wrap:wrap;gap:6px"></div>
-          </div>
-
-        </div><!-- /mojo-main -->
-
-        <!-- RIGHT: disposition sidebar -->
-        <div class="mojo-disp-bar">
-          <button class="mojo-disp-btn" onclick="hangupActive()" title="Spoke with person">
-            Contact <span class="mojo-key">1</span>
+        <div class="active-tags" id="activeTags"></div>
+        <div class="active-controls">
+          <button class="ctrl-btn ctrl-contact" onclick="hangupActive()" title="I spoke with this person — hang up and log the call">
+            <span class="ctrl-icon">✅</span><span>Contact</span>
           </button>
-          <button class="mojo-disp-btn" onclick="hangupNextNumber()" title="Try next phone number for this contact">
-            No Contact<br><span style="font-size:9px;opacity:.8">(Next Number)</span><span class="mojo-key">2</span>
+          <button class="ctrl-btn ctrl-nocontact" onclick="hangupNoContact()" title="No real conversation — hang up and continue dialing">
+            <span class="ctrl-icon">📵</span><span>No Contact</span>
           </button>
-          <button class="mojo-disp-btn" onclick="hangupNoContact()" title="No answer — next record">
-            No Contact<br><span style="font-size:9px;opacity:.8">(Next Record)</span><span class="mojo-key">3</span>
+          <button class="ctrl-btn ctrl-badnum" onclick="hangupThenBadNumber()" title="Bad number — remove and continue">
+            <span class="ctrl-icon">☎✕</span><span>Bad #</span>
           </button>
-          <button class="mojo-disp-btn" onclick="hangupThenBadNumber()" title="Bad number">
-            Bad Number <span class="mojo-key">4</span>
-          </button>
-          <button class="mojo-disp-btn" onclick="dropVoicemailById(0)" title="Drop voicemail">
-            Voicemail <span class="mojo-key">5</span>
-          </button>
-          <div class="mojo-disp-divider"></div>
-          <button class="mojo-disp-btn mojo-dnc" onclick="(function(){if(state._dispContact){state._dispContact.isDNC=true;saveContacts();}hangupNoContact();})()" title="DNC this contact">
-            DNC Contact
-          </button>
-          <button class="mojo-disp-btn mojo-dnc" onclick="(function(){const p=state.activeLineId&&state.lines?.[state.activeLineId]?.phoneEntry?.phone;if(p)addToDNC(p);hangupNoContact();})()" title="DNC this number">
-            DNC Number
-          </button>
-          <div class="mojo-disp-divider"></div>
-          <button class="mojo-disp-btn mojo-dark" onclick="(function(){const l=state.activeLineId!=null&&state.lines?.[state.activeLineId];if(l)muteLine(l);})()" title="Redial / mute toggle">
-            🔁 Redial <span class="mojo-key">R</span>
-          </button>
-          <button class="mojo-disp-btn mojo-dark" onclick="hangupActive()" title="Hang up">
-            📵 Hang up <span class="mojo-key">H</span>
-          </button>
-          <button class="mojo-disp-btn mojo-dark" onclick="togglePause()" title="Pause dialing">
-            ⏸ Pause <span class="mojo-key">P</span>
-          </button>
-          <button class="mojo-disp-btn mojo-stop" onclick="stopSession()" title="Stop session">
-            ⏹ Stop
-          </button>
-        </div><!-- /mojo-disp-bar -->
-
+        </div>
+        <!-- Group assignment strip (shown during connected call) -->
+        <div id="activeCallGroupRow" style="display:none;padding:8px 12px 4px;border-top:1px solid var(--border)">
+          <div style="font-size:10px;font-weight:600;letter-spacing:.06em;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">Assign to Group</div>
+          <div id="activeCallGroupPills" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+        </div>
       </div>
 
       <!-- No active call state -->
@@ -2271,11 +2071,6 @@
             style="flex:1;padding:7px 10px;background:#2a1a3a;border:1px solid #4a2a6a;border-radius:6px;color:#c084fc;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;transition:background 0.1s"
             onmouseover="this.style.background='#341a4a'" onmouseout="this.style.background='#2a1a3a'">
             📤 Push to Cloze
-          </button>
-          <button onclick="dncFromDisp()" title="Add all numbers to DNC list"
-            style="flex:1;padding:7px 10px;background:#2d1515;border:1px solid #5a2222;border-radius:6px;color:#fca5a5;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;transition:background 0.1s"
-            onmouseover="this.style.background='#3a1a1a'" onmouseout="this.style.background='#2d1515'">
-            🚫 Add to DNC
           </button>
         </div>
       </div>
@@ -2453,10 +2248,6 @@
       </div>
       <div class="import-note">Contacts in the same list are kept together in your sidebar. Leave blank to load into All Contacts.</div>
 
-      <div style="display:flex;align-items:center;gap:8px;margin:8px 0 4px">
-        <input type="checkbox" id="importAsExpireds" style="width:16px;height:16px;cursor:pointer;accent-color:#ef4444">
-        <label for="importAsExpireds" style="font-size:13px;cursor:pointer;color:var(--text-main)">📋 Import as Expireds <span style="color:var(--text-muted);font-size:11px">(goes to Expireds list, not geo)</span></label>
-      </div>
       <div class="modal-actions">
         <button class="btn btn-ghost" onclick="closeModal('importModal')">Cancel</button>
         <button class="btn btn-ghost" style="font-size:12px" onclick="loadFromAgentOS()">🔗 AgentOS</button>
@@ -2473,10 +2264,6 @@
       <div class="input-group" style="margin-bottom:6px">
         <div class="input-label">Save to List <span style="color:var(--text-muted);font-weight:400">(optional)</span></div>
         <input class="input-field" id="importListName2" placeholder="e.g. Kingsbridge 2025, Manhattan Expireds…" />
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;margin:8px 0 4px">
-        <input type="checkbox" id="importAsExpireds2" style="width:16px;height:16px;cursor:pointer;accent-color:#ef4444">
-        <label for="importAsExpireds2" style="font-size:13px;cursor:pointer;color:var(--text-main)">📋 Import as Expireds <span style="color:var(--text-muted);font-size:11px">(goes to Expireds list, not geo)</span></label>
       </div>
       <div class="modal-actions">
         <button class="btn btn-ghost" onclick="backToImportStep1()">← Back</button>
@@ -2502,43 +2289,6 @@
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeCityOrganizer()">Cancel</button>
       <button class="btn btn-primary" onclick="confirmCityOrganizer()" id="cityOrgConfirmBtn">Create Lists</button>
-    </div>
-  </div>
-</div>
-
-<!-- ===== ADD CONTACT MODAL ===== -->
-<div id="addContactModal" class="modal-overlay hidden">
-  <div class="modal" style="max-width:420px">
-    <div class="modal-title">➕ Add Contact</div>
-    <div class="input-group">
-      <div class="input-label">Name <span style="color:var(--accent-red)">*</span></div>
-      <input class="input-field" id="acName" placeholder="John Smith" autocomplete="off">
-    </div>
-    <div class="input-group">
-      <div class="input-label">Phone <span style="color:var(--accent-red)">*</span></div>
-      <input class="input-field" id="acPhone" placeholder="(914) 555-0123" type="tel" autocomplete="off">
-    </div>
-    <div class="input-group">
-      <div class="input-label">Phone 2 <span style="color:var(--text-muted);font-weight:400">(optional)</span></div>
-      <input class="input-field" id="acPhone2" placeholder="(845) 555-0456" type="tel" autocomplete="off">
-    </div>
-    <div class="input-group">
-      <div class="input-label">Address / City</div>
-      <input class="input-field" id="acCity" placeholder="123 Main St, Bronx NY 10451" autocomplete="off">
-    </div>
-    <div class="input-group">
-      <div class="input-label">List <span style="color:var(--text-muted);font-weight:400">(optional)</span></div>
-      <select class="input-field" id="acList">
-        <option value="">— All Contacts —</option>
-      </select>
-    </div>
-    <div class="input-group">
-      <div class="input-label">Notes</div>
-      <textarea class="input-field" id="acNotes" rows="2" placeholder="Any notes about this contact…"></textarea>
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal('addContactModal')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveNewContact()">Add Contact</button>
     </div>
   </div>
 </div>
@@ -2592,12 +2342,6 @@
           <input type="checkbox" id="settingRecordCalls" class="toggle-checkbox">
         </label>
         <div style="height:1px;background:var(--border);margin:16px 0"></div>
-        <div class="stab-section-title">Answering Machine Detection (AMD)</div>
-        <label class="toggle-row">
-          <span class="toggle-label"><strong>Enable AMD</strong><span class="toggle-sub">Twilio auto-detects machines — skips them instantly so you only hear live answers</span></span>
-          <input type="checkbox" id="settingAmd" class="toggle-checkbox">
-        </label>
-        <div style="height:1px;background:var(--border);margin:16px 0"></div>
         <div class="stab-section-title">Voicemail Drop Library</div>
         <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Add multiple voicemail scripts for different scenarios. Access them from the Script Panel → VM Script tab during a call.</p>
         <div id="vmLibraryList"></div>
@@ -2635,13 +2379,6 @@
         <div style="margin-top:12px;padding:10px;background:var(--bg-3);border-radius:6px;font-size:11px;color:var(--text-muted)">
           ℹ️ Buy numbers for each area code in your Twilio console. Suggested: 212 (Manhattan), 845 (Dutchess), 914 (Yonkers/Westchester), 718/347 (Bronx/Brooklyn)
         </div>
-
-        <div style="height:1px;background:var(--border);margin:16px 0"></div>
-        <div class="stab-section-title">🔄 Number Rotation Pool</div>
-        <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Round-robins calls across multiple numbers to reduce spam flagging. Set <code style="background:var(--bg-3);padding:1px 4px;border-radius:3px">TWILIO_PHONE_NUMBERS</code> in Railway Variables as a comma-separated list (e.g. <code style="background:var(--bg-3);padding:1px 4px;border-radius:3px">+12125550001,+12125550002</code>). Local presence area code rules take priority over rotation.</p>
-        <div id="numberPoolStatus" style="font-size:12px;color:var(--text-muted);padding:8px;background:var(--bg-3);border-radius:6px;margin-bottom:8px">Loading pool status…</div>
-        <button class="btn btn-ghost" style="width:100%;font-size:12px" onclick="loadNumberPool()">🔄 Refresh Pool Status</button>
-        <button class="btn btn-ghost" style="width:100%;font-size:12px;margin-top:6px" onclick="resetRotation()">↩️ Reset Rotation Counter</button>
       </div>
 
       <!-- ACTION PLANS -->
@@ -2678,27 +2415,6 @@
         <div class="stab-section-title">FUB CSV Export</div>
         <p style="font-size:11px;color:var(--text-muted);margin-bottom:8px">Download all call records as a Follow Up Boss–formatted CSV you can import directly.</p>
         <button class="btn btn-ghost" style="width:100%;font-size:12px" onclick="exportToFUBCsv()">📥 Download FUB CSV</button>
-        <div style="height:1px;background:var(--border);margin:16px 0"></div>
-        <div class="stab-section-title" style="display:flex;align-items:center;justify-content:space-between">
-          <span>🚫 Do Not Call List</span>
-          <span id="dncCountBadge" style="font-size:11px;color:var(--text-muted);font-weight:400">0 numbers</span>
-        </div>
-        <p style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Phone numbers on this list are blocked from dialing and automatically flagged on import.</p>
-        <textarea id="dncBulkInput" class="input-field" rows="3" placeholder="Paste numbers to add, one per line or comma-separated..." style="font-size:12px;font-family:monospace;resize:vertical;margin-bottom:8px"></textarea>
-        <div style="display:flex;gap:8px;margin-bottom:12px">
-          <button class="btn btn-primary" style="flex:1;font-size:12px" onclick="bulkAddDNC()">➕ Add Numbers</button>
-          <button class="btn btn-ghost" style="font-size:12px;color:var(--red)" onclick="clearAllDNC()">🗑 Clear All</button>
-        </div>
-        <div id="dncListEl" style="max-height:160px;overflow-y:auto"></div>
-      </div>
-
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-top:16px">
-        <div style="font-size:13px;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:6px">
-          <span>🔁 Remove Duplicates</span>
-        </div>
-        <p style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Scans all contacts across every list and removes duplicates matched by name + address. Keeps the first occurrence.</p>
-        <button class="btn btn-ghost" style="font-size:12px;color:var(--red)" onclick="dedupeAllContacts()">🗑 Remove Duplicates Now</button>
-        <span id="dedupeResult" style="font-size:11px;color:var(--text-muted);margin-left:10px"></span>
       </div>
 
     </div>
@@ -2824,14 +2540,12 @@ const state = {
   settings: {
     backendUrl: '',
     myPhone: '',
-    dialInNumber: '',
     callerId: '',
     vmUrl: '',
     vmLibrary: [],
     delay: 3,
     tzProtect: false,
     recordCalls: false,
-    amdEnabled: true,
     aiSummary: false,
     claudeApiKey: '',
     clozeApiKey: '',
@@ -2857,12 +2571,12 @@ const state = {
   lists: [],             // [{ id, name }] — named call lists
   groups: [],            // [{ id, name }] — user-created groups
   activeListId: null,    // null = show all lists
+  showingExpireds: false,  // true when Expireds tab is active
   sessionStartTime: null,
   sessionTimerInt: null,
   pendingCbContact: null, // contact waiting for callback date assignment
   goal: { type: 'contacts', target: 0, current: 0 },
   _dispContact: null,     // contact reference kept across disposition
-  dncNumbers: new Set(), // persistent phone number blocklist
 };
 
 // Global error handler — surfaces silent JS errors as visible toasts during dev
@@ -3006,15 +2720,10 @@ function switchSettingsTab(name) {
     if (pane) pane.style.display = t === name ? '' : 'none';
   });
   if (name === 'sms') renderSmsTemplateList();
-  if (name === 'presence') { renderPresenceList(); loadNumberPool(); }
+  if (name === 'presence') renderPresenceList();
   if (name === 'plans') renderActionPlanList();
   if (name === 'rules') renderListRuleList();
   if (name === 'recording') renderVmLibraryList();
-  if (name === 'integrations') {
-    renderDNCList();
-    const badge = document.getElementById('dncCountBadge');
-    if (badge) badge.textContent = `${state.dncNumbers.size} number${state.dncNumbers.size !== 1 ? 's' : ''}`;
-  }
 }
 
 function showSettingsModal() {
@@ -3025,7 +2734,6 @@ function showSettingsModal() {
   document.getElementById('settingDelay').value = state.settings.delay;
   document.getElementById('settingTzProtect').checked = !!state.settings.tzProtect;
   document.getElementById('settingRecordCalls').checked = !!state.settings.recordCalls;
-  document.getElementById('settingAmd').checked = state.settings.amdEnabled !== false;
   renderVmLibraryList();
   document.getElementById('settingAiSummary').checked = !!state.settings.aiSummary;
   document.getElementById('settingClaudeApiKey').value = state.settings.claudeApiKey || '';
@@ -3044,7 +2752,6 @@ function saveSettings() {
   state.settings.delay = parseInt(document.getElementById('settingDelay').value) || 3;
   state.settings.tzProtect = document.getElementById('settingTzProtect').checked;
   state.settings.recordCalls = document.getElementById('settingRecordCalls').checked;
-  state.settings.amdEnabled  = document.getElementById('settingAmd').checked;
   saveVmLibraryFromUI();
   state.settings.aiSummary = document.getElementById('settingAiSummary').checked;
   state.settings.claudeApiKey = document.getElementById('settingClaudeApiKey').value.trim();
@@ -3058,7 +2765,7 @@ function saveSettings() {
   // Save action plans and list rules from rendered inputs
   saveActionPlansFromUI();
   saveListRulesFromUI();
-  state.demoMode = false; // backendUrl empty = same origin (Railway co-hosted)
+  state.demoMode = !state.settings.backendUrl;
   localStorage.setItem('powerdial_settings', JSON.stringify(state.settings));
   localStorage.setItem('powerdial_actionPlans', JSON.stringify(state.actionPlans));
   localStorage.setItem('powerdial_listRules', JSON.stringify(state.listRules));
@@ -3700,44 +3407,6 @@ async function checkSpamReputation() {
 }
 
 // ============================================================
-//  NUMBER POOL / ROTATION
-// ============================================================
-async function loadNumberPool() {
-  const el = document.getElementById('numberPoolStatus');
-  if (!el) return;
-  if (state.demoMode) {
-    el.innerHTML = '🟡 Demo mode — number pool not available.';
-    return;
-  }
-  try {
-    const res = await fetch(state.settings.backendUrl + '/api/numbers');
-    if (!res.ok) throw new Error(await res.text());
-    const data = await res.json();
-    if (!data.pool || !data.pool.length) {
-      el.innerHTML = '⚠️ No numbers in pool. Set <code>TWILIO_PHONE_NUMBERS</code> in Railway Variables.';
-    } else {
-      el.innerHTML = `<strong>${data.pool.length} number${data.pool.length > 1 ? 's' : ''} in pool:</strong><br>` +
-        data.pool.map((n, i) => {
-          const isNext = i === (data.rotationIdx % data.pool.length);
-          return `${isNext ? '▶️' : '◻️'} <code>${n}</code>${isNext ? ' <em>(next)</em>' : ''}`;
-        }).join('<br>') +
-        `<br><span style="color:var(--text-muted);font-size:11px">${data.rotationIdx} calls rotated so far</span>`;
-    }
-  } catch(e) {
-    el.textContent = '❌ ' + e.message;
-  }
-}
-
-async function resetRotation() {
-  if (state.demoMode) { toast('⚠️ Demo mode', 'yellow'); return; }
-  try {
-    await fetch(state.settings.backendUrl + '/api/numbers/reset', { method: 'POST' });
-    toast('✅ Rotation counter reset', 'green');
-    loadNumberPool();
-  } catch(e) { toast('❌ ' + e.message, 'red'); }
-}
-
-// ============================================================
 //  IMPORT
 // ============================================================
 function showImportModal() {
@@ -3790,34 +3459,6 @@ function parseCSVRow(row) {
   return result;
 }
 
-// Parse entire CSV respecting quoted fields that contain embedded newlines.
-// Returns array of field arrays (one per logical row), skipping the header row.
-function parseCSVRows(raw) {
-  const rows = [];
-  let cur = '', inQuote = false, fields = [];
-  // Normalize line endings
-  const text = raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
-    if (ch === '"') {
-      if (inQuote && text[i + 1] === '"') { cur += '"'; i++; } // escaped quote
-      else inQuote = !inQuote;
-    } else if (ch === ',' && !inQuote) {
-      fields.push(cur.trim()); cur = '';
-    } else if (ch === '\n' && !inQuote) {
-      fields.push(cur.trim()); cur = '';
-      if (fields.some(f => f)) rows.push(fields); // skip blank rows
-      fields = [];
-    } else {
-      cur += ch;
-    }
-  }
-  // Flush last field/row
-  fields.push(cur.trim());
-  if (fields.some(f => f)) rows.push(fields);
-  return rows; // includes header row at index 0
-}
-
 function cleanPhone(p) {
   if (!p) return '';
   const digits = p.replace(/\D/g, '');
@@ -3831,10 +3472,9 @@ function isMojoCSV(headers) {
 }
 
 function parseMojoCSV(raw) {
-  const allRows = parseCSVRows(raw); // handles quoted newlines correctly
-  if (allRows.length < 2) return [];
-  const headers = allRows[0];
-  const lines = allRows; // reuse variable name below
+  const lines = raw.split('\n').filter(l => l.trim());
+  if (lines.length < 2) return [];
+  const headers = parseCSVRow(lines[0]);
 
   // Find name column
   const nameIdx  = headers.findIndex(h => /^(full name|first or full name|name)$/i.test(h.trim()));
@@ -3871,7 +3511,7 @@ function parseMojoCSV(raw) {
 
   const contacts = [];
   for (let i = 1; i < lines.length; i++) {
-    const parts = lines[i]; // already parsed rows from parseCSVRows
+    const parts = parseCSVRow(lines[i]);
     const getName = () => {
       if (nameIdx >= 0 && parts[nameIdx]?.trim()) return parts[nameIdx].trim();
       const first = firstIdx >= 0 ? parts[firstIdx]?.trim() : '';
@@ -3987,20 +3627,8 @@ const CSV_FIELD_OPTIONS = [
   { value: 'state',     label: 'State' },
   { value: 'zip',       label: 'Zip' },
   { value: 'email',     label: 'Email' },
-  { value: 'notes',        label: 'Notes' },
-  { value: 'type',         label: 'Lead Type' },
-  // Property data
-  { value: 'avm',          label: 'AVM / Est. Value' },
-  { value: 'taxValue',     label: 'Tax Value' },
-  { value: 'propertyType', label: 'Property Type' },
-  { value: 'beds',         label: 'Beds' },
-  { value: 'baths',        label: 'Baths' },
-  { value: 'sqft',         label: 'Sq Ft' },
-  { value: 'acres',        label: 'Acres' },
-  { value: 'units',        label: 'Units' },
-  { value: 'yearBuilt',    label: 'Year Built' },
-  { value: 'occupancy',    label: 'Occupancy' },
-  { value: 'owner',        label: 'Owner Name' },
+  { value: 'notes',     label: 'Notes' },
+  { value: 'type',      label: 'Lead Type' },
 ];
 
 function autoDetectMapping(header) {
@@ -4029,33 +3657,20 @@ function autoDetectMapping(header) {
   if (/^(notes?|comment|description|remarks?)$/.test(h)) return 'notes';
   // Lead type
   if (/^(type|lead type|contact type|prospect type)$/.test(h)) return 'type';
-  // Property data columns — now mappable
-  if (/^(avm|avm value|estimated value|est\.? value|estimated home value)$/i.test(h)) return 'avm';
-  if (/^(tax value|assessed value|tax assessed value)$/i.test(h)) return 'taxValue';
-  if (/^(property type|prop type|type of property)$/i.test(h)) return 'propertyType';
-  if (/^(beds?|bedrooms?|bed count|# beds?)$/i.test(h)) return 'beds';
-  if (/^(baths?|bathrooms?|bath count|# baths?)$/i.test(h)) return 'baths';
-  if (/^(sq ?ft|square feet|square footage|sqft|living area|floor area)$/i.test(h)) return 'sqft';
-  if (/^(acres?|lot size|lot acres?)$/i.test(h)) return 'acres';
-  if (/^(units?|unit count|number of units|# units?)$/i.test(h)) return 'units';
-  if (/^(year built|yr built|built)$/i.test(h)) return 'yearBuilt';
-  if (/^(occupancy|occupancy status|owner occupied|renter)$/i.test(h)) return 'occupancy';
-  if (/^(owner|owner name|record owner)$/i.test(h)) return 'owner';
-  // Skip columns
-  if (/^(do not call|dnc|record type|phone\s*\d+\s*label)$/i.test(h)) return 'skip';
+  // Mojo-specific columns we always skip
+  if (/^(avm|avm value|estimated value|tax value|assessed value|occupancy|sq ?ft|acres|lot size|units|property type|beds|baths|year built|owner|do not call|dnc|record type)$/i.test(h)) return 'skip';
   return 'skip';
 }
 
 function showColumnMapper(raw) {
   state._csvRaw = raw;
-  // Use full quoted-newline-aware parser so row count is accurate
-  const allRows = parseCSVRows(raw);
-  if (allRows.length < 2) { toast('⚠️ CSV needs at least a header row and one data row', 'yellow'); return; }
+  const lines = raw.split('\n').filter(l => l.trim());
+  if (lines.length < 2) { toast('⚠️ CSV needs at least a header row and one data row', 'yellow'); return; }
 
-  const headers = allRows[0];
+  const headers = parseCSVRow(lines[0]);
   state._csvHeaders = headers;
-  const previewRows = allRows.slice(1, 6);
-  const dataCount = allRows.length - 1;
+  const previewRows = lines.slice(1, 6).map(l => parseCSVRow(l));
+  const dataCount = lines.length - 1;
 
   // Build table HTML
   const selectHtml = (colIdx) => {
@@ -4096,18 +3711,7 @@ function importFromMapping() {
   const raw = state._csvRaw;
   const headers = state._csvHeaders;
   if (!raw || !headers.length) { toast('⚠️ No CSV data to import', 'yellow'); return; }
-  // Show processing indicator for large files
-  const importBtn = document.getElementById('colMapImportBtn');
-  if (importBtn) { importBtn.disabled = true; importBtn.textContent = '⏳ Importing…'; }
-  // Yield to UI thread so the button state renders before we block on CSV parsing
-  setTimeout(() => _doImportFromMapping(raw, headers, importBtn), 50);
-}
-function _doImportFromMapping(raw, headers, importBtn) {
-  try { _runImportFromMapping(raw, headers); }
-  catch(e) { console.error('[PowerDial] import error:', e); toast(`❌ Import error: ${e.message||e}`, 'red'); }
-  finally { if (importBtn) { importBtn.disabled = false; importBtn.textContent = 'Import Contacts'; } }
-}
-function _runImportFromMapping(raw, headers) {
+
   // Build column mapping: collect ALL assigned columns per field type
   // phoneIdxs = ordered list of column indices mapped to 'phone'
   // singular fields: first assigned column wins
@@ -4135,11 +3739,10 @@ function _runImportFromMapping(raw, headers) {
     return orderIdx === 0 ? 'Phone' : `Phone ${orderIdx + 1}`;
   }
 
-  const allRows = parseCSVRows(raw); // handles quoted newlines correctly
-  const dataRows = allRows.slice(1);  // skip header row
+  const lines = raw.split('\n').filter(l => l.trim()).slice(1);
   const contacts = [];
-  let skippedNoPhone = 0;
-  for (const parts of dataRows) {
+  for (const line of lines) {
+    const parts = parseCSVRow(line);
     const get = (key) => (singular[key] !== undefined ? (parts[singular[key]] || '').trim() : '');
 
     // Name: full name > first+last > address fallback
@@ -4157,16 +3760,11 @@ function _runImportFromMapping(raw, headers) {
       const phone = cleanPhone(raw);
       if (phone) phones.push({ phone, label: phoneLabel(colIdx, orderIdx), status: 'pending' });
     });
-    if (!phones.length) { skippedNoPhone++; continue; }
+    if (!phones.length) continue;
 
     const city = get('city'), st = get('state'), zip = get('zip'), addr = get('address');
     const cityStateParts = [city, st ? (zip ? `${st} ${zip}` : st) : zip].filter(Boolean);
     const fullAddr = [addr, cityStateParts.join(', ')].filter(Boolean).join(', ');
-
-    const propFields = {};
-    ['avm','taxValue','propertyType','beds','baths','sqft','acres','units','yearBuilt','occupancy','owner'].forEach(f => {
-      const v = get(f); if (v) propFields[f] = v;
-    });
 
     contacts.push({
       name,
@@ -4175,49 +3773,28 @@ function _runImportFromMapping(raw, headers) {
       city, state: st, zip, address: addr,
       email: get('email'),
       type: get('type'),
-      status: 'pending',
-      ...propFields
+      status: 'pending'
     });
   }
 
-  if (!contacts.length) {
-    toast(`⚠️ No contacts with phone numbers found (${skippedNoPhone} rows had no valid phone)`, 'yellow');
-    return;
-  }
+  if (!contacts.length) { toast('⚠️ No contacts with phone numbers found', 'yellow'); return; }
 
   // List assignment
-  const importAsExpireds2 = document.getElementById('importAsExpireds2')?.checked;
-  let listNameInput = (document.getElementById('importListName2')?.value || '').trim();
-  // Auto-name if blank so we NEVER do a full wipe
-  if (!listNameInput && !importAsExpireds2) {
-    const d = new Date();
-    listNameInput = `Import ${d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}`;
-  }
+  const listNameInput = (document.getElementById('importListName2')?.value || '').trim();
   let listId = null;
-  if (importAsExpireds2) {
-    const expList = initExpiredsList();
-    listId = expList.id;
-  } else {
+  if (listNameInput) {
     let existing = state.lists.find(l => l.name.toLowerCase() === listNameInput.toLowerCase());
     if (!existing) existing = createList(listNameInput);
     listId = existing.id;
   }
-  // Auto-flag contacts whose phones are on the DNC list
-  const tagged = contacts.map(c => {
-    const onDNC = (c.phones||[]).some(p => isOnDNC(p.number||p.raw));
-    return { ...c, listId, ...(onDNC ? { isDNC: true } : {}) };
-  });
-  const dncFlagged = tagged.filter(c => c.isDNC).length;
+  const tagged = contacts.map(c => ({ ...c, listId }));
 
   if (state.session) stopSession();
-  // listId is always set now — never do a full wipe
-  if (importAsExpireds2) {
-    // Expireds: always append
-    state.contacts = [...state.contacts, ...tagged];
-  } else {
-    // Named list: replace only that list's contacts, keep everything else
+  if (listId) {
     state.contacts = state.contacts.filter(c => c.listId !== listId);
     state.contacts = [...state.contacts, ...tagged];
+  } else {
+    state.contacts = tagged;
   }
   state.queue = [...state.contacts];
   state.currentIdx = 0;
@@ -4227,9 +3804,7 @@ function _runImportFromMapping(raw, headers) {
   saveContacts();
   if (listId) setActiveList(listId); else renderQueue();
   const totalPhones = tagged.reduce((s, c) => s + (c.phones?.length || 1), 0);
-  const dncMsg = dncFlagged ? ` · 🚫 ${dncFlagged} DNC` : '';
-  const skipMsg = skippedNoPhone ? ` · ⚠️ ${skippedNoPhone} skipped (no phone)` : '';
-  toast(`✅ ${tagged.length} contacts · ${totalPhones} phone numbers${listNameInput ? ` → "${listNameInput}"` : ''}${dncMsg}${skipMsg}`, 'green', 6000);
+  toast(`✅ ${tagged.length} contacts · ${totalPhones} phone numbers${listNameInput ? ` → "${listNameInput}"` : ''}`, 'green');
 }
 
 function importContacts() {
@@ -4274,42 +3849,13 @@ function _importContactsInner() {
       else toast(`✅ ${withCity} contacts with city data imported`, 'green');
     } else {
       // ── Simple CSV: Name, Phone, Notes ──
-      // Also handles headerless Mojo format: Name, Phone, "Street, City, Zip"
       contacts = raw.split('\n').filter(r => r.trim()).map(row => {
         const parts = parseCSVRow(row);
         const phone = parts[1] || '—';
-        const rawAddr = parts[2] || '';
-        // Try to split "Street Address, City, Zip" into components
-        let address = rawAddr, city = '', state = '', zip = '';
-        const addrParts = rawAddr.split(',').map(s => s.trim()).filter(Boolean);
-        if (addrParts.length >= 2) {
-          const lastPart = addrParts[addrParts.length - 1];
-          const secondLast = addrParts[addrParts.length - 2];
-          // Check if last part is a zip code (5 digits, or state + zip like "NY 10801")
-          const zipMatch = lastPart.match(/^(?:([A-Z]{2})\s+)?(\d{5}(?:-\d{4})?)$/);
-          if (zipMatch) {
-            zip = zipMatch[2];
-            if (zipMatch[1]) state = zipMatch[1];
-            // Check if second-to-last looks like a state abbreviation
-            const stateMatch = !state && secondLast.match(/^[A-Z]{2}$/);
-            if (stateMatch) {
-              state = secondLast;
-              city = addrParts.slice(0, addrParts.length - 2).join(', ');
-            } else {
-              city = addrParts.slice(0, addrParts.length - 1).join(', ');
-            }
-            address = addrParts[0];
-          } else if (addrParts.length >= 2) {
-            // No zip found — treat last part as city
-            address = addrParts[0];
-            city = addrParts.slice(1).join(', ');
-          }
-        }
         return {
           name: parts[0] || 'Unknown',
           phones: [{ phone, label: 'Phone', status: 'pending' }],
-          notes: rawAddr,
-          address, city, state, zip,
+          notes: parts[2] || '',
           status: 'pending'
         };
       });
@@ -4319,49 +3865,29 @@ function _importContactsInner() {
   if (!contacts.length) { toast('⚠️ No contacts parsed', 'yellow'); return; }
 
   // Handle list assignment
-  const importAsExpireds = document.getElementById('importAsExpireds')?.checked;
-  let listNameInput = (document.getElementById('importListName')?.value || '').trim();
-  if (!listNameInput) {
-    const d = new Date();
-    listNameInput = `Import ${d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}`;
-  }
+  const listNameInput = (document.getElementById('importListName')?.value || '').trim();
   let listId = null;
-  if (importAsExpireds) {
-    const expList = initExpiredsList();
-    listId = expList.id;
-  } else if (listNameInput) {
+  if (listNameInput) {
     let existing = state.lists.find(l => l.name.toLowerCase() === listNameInput.toLowerCase());
     if (!existing) existing = createList(listNameInput);
     listId = existing.id;
   }
-  // Auto-flag contacts whose phones are on the DNC list
-  const dncFlaggedInner = contacts.filter(c =>
-    (c.phones||[]).some(p => isOnDNC(p.number||p.raw))
-  ).length;
-  contacts = contacts.map(c => {
-    const onDNC = (c.phones||[]).some(p => isOnDNC(p.number||p.raw));
-    return { ...c, listId, ...(onDNC ? { isDNC: true } : {}) };
-  });
+  contacts = contacts.map(c => ({ ...c, listId }));
 
   // Append to existing contacts (or replace if same list)
   if (listId) {
-    if (importAsExpireds) {
-      // Expireds: always append, never wipe existing
-      state.contacts = [...state.contacts, ...contacts];
-    } else {
-      // Remove old contacts from this list, then append new
-      state.contacts = state.contacts.filter(c => c.listId !== listId);
-      state.contacts = [...state.contacts, ...contacts];
-    }
+    // Remove old contacts from this list, then append new
+    state.contacts = state.contacts.filter(c => c.listId !== listId);
+    state.contacts = [...state.contacts, ...contacts];
   } else {
-    // No list — always APPEND to existing contacts (carry over groupId for matching names)
+    // No list — replace all contacts but carry over groupId for matching names
     const prevByName = {};
     state.contacts.forEach(c => { if (c.name && c.groupId) prevByName[c.name.toLowerCase()] = c.groupId; });
     contacts = contacts.map(c => {
       const savedGroup = prevByName[c.name?.toLowerCase()];
       return savedGroup ? { ...c, groupId: savedGroup } : c;
     });
-    state.contacts = [...state.contacts, ...contacts];
+    state.contacts = contacts;
   }
   state.queue = [...state.contacts];
   state.currentIdx = 0;
@@ -4380,89 +3906,7 @@ function _importContactsInner() {
 
   const totalPhones = contacts.reduce((sum, c) => sum + (c.phones?.length || 1), 0);
   const listMsg = listNameInput ? ` → "${listNameInput}"` : '';
-  const dncMsgInner = dncFlaggedInner ? ` · 🚫 ${dncFlaggedInner} DNC` : '';
-  toast(`✅ ${contacts.length} contacts · ${totalPhones} phone numbers${listMsg}${dncMsgInner}`, 'green');
-}
-
-// ===== ADD CONTACT =====
-function showAddContactModal() {
-  // Populate list dropdown with current lists
-  const sel = document.getElementById('acList');
-  sel.innerHTML = '<option value="">— All Contacts —</option>';
-  state.lists.forEach(l => {
-    const opt = document.createElement('option');
-    opt.value = l.id;
-    opt.textContent = l.name;
-    if (state.activeListId && l.id === state.activeListId) opt.selected = true;
-    sel.appendChild(opt);
-  });
-  // Clear fields
-  ['acName','acPhone','acPhone2','acCity','acNotes'].forEach(id => {
-    document.getElementById(id).value = '';
-  });
-  document.getElementById('addContactModal').classList.remove('hidden');
-  setTimeout(() => document.getElementById('acName').focus(), 80);
-}
-
-function saveNewContact() {
-  const name  = (document.getElementById('acName').value  || '').trim();
-  const phone = (document.getElementById('acPhone').value || '').trim();
-  if (!name)  { toast('⚠️ Name is required', 'yellow'); return; }
-  if (!phone) { toast('⚠️ Phone is required', 'yellow'); return; }
-
-  const phones = [{ phone, label: 'Phone', status: 'pending' }];
-  const phone2 = (document.getElementById('acPhone2').value || '').trim();
-  if (phone2) phones.push({ phone: phone2, label: 'Phone 2', status: 'pending' });
-
-  const city  = (document.getElementById('acCity').value  || '').trim();
-  const notes = (document.getElementById('acNotes').value || '').trim();
-  const listId = document.getElementById('acList').value || null;
-
-  const contact = {
-    name,
-    phones,
-    notes: city || notes,
-    city: city ? city.split(',')[0].trim() : '',
-    status: 'pending',
-    listId: listId || undefined
-  };
-  if (city && notes) contact.notes = city + (notes ? '\n' + notes : '');
-
-  // DNC check
-  if ((contact.phones||[]).some(p => isOnDNC(p.phone))) {
-    contact.isDNC = true;
-    toast('⚠️ Phone is on DNC list — contact marked DNC', 'yellow');
-  }
-
-  state.contacts.push(contact);
-  state.queue = [...state.contacts];
-  saveContacts();
-  closeModal('addContactModal');
-
-  if (listId) setActiveList(listId);
-  else renderQueue();
-
-  toast(`✅ ${name} added to queue`, 'green');
-}
-
-// Reset no-answer contacts back to pending for a redial pass
-function retryNoAnswers() {
-  const scope = state.activeListId !== null
-    ? state.contacts.filter(c => c.listId === state.activeListId)
-    : state.contacts;
-  const naContacts = scope.filter(c => c.status === 'noanswer' && !c.isDNC);
-  if (!naContacts.length) { toast('No no-answer contacts to retry', 'gray'); return; }
-  naContacts.forEach(c => {
-    c.status = 'pending';
-    c.disposition = null;
-    // Also reset phone statuses
-    (c.phones||[]).forEach(p => { if (p.status === 'noanswer') p.status = 'pending'; });
-  });
-  state.currentIdx = 0;
-  saveContacts();
-  renderQueue();
-  updateProgress();
-  toast(`🔁 ${naContacts.length} no-answers reset to pending`, 'accent');
+  toast(`✅ ${contacts.length} contacts · ${totalPhones} phone numbers${listMsg}`, 'green');
 }
 
 function clearQueue() {
@@ -4585,6 +4029,7 @@ function renderSidebar() {
 }
 
 function setActiveGroup(id) {
+  state.showingExpireds = false;
   state.activeGroup = state.activeGroup === id ? null : id;
   if (state.activeGroup !== null) state.activeListId = null;
   renderSidebar();
@@ -4634,9 +4079,29 @@ function getContactCity(c) {
 }
 
 function renderCityChips() {
-  // City chips are no longer shown in the toolbar (too many cities with large lists).
-  // City-level filtering is done via sidebar "Organize by city" → lists.
-  // This function is kept as a no-op so callers don't break.
+  const row = document.getElementById('cityFilterRow');
+  if (!row) return;
+
+  // Collect unique cities using the normalizer
+  const cities = {};
+  state.contacts.forEach(c => {
+    if (state.activeListId !== null && c.listId !== state.activeListId) return;
+    const city = getContactCity(c);
+    if (!city) return;
+    const key = city.toLowerCase();
+    if (!cities[key]) cities[key] = { label: city, count: 0 };
+    cities[key].count++;
+  });
+
+  const keys = Object.keys(cities).sort();
+  if (!keys.length) { row.style.display = 'none'; return; }
+
+  row.style.display = 'flex';
+  row.innerHTML = `<span class="city-filter-label">📍</span>` +
+    keys.map(k => {
+      const active = state.activeCity === k;
+      return `<button class="city-chip${active ? ' active' : ''}" onclick="setCityFilter('${k}')">${cities[k].label} <span style="opacity:0.65">${cities[k].count}</span></button>`;
+    }).join('');
 }
 
 function setCityFilter(key) {
@@ -4655,9 +4120,6 @@ function getBulkContacts() {
     if (state.activeCity && getContactCity(c).toLowerCase() !== state.activeCity) return false;
     if (state.queueTab === 'pending' && c.status !== 'pending') return false;
     if (state.queueTab === 'called'  && c.status === 'pending') return false;
-    if (state.queueTab === 'hot' && !(c.temperature === 'hot' || c.disposition === 'Hot Lead' || c.disposition === 'Appointment')) return false;
-    if (state.queueTab === 'interested' && !(c.temperature === 'warm' || c.disposition === 'Interested')) return false;
-    if (state.queueTab === 'callback' && c.status !== 'callback') return false;
     if (q && ![c.name,...(c.phones||[]).map(p=>p.phone),c.city,c.state,c.zip,c.notes,c.address,c.type,c.disposition,c.callNotes]
       .some(v => (v||'').toLowerCase().includes(q))) return false;
     return true;
@@ -4744,7 +4206,6 @@ function setQueueTab(tab) {
   const btn = document.getElementById('tab-' + tab);
   if (btn) btn.classList.add('active');
   renderQueue();
-  updateProgress();
 }
 
 function cycleSort() {
@@ -4758,6 +4219,7 @@ function cycleSort() {
 }
 
 function renderQueue() {
+  if (state.showingExpireds) return;  // Expireds tab is active — don't overwrite
   const el = document.getElementById('queueList');
   const badge = document.getElementById('queueBadge');
   const pending = state.contacts.filter(c => c.status === 'pending').length;
@@ -4793,9 +4255,6 @@ function renderQueue() {
     if (state.activeCity && getContactCity(c).toLowerCase() !== state.activeCity) return false;
     if (state.queueTab === 'pending') return c.status === 'pending';
     if (state.queueTab === 'called')  return c.status !== 'pending';
-    if (state.queueTab === 'hot')      return c.temperature === 'hot' || c.disposition === 'Hot Lead' || c.disposition === 'Appointment';
-    if (state.queueTab === 'interested') return c.temperature === 'warm' || c.disposition === 'Interested';
-    if (state.queueTab === 'callback') return c.status === 'callback';
     return true; // 'all'
   });
 
@@ -4856,15 +4315,9 @@ function contactItem(c, i) {
   if (c.isDNC) rowClass += ' called';
   else if (c.status !== 'pending') rowClass += ' called';
   const realIdx = state.contacts.indexOf(c);
-  const addr = ([c.address, c.city, c.state].filter(Boolean).join(', ') || c.notes || '').trim();
+  const addr = (c.notes || c.address || '').trim();
   const zillowHref = addr ? `https://www.zillow.com/homes/${encodeURIComponent(addr)}_rb/` : '';
   const tempClass = c.temperature ? `temp-${c.temperature}` : 'temp-none';
-
-  // Expired date chip (shown on contacts in the Expireds list)
-  const expList = state.lists.find(l => l.isExpireds);
-  const expChip = (c.expiredDate && expList && c.listId === expList.id)
-    ? `<span style="font-size:9px;background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:4px;padding:1px 5px;white-space:nowrap">🗓 Exp ${c.expiredDate}</span>`
-    : '';
 
   // Callback date chip
   let cbChip = '';
@@ -4896,7 +4349,7 @@ function contactItem(c, i) {
         return formatPhone(first.phone) + label + extra;
       })()}</div>
       ${addr ? `<div class="contact-address">${addr}${zillowHref ? ` <a href="${zillowHref}" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="zillow-btn" style="margin-left:5px;font-size:9px;padding:1px 5px">🏠</a>` : ''}</div>` : ''}
-      ${expChip || cbChip ? `<div style="margin-top:3px;display:flex;gap:4px;flex-wrap:wrap">${expChip}${cbChip}</div>` : ''}
+      ${cbChip ? `<div style="margin-top:3px">${cbChip}</div>` : ''}
       ${c.callNotes ? `<div class="contact-address" style="color:var(--yellow);opacity:0.8">📝 ${c.callNotes}</div>` : ''}
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
@@ -4941,64 +4394,6 @@ function createList(name) {
   return list;
 }
 
-// ===== EXPIREDS LIST =====
-const EXPIREDS_LIST_NAME = '📋 Expireds';
-
-function initExpiredsList() {
-  let list = state.lists.find(l => l.isExpireds);
-  if (!list) list = state.lists.find(l => l.name === EXPIREDS_LIST_NAME);
-  if (!list) {
-    const id = 'list_expireds';
-    list = { id, name: EXPIREDS_LIST_NAME, isExpireds: true };
-    state.lists.unshift(list); // pin to front
-    saveListsDB();
-    renderListTabs();
-  } else if (!list.isExpireds) {
-    list.isExpireds = true;
-    saveListsDB();
-  }
-  return list;
-}
-
-async function checkPendingExpireds() {
-  if (!state.settings.backendUrl) return;
-  try {
-    const res = await fetch(`${state.settings.backendUrl}/api/expireds/pending`);
-    if (!res.ok) return;
-    const data = await res.json();
-    if (!data.contacts || !data.contacts.length) return;
-
-    const expList = initExpiredsList();
-    const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-
-    const newContacts = data.contacts.map(c => ({
-      ...c,
-      listId: expList.id,
-      status: 'pending',
-      expiredDate: today,
-      // Notes: combine address info if provided
-      notes: [c.address, c.city, c.county ? c.county + ' County' : '', c.listPrice ? `List: $${Number(c.listPrice).toLocaleString()}` : '', c.beds ? `${c.beds}bd/${c.baths}ba` : ''].filter(Boolean).join(' · ')
-    }));
-
-    // TRUE APPEND — never remove existing expireds contacts
-    state.contacts = [...state.contacts, ...newContacts];
-    state.queue = [...state.contacts];
-    saveContacts();
-
-    if (state.activeListId === expList.id || !state.activeListId) {
-      setActiveList(expList.id);
-    } else {
-      renderQueue();
-    }
-
-    setTimeout(() => {
-      toast(`📋 ${newContacts.length} new expireds loaded for ${today}`, 'green');
-    }, 800);
-  } catch(e) {
-    console.error('[PowerDial] Failed to check pending expireds:', e);
-  }
-}
-
 function deleteList(id, e) {
   if (e) e.stopPropagation();
   state.lists = state.lists.filter(l => l.id !== id);
@@ -5012,6 +4407,7 @@ function deleteList(id, e) {
 }
 
 function setActiveList(id) {
+  state.showingExpireds = false;
   state.activeListId = id;
   state.activeGroup = null;
   state.activeCity = null;
@@ -5619,41 +5015,19 @@ async function loadListsDB() {
 }
 
 async function saveContacts() {
-  const CHUNK = 5000; // write in chunks to avoid transaction size limits
   try {
     const db = await openDB();
-
-    // 1. Clear existing records
-    const clearTx = db.transaction(STORE, 'readwrite');
-    clearTx.objectStore(STORE).clear();
-    await new Promise((res, rej) => { clearTx.oncomplete = res; clearTx.onerror = rej; });
-
-    // 2. Write in chunks so no single transaction explodes
-    const contacts = state.contacts;
-    for (let start = 0; start < contacts.length; start += CHUNK) {
-      const chunk = contacts.slice(start, start + CHUNK);
-      const tx = db.transaction(STORE, 'readwrite');
-      const store = tx.objectStore(STORE);
-      chunk.forEach((c, j) => store.put({ ...c, _idx: start + j }));
-      await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
-    }
-
+    const tx = db.transaction(STORE, 'readwrite');
+    const store = tx.objectStore(STORE);
+    store.clear();
+    state.contacts.forEach((c, i) => store.put({ ...c, _idx: i }));
+    await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
     db.close();
-    // For small datasets only, keep localStorage in sync as a quick-load cache
-    if (contacts.length <= 2000) {
-      try { localStorage.setItem('powerdial_contacts', JSON.stringify(contacts)); } catch(_) {}
-    } else {
-      // Clear stale localStorage so we never load a truncated version after a reload
-      try { localStorage.removeItem('powerdial_contacts'); } catch(_) {}
-    }
+    // Always keep localStorage in sync so the fallback reflects cleared state too
+    try { localStorage.setItem('powerdial_contacts', JSON.stringify(state.contacts)); } catch(_) {}
   } catch(e) {
-    console.error('[PowerDial] saveContacts IDB error:', e);
-    // IndexedDB failed — only use localStorage for small datasets
-    if (state.contacts.length <= 2000) {
-      try { localStorage.setItem('powerdial_contacts', JSON.stringify(state.contacts)); } catch(_) {}
-    } else {
-      toast('⚠️ Could not save contacts — IndexedDB unavailable. Data may be lost on reload.', 'red', 8000);
-    }
+    // IndexedDB failed — fall back to localStorage only
+    try { localStorage.setItem('powerdial_contacts', JSON.stringify(state.contacts)); } catch(_) {}
   }
 }
 
@@ -5758,69 +5132,6 @@ function updateProgress() {
 // ============================================================
 //  SESSION CONTROL
 // ============================================================
-// ─── "Call Me First" — park agent on hold before leads dial ─────────────────
-// Calls Jose's phone and puts him in conference on hold. When agentReady=true,
-// clicking Start Session dials leads directly into the same conference.
-let _callMePollInterval = null;
-
-async function callMeFirst() {
-  const btn = document.getElementById('btnCallMe');
-  const btnStart = document.getElementById('btnStart');
-  const base = state.settings.backendUrl;
-
-  if (btn.dataset.ready === 'true') {
-    // Already ready — just flash and let user click Start Session
-    toast('✅ Already connected — click Start Session', 'green');
-    return;
-  }
-
-  btn.disabled = true;
-  btn.textContent = '📞 Calling...';
-  btn.style.background = '#f59e0b';
-  btn.style.borderColor = '#f59e0b';
-
-  try {
-    const resp = await fetch(`${base}/api/call-agent`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ agentPhone: state.settings.myPhone })
-    });
-    const data = await resp.json();
-    if (!data.success) throw new Error(data.error || 'Failed');
-
-    toast('📲 Calling your phone — pick up and wait...', 'yellow');
-
-    // Poll for agentReady
-    if (_callMePollInterval) clearInterval(_callMePollInterval);
-    _callMePollInterval = setInterval(async () => {
-      try {
-        const r = await fetch(`${base}/api/agent-ready`);
-        const d = await r.json();
-        if (d.agentReady) {
-          clearInterval(_callMePollInterval);
-          _callMePollInterval = null;
-          btn.textContent = '✅ Ready — Call Me Connected';
-          btn.style.background = '#16a34a';
-          btn.style.borderColor = '#16a34a';
-          btn.dataset.ready = 'true';
-          btn.disabled = false;
-          if (btnStart) {
-            btnStart.style.boxShadow = '0 0 0 3px rgba(34,197,94,0.5)';
-          }
-          toast("✅ You're connected — click Start Session to dial leads!", 'green');
-        }
-      } catch (_) {}
-    }, 2000);
-
-  } catch (err) {
-    btn.disabled = false;
-    btn.textContent = '📞 Call Me First';
-    btn.style.background = '#6b7280';
-    btn.style.borderColor = '#6b7280';
-    toast('❌ Call Me failed: ' + err.message, 'red');
-  }
-}
-
 function startSession() {
   if (!state.contacts.length) { toast('⚠️ Import contacts first', 'yellow'); showImportModal(); return; }
 
@@ -5926,11 +5237,6 @@ function stopSession() {
   if (pill) { pill.style.display = 'none'; pill.classList.remove('live'); }
   if (cphPill) cphPill.style.display = 'none';
   state.sessionStartTime = null;
-  // Disconnect WebRTC device if active
-  if (twilioActiveCall) { twilioActiveCall.disconnect(); twilioActiveCall = null; }
-  if (_dialInPollInterval) { clearInterval(_dialInPollInterval); _dialInPollInterval = null; }
-  // Reset headset status for next session
-  const hel = document.getElementById("headsetStatus"); if (hel) startAgentConnection();
   // Drop all lines
   state.lines.forEach(l => { if (l.status !== 'idle') dropLine(l.id, true); });
   clearActiveCall();
@@ -6154,15 +5460,12 @@ function dialContact(line, contact, phoneEntry) {
 // ============================================================
 function simulateDemoSession(pairs) {
   // Simulate each line with random outcomes
-  // When AMD is on, voicemail outcomes become machine detections instead
-  const baseOutcomes = ['connected', 'noanswer', 'voicemail', 'noanswer', 'connected', 'busy'];
+  const outcomes = ['connected', 'noanswer', 'voicemail', 'noanswer', 'connected', 'busy'];
   const delays = [2000 + Math.random()*3000, 3000 + Math.random()*4000, 2500 + Math.random()*3500];
 
   pairs.forEach(({ contact }, i) => {
     const line = state.lines[i];
-    let outcome = baseOutcomes[Math.floor(Math.random() * baseOutcomes.length)];
-    // AMD demo: replace voicemail with machine detection when AMD enabled
-    if (outcome === 'voicemail' && state.settings.amdEnabled) outcome = 'machine';
+    const outcome = outcomes[Math.floor(Math.random() * outcomes.length)];
     const delay = delays[i];
 
     setTimeout(() => {
@@ -6176,8 +5479,6 @@ function simulateDemoSession(pairs) {
         } else {
           lineConnected(line);
         }
-      } else if (outcome === 'machine') {
-        lineMachine(line);
       } else if (outcome === 'voicemail') {
         lineVoicemail(line);
       } else if (outcome === 'busy') {
@@ -6300,28 +5601,7 @@ function lineVoicemail(line) {
   checkAllDone();
 }
 
-function lineMachine(line) {
-  // AMD detected an answering machine — skip instantly without logging a VM
-  if (line.timerInt) clearInterval(line.timerInt);
-  line.status = 'machine';
-  updateLineUI(line);
-  state.stats.amdSkipped = (state.stats.amdSkipped || 0) + 1;
-  // Mark contact as no-answer and move on after brief display
-  setTimeout(() => {
-    if (line.status !== 'machine') return;
-    toast(`🤖 Machine skipped: ${line.contact?.name || ''}`, 'gray', 2000);
-    lineDone(line, 'noanswer', true);
-  }, 1200);
-  checkAllDone();
-}
-
 function lineDone(line, outcome, silent = false) {
-  // Always hang up the Twilio call — even for dropped/vm_dropped so ringing lines
-  // are terminated on the backend and don't ghost-connect after disposition.
-  const _ldBase = state.settings.backendUrl || '';
-  if (line.callSid) {
-    fetch(`${_ldBase}/api/lines/${line.id}/hangup`, { method: 'POST' }).catch(() => {});
-  }
   if (line.timerInt) clearInterval(line.timerInt);
   if (!['vm_dropped','dropped'].includes(outcome)) {
     if (line.contact && line.phoneEntry) {
@@ -6375,12 +5655,6 @@ function hangupActive() {
   const duration = line.timerVal;
   const contact = line.contact;
   const phoneEntry = line.phoneEntry;
-
-  // Hang up the actual Twilio call so backend clears connectedLine
-  const _huaBase = state.settings.backendUrl || '';
-  if (line.callSid) {
-    fetch(`${_huaBase}/api/lines/${line.id}/hangup`, { method: 'POST' }).catch(() => {});
-  }
 
   // Save for dispose()
   state._pendingContact = contact;
@@ -6635,7 +5909,6 @@ async function dialReal(pairs) {
         agentPhone: state.settings.myPhone,
         vmUrl: state.settings.vmUrl,
         record: !!state.settings.recordCalls,
-        machineDetection: state.settings.amdEnabled ? 'DetectMessageEnd' : 'Disable',
       })
     });
     const data = await resp.json();
@@ -6656,7 +5929,7 @@ let pollInterval = null;
 function startEventPolling() {
   if (pollInterval) clearInterval(pollInterval);
   pollInterval = setInterval(async () => {
-    if (!state.session) { clearInterval(pollInterval); return; }
+    if (!state.session || !state.settings.backendUrl) { clearInterval(pollInterval); return; }
     try {
       const resp = await fetch(`${state.settings.backendUrl}/api/session/status`);
       const data = await resp.json();
@@ -6669,18 +5942,8 @@ function processBackendEvents(data) {
   // Process line status updates from backend
   data.lines?.forEach(lineData => {
     const line = state.lines[lineData.lineId - 1];
-    if (!line) return;
-    // AMD result: answeredBy comes from Twilio's asyncAmdStatusCallback
-    const answeredBy = lineData.answeredBy || '';
-    if (answeredBy && state.settings.amdEnabled) {
-      const isMachine = /machine/.test(answeredBy); // machine_start, machine_end_beep, machine_end_silence
-      if (isMachine && line.status !== 'machine' && line.status !== 'idle') {
-        lineMachine(line); return;
-      }
-    }
-    if (line.status === lineData.status) return;
-    // Guard: don't re-trigger lineConnected if frontend already cleared line.contact
-    if (lineData.status === 'connected') { if (line.contact) lineConnected(line); }
+    if (!line || line.status === lineData.status) return;
+    if (lineData.status === 'connected') lineConnected(line);
     else if (lineData.status === 'voicemail') lineVoicemail(line);
     else if (lineData.status === 'noanswer' || lineData.status === 'busy') lineDone(line, lineData.status);
   });
@@ -6705,11 +5968,10 @@ function updateLineUI(line) {
   card.className = 'line-card ' + (line.status === 'ringing' ? 'ringing' :
     line.status === 'connected' ? 'connected' :
     line.status === 'voicemail' ? 'voicemail' :
-    line.status === 'machine' ? 'machine' :
     line.status === 'busy' ? 'busy' :
     line.status === 'noanswer' ? 'noanswer' : 'idle');
 
-  const statusLabels = { idle:'Idle', ringing:'Ringing...', connected:'Connected', noanswer:'No Answer', voicemail:'Voicemail', machine:'🤖 Machine', busy:'Busy', dropped:'Dropped' };
+  const statusLabels = { idle:'Idle', ringing:'Ringing...', connected:'Connected', noanswer:'No Answer', voicemail:'Voicemail', busy:'Busy', dropped:'Dropped' };
   badge.textContent = statusLabels[line.status] || line.status;
   badge.className = `line-status-badge status-${line.status}`;
 
@@ -6746,134 +6008,91 @@ function showActiveCall(line) {
   document.getElementById('notesSection').style.display = 'flex';
   const card = document.getElementById('activeCallCard');
   card.style.display = 'flex';
+  card.style.borderColor = '';
+  card.style.background = '';
 
-  // ── Live call banner ─────────────────────────────────────
-  const banner = document.getElementById('liveCallBanner');
-  if (banner) banner.classList.add('visible');
-  const c = line.contact;
-  const activePhone = line.phoneEntry?.phone || (c.phones?.[0]?.phone) || '';
-  // Banner fields
-  document.getElementById('activeName').textContent = c.name || '—';
-  document.getElementById('activeSub').textContent = activePhone ? formatPhone(activePhone) : '—';
+  document.getElementById('activeName').textContent = line.contact.name;
+  const activePhone = line.phoneEntry?.phone || (line.contact.phones?.[0]?.phone) || '';
+  const activeLabel = line.phoneEntry?.label ? ` · ${line.phoneEntry.label}` : '';
+  document.getElementById('activeSub').innerHTML = `${formatPhone(activePhone)}${activeLabel} · <span>Line ${line.id}</span>`;
   document.getElementById('activeTimer').textContent = '0:00';
+  document.getElementById('callNotes').value = '';
+  // Show recording badge if recording is enabled
   const recBadge = document.getElementById('recBadge');
   if (recBadge) recBadge.style.display = state.settings.recordCalls ? '' : 'none';
+  renderActiveNoteLog(line.contact);
 
-  // ── Contact name + owner ─────────────────────────────────
-  document.getElementById('mojoContactName').textContent = c.name || '—';
-  document.getElementById('mojoContactOwner').textContent = c.owner && c.owner !== c.name ? c.owner : '';
-
-  // ── Phones list ──────────────────────────────────────────
-  const phonesEl = document.getElementById('mojoPhonesEl');
-  if (phonesEl) {
-    const phones = c.phones || [];
-    if (phones.length) {
-      phonesEl.innerHTML = phones.map(p => {
-        const isActive = p.phone === activePhone;
-        return `<div class="mojo-phone-row${isActive ? ' active-phone' : ''}">
-          <span class="mojo-phone-num">${formatPhone(p.phone)}</span>
-          <span class="mojo-phone-label">${p.label || 'Phone'}</span>
-          ${isActive ? '<span style="font-size:10px;font-weight:700;color:#16a34a;margin-left:4px">● ACTIVE</span>' : ''}
-        </div>`;
-      }).join('');
-    } else {
-      phonesEl.innerHTML = '<div style="font-size:12px;color:#aaa">No phones on record</div>';
-    }
-  }
-
-  // ── Email ────────────────────────────────────────────────
-  const emailRow = document.getElementById('mojoEmailRow');
-  const emailLink = document.getElementById('mojoEmailLink');
-  if (c.email && emailRow && emailLink) {
-    emailLink.href = `mailto:${c.email}`;
-    emailLink.textContent = c.email;
-    emailRow.style.display = 'flex';
-  } else if (emailRow) {
-    emailRow.style.display = 'none';
-  }
-
-  // ── Meta chips (list, type) ──────────────────────────────
-  const metaRow = document.getElementById('mojoMetaRow');
-  if (metaRow) {
-    const chips = [];
-    if (c.listId) {
-      const list = state.lists.find(l => l.id === c.listId);
-      if (list) chips.push(`<span class="mojo-meta-chip">📁 ${list.name}</span>`);
-    }
-    if (c.type) chips.push(`<span class="mojo-meta-chip">🏷️ ${c.type}</span>`);
-    metaRow.innerHTML = chips.join('');
-  }
-
-  // ── Address ──────────────────────────────────────────────
-  const streetAddr = (c.address || '').trim();
+  // ── Property info panel (Mojo-style) ──────────────────────
+  const c = line.contact;
+  const streetAddr = (c.address || c.notes || '').trim();
   const cityLine   = [c.city, c.state, c.zip].filter(Boolean).join(', ');
   const fullAddr   = [streetAddr, cityLine].filter(Boolean).join(', ');
-  document.getElementById('propAddrMain').textContent = streetAddr || cityLine || '';
-  document.getElementById('propAddrCity').textContent = streetAddr ? cityLine : '';
-  const addrBlock = document.getElementById('mojoAddrBlock');
-  if (addrBlock) addrBlock.style.display = (streetAddr || cityLine) ? 'flex' : 'none';
-
-  // ── Maps / Zillow action links ───────────────────────────
-  if (fullAddr) {
-    const enc = encodeURIComponent(fullAddr);
-    const mapsEl = document.getElementById('mojoMapsLink');
-    const zillowEl = document.getElementById('mojoZillowLink');
-    if (mapsEl) mapsEl.href = `https://maps.google.com/?q=${enc}`;
-    if (zillowEl) zillowEl.href = `https://www.zillow.com/homes/${enc}_rb/`;
-  }
-
-  // ── Property data panel ──────────────────────────────────
   const propPanel  = document.getElementById('propPanel');
-  const fmtMoney = v => v ? (v.toString().startsWith('$') ? v : '$' + Number(v.toString().replace(/[^0-9.]/g,'')).toLocaleString()) : '';
-  const gridEl = document.getElementById('propDataGrid');
-  const gridRows = [];
-  if (c.avm)          gridRows.push(`<div class="prop-data-item avm-item"><span class="pdl">AVM</span><span class="pdv">${fmtMoney(c.avm)}</span></div>`);
-  if (c.units && parseInt(c.units) > 1)
-                      gridRows.push(`<div class="prop-data-item units-item"><span class="pdl">Units</span><span class="pdv">${c.units}</span></div>`);
-  if (c.beds)         gridRows.push(`<div class="prop-data-item"><span class="pdl">Beds</span><span class="pdv">${c.beds}</span></div>`);
-  if (c.baths)        gridRows.push(`<div class="prop-data-item"><span class="pdl">Baths</span><span class="pdv">${c.baths}</span></div>`);
-  if (c.sqft)         gridRows.push(`<div class="prop-data-item"><span class="pdl">Sq Ft</span><span class="pdv">${Number(c.sqft).toLocaleString()}</span></div>`);
-  if (c.yearBuilt)    gridRows.push(`<div class="prop-data-item"><span class="pdl">Built</span><span class="pdv">${c.yearBuilt}</span></div>`);
-  if (c.taxValue)     gridRows.push(`<div class="prop-data-item"><span class="pdl">Tax Val</span><span class="pdv">${fmtMoney(c.taxValue)}</span></div>`);
-  if (c.propertyType) gridRows.push(`<div class="prop-data-item"><span class="pdl">Type</span><span class="pdv">${c.propertyType}</span></div>`);
-  if (c.occupancy)    gridRows.push(`<div class="prop-data-item"><span class="pdl">Occupancy</span><span class="pdv">${c.occupancy}</span></div>`);
-  if (c.acres)        gridRows.push(`<div class="prop-data-item"><span class="pdl">Acres</span><span class="pdv">${c.acres}</span></div>`);
 
-  if (gridRows.length) {
-    gridEl.innerHTML = gridRows.join('');
-    gridEl.style.display = '';
-    const propMeta = document.getElementById('propMeta');
-    if (propMeta) propMeta.innerHTML = '';
-    if (fullAddr) {
-      const enc = encodeURIComponent(fullAddr);
-      document.getElementById('propLinks').innerHTML = [
-        `<a class="prop-link prop-link-maps" href="https://maps.google.com/?q=${enc}&layer=c" target="_blank" rel="noopener">🚗 Street View</a>`,
-        `<a class="prop-link prop-link-records" href="https://www.google.com/search?q=${enc}+property+records+owner" target="_blank" rel="noopener">📋 Records</a>`,
-      ].join('');
+  if (streetAddr || cityLine) {
+    document.getElementById('propAddrMain').textContent = streetAddr || cityLine;
+    document.getElementById('propAddrCity').textContent = streetAddr ? cityLine : '';
+
+    // Property data grid — AVM, Units, Tax Value, Type, Occupancy, Baths, Sq Ft, Acres
+    const gridEl = document.getElementById('propDataGrid');
+    const gridRows = [];
+    const fmtMoney = v => v ? (v.toString().startsWith('$') ? v : '$' + Number(v.toString().replace(/[^0-9.]/g,'')).toLocaleString()) : '';
+    if (c.avm)          gridRows.push(`<div class="prop-data-item avm-item"><span class="pdl">AVM:</span><span class="pdv">${fmtMoney(c.avm)}</span></div>`);
+    if (c.units && parseInt(c.units) > 1)
+                        gridRows.push(`<div class="prop-data-item units-item"><span class="pdl">Units:</span><span class="pdv">${c.units} Units</span></div>`);
+    if (c.taxValue)     gridRows.push(`<div class="prop-data-item"><span class="pdl">Tax Value:</span><span class="pdv">${fmtMoney(c.taxValue)}</span></div>`);
+    if (c.propertyType) gridRows.push(`<div class="prop-data-item"><span class="pdl">Prop Type:</span><span class="pdv">${c.propertyType}</span></div>`);
+    if (c.occupancy)    gridRows.push(`<div class="prop-data-item"><span class="pdl">Occupancy:</span><span class="pdv">${c.occupancy}</span></div>`);
+    if (c.baths)        gridRows.push(`<div class="prop-data-item"><span class="pdl">Baths:</span><span class="pdv">${c.baths}</span></div>`);
+    if (c.sqft)         gridRows.push(`<div class="prop-data-item"><span class="pdl">Sq Ft:</span><span class="pdv">${Number(c.sqft).toLocaleString()}</span></div>`);
+    if (c.acres)        gridRows.push(`<div class="prop-data-item"><span class="pdl">Acres:</span><span class="pdv">${c.acres}</span></div>`);
+    if (gridRows.length) {
+      gridEl.innerHTML = gridRows.join('');
+      gridEl.style.display = '';
     } else {
-      document.getElementById('propLinks').innerHTML = '';
+      gridEl.style.display = 'none';
     }
+
+    // Meta row — type, disposition, list
+    const metaParts = [];
+    if (c.type)        metaParts.push(`<span><strong>Type:</strong> ${c.type}</span>`);
+    if (c.disposition) metaParts.push(`<span><strong>Status:</strong> ${c.disposition}</span>`);
+    if (c.listId) {
+      const list = state.lists.find(l => l.id === c.listId);
+      if (list) metaParts.push(`<span><strong>List:</strong> ${list.name}</span>`);
+    }
+    document.getElementById('propMeta').innerHTML = metaParts.join('');
+
+    // Quick-link buttons
+    const enc = encodeURIComponent(fullAddr || streetAddr || cityLine);
+    const links = [
+      { cls:'prop-link-zillow',  href:`https://www.zillow.com/homes/${enc}_rb/`,             label:'🏠 Zillow' },
+      { cls:'prop-link-maps',    href:`https://maps.google.com/?q=${enc}`,                    label:'📍 Maps' },
+      { cls:'prop-link-street',  href:`https://maps.google.com/?q=${enc}&layer=c`,            label:'🚗 Street View' },
+      { cls:'prop-link-records', href:`https://www.google.com/search?q=${enc}+property+records+owner`, label:'📋 Records' },
+    ];
+    document.getElementById('propLinks').innerHTML = links.map(l =>
+      `<a class="prop-link ${l.cls}" href="${l.href}" target="_blank" rel="noopener">${l.label}</a>`
+    ).join('');
+
     propPanel.style.display = '';
   } else {
     propPanel.style.display = 'none';
   }
 
-  // ── Tags ─────────────────────────────────────────────────
   const tags = document.getElementById('activeTags');
-  const typeClass = (c.type || '').toLowerCase().includes('buyer') ? 'buyer' : 'seller';
-  const typeLbl = c.type || (typeClass === 'buyer' ? 'Buyer' : 'Seller');
-  const temp = c.temperature;
+  const typeClass = (line.contact.type || '').toLowerCase().includes('buyer') ? 'buyer' : 'seller';
+  const typeLbl = line.contact.type || (typeClass === 'buyer' ? 'Buyer' : 'Seller');
+  const temp = line.contact.temperature;
   const tempTag = temp ? `<span class="tag tag-${temp}">${{hot:'🔥 Hot', warm:'🌟 Warm', cold:'❄️ Cold'}[temp]||temp}</span>` : '';
-  const cbTag = c.callbackDate ? `<span class="tag" style="background:var(--accent-dim);color:var(--accent)">📅 Callback</span>` : '';
+  const cbTag = line.contact.callbackDate ? `<span class="tag" style="background:var(--accent-dim);color:var(--accent)">📅 Callback</span>` : '';
   tags.innerHTML = `<span class="tag tag-${typeClass}">${typeLbl}</span><span class="tag tag-line">Line ${line.id}</span>${tempTag}${cbTag}`;
 
-  // ── Group strip ───────────────────────────────────────────
-  state._dispContact = c;
-  document.getElementById('callNotes').value = '';
-  renderActiveNoteLog(c);
+  // Show group assignment strip during active call
+  state._dispContact = line.contact;
   const groupRow = document.getElementById('activeCallGroupRow');
   if (state.groups && state.groups.length) {
-    renderCallGroups(c, 'activeCallGroupPills');
+    renderCallGroups(line.contact, 'activeCallGroupPills');
     groupRow.style.display = '';
   } else {
     groupRow.style.display = 'none';
@@ -6883,8 +6102,8 @@ function showActiveCall(line) {
 function clearActiveCall(hideDisp = true) {
   const card = document.getElementById('activeCallCard');
   card.style.display = 'none';
-  const banner = document.getElementById('liveCallBanner');
-  if (banner) banner.classList.remove('visible');
+  card.style.borderColor = '';
+  card.style.background = '';
   // Only hide the disposition panel if explicitly asked — showDisposition() keeps it open
   if (hideDisp) {
     document.getElementById('dispSection').style.display = 'none';
@@ -6961,63 +6180,10 @@ function assignContactGroup(groupId, pillsContainerId) {
 // ============================================================
 
 // ── No-contact hangup (no conversation, continue dialing) ──
-function hangupNextNumber() {
-  // No Contact (Next Number) — mark THIS phone as noanswer, keep contact pending
-  // so the dialer queues up the next phone on the same person.
-  if (state.activeLineId === null) return;
-  const line = state.lines[state.activeLineId - 1];
-  if (line.timerInt) clearInterval(line.timerInt);
-  // Hang up the actual Twilio call so backend clears connectedLine
-  const _hnnBase = state.settings.backendUrl || '';
-  if (line.callSid) {
-    fetch(`${_hnnBase}/api/lines/${line.id}/hangup`, { method: 'POST' }).catch(() => {});
-  }
-  const contact = line.contact;
-  const phoneEntry = line.phoneEntry;
-
-  if (contact && phoneEntry) {
-    phoneEntry.status = 'noanswer';
-    // Check if there are still pending phones on this contact
-    const remainingPending = (contact.phones || []).filter(p => p.status === 'pending');
-    if (remainingPending.length > 0) {
-      // Keep contact pending so the dialer picks it up again with the next phone
-      contact.status = 'pending';
-      contact.disposition = null;
-    } else {
-      // No more phones — treat same as No Contact
-      contact.status = 'noanswer';
-      contact.disposition = 'No Contact';
-    }
-    state.stats.calls++;
-    addToLog(contact, 'noanswer', line.timerVal);
-    saveCallRecord(contact, phoneEntry, 'No Contact (Next Number)', line.timerVal, '');
-    saveContacts();
-    updateStatsUI();
-  }
-
-  line.status = 'idle';
-  line.contact = null;
-  line.phoneEntry = null;
-  line.timerVal = 0;
-  state.activeLineId = null;
-  if (state.activeTimerInt) clearInterval(state.activeTimerInt);
-  updateLineUI(line);
-  clearActiveCall();
-  renderQueue();
-  const remaining = (contact?.phones || []).filter(p => p.status === 'pending').length;
-  toast(remaining > 0 ? `📵 No contact — trying next number (${remaining} left)` : '📵 No contact — no more numbers', 'gray');
-  resumeAfterDisposition();
-}
-
 function hangupNoContact() {
   if (state.activeLineId === null) return;
   const line = state.lines[state.activeLineId - 1];
   if (line.timerInt) clearInterval(line.timerInt);
-  // Hang up the actual Twilio call so backend clears connectedLine
-  const _hncBase = state.settings.backendUrl || '';
-  if (line.callSid) {
-    fetch(`${_hncBase}/api/lines/${line.id}/hangup`, { method: 'POST' }).catch(() => {});
-  }
   const contact = line.contact;
   const phoneEntry = line.phoneEntry;
 
@@ -7070,30 +6236,6 @@ function saveCallRecord(contact, phoneEntry, outcome, duration, notes) {
     // Keep last 2000 records
     if (existing.length > 2000) existing.length = 2000;
     localStorage.setItem('powerdial_call_records', JSON.stringify(existing));
-    // Sync to Railway server for Claude MCP
-    try {
-      const backendUrl = (state.settings && state.settings.backendUrl) ? state.settings.backendUrl : '';
-      if (backendUrl) {
-        fetch(backendUrl + '/api/claude/sync/call', {
-          method: 'POST',
-          headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({
-            record_id: String(record.id),
-            date: record.date,
-            session_id: String(record.sessionId),
-            contact_name: record.contactName,
-            phone: record.phone,
-            phone_label: record.phoneLabel,
-            city: record.city,
-            state: record.state,
-            outcome: record.outcome,
-            duration_secs: Math.round(record.duration || 0),
-            notes: record.notes,
-            group_name: record.groupName
-          })
-        }).catch(function(){});
-      }
-    } catch(e2) {}
   } catch(e) {}
 }
 
@@ -7119,28 +6261,6 @@ function saveSessionReport() {
     existing.unshift(report);
     if (existing.length > 200) existing.length = 200;
     localStorage.setItem('powerdial_session_reports', JSON.stringify(existing));
-    // Sync to Railway server for Claude MCP
-    try {
-      const backendUrl = (state.settings && state.settings.backendUrl) ? state.settings.backendUrl : '';
-      if (backendUrl) {
-        fetch(backendUrl + '/api/claude/sync/session', {
-          method: 'POST',
-          headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({
-            session_id: String(report.id),
-            date: report.date,
-            end_time: report.endTime,
-            duration_secs: report.durationSecs,
-            calls: report.calls,
-            connected: report.connected,
-            vm: report.vm,
-            appts: report.appts,
-            callbacks: report.callbacks,
-            contact_rate: report.contactRate
-          })
-        }).catch(function(){});
-      }
-    } catch(e2) {}
   } catch(e) {}
 }
 
@@ -7425,116 +6545,14 @@ function updateSessionTimer() {
 }
 
 // ============================================================
-// ============================================================
-//  DNC PERSISTENT LIST
-// ============================================================
-function normPhone(p) {
-  return (p || '').replace(/\D/g, '').slice(-10);
-}
-function loadDNCNumbers() {
-  try {
-    const arr = JSON.parse(localStorage.getItem('powerdial_dnc') || '[]');
-    state.dncNumbers = new Set(arr);
-  } catch(e) { state.dncNumbers = new Set(); }
-}
-function saveDNCNumbers() {
-  try { localStorage.setItem('powerdial_dnc', JSON.stringify([...state.dncNumbers])); } catch(e) {}
-}
-function isOnDNC(phone) {
-  return state.dncNumbers.has(normPhone(phone));
-}
-function addToDNCList(phone) {
-  const n = normPhone(phone);
-  if (!n) return false;
-  state.dncNumbers.add(n);
-  saveDNCNumbers();
-  return true;
-}
-function removeFromDNCList(phone) {
-  const n = normPhone(phone);
-  state.dncNumbers.delete(n);
-  saveDNCNumbers();
-}
-// Quick-add from disposition panel
-function dncFromDisp() {
-  const contact = state._dispContact || state._pendingContact;
-  if (!contact) return;
-  // Add all phones from contact to DNC
-  const phones = (contact.phones || []).map(p => p.number || p.raw);
-  phones.forEach(p => addToDNCList(p));
-  contact.isDNC = true;
-  saveContacts();
-  renderQueue();
-  toast(`🚫 ${contact.name} added to DNC (${phones.length} number${phones.length>1?'s':''})`, 'red');
-}
-// Settings DNC tab helpers
-function renderDNCList() {
-  const el = document.getElementById('dncListEl');
-  if (!el) return;
-  const nums = [...state.dncNumbers];
-  if (!nums.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:8px 0">No numbers in DNC list.</div>'; return; }
-  el.innerHTML = nums.map(n =>
-    `<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px">
-      <span style="font-family:monospace;color:var(--text-secondary)">(${n.slice(0,3)}) ${n.slice(3,6)}-${n.slice(6)}</span>
-      <button onclick="removeDNCNumber('${n}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:13px;padding:2px 6px">✕</button>
-    </div>`
-  ).join('');
-}
-function removeDNCNumber(n) {
-  state.dncNumbers.delete(n);
-  saveDNCNumbers();
-  renderDNCList();
-  toast('✅ Number removed from DNC', 'green');
-}
-function bulkAddDNC() {
-  const raw = document.getElementById('dncBulkInput')?.value || '';
-  const lines = raw.split(/[\n,;]+/).map(l => normPhone(l)).filter(n => n.length >= 7);
-  let added = 0;
-  lines.forEach(n => { state.dncNumbers.add(n); added++; });
-  saveDNCNumbers();
-  if (document.getElementById('dncBulkInput')) document.getElementById('dncBulkInput').value = '';
-  renderDNCList();
-  toast(`🚫 Added ${added} number${added!==1?'s':''} to DNC`, 'red');
-}
-function clearAllDNC() {
-  if (!confirm(`Clear all ${state.dncNumbers.size} DNC numbers?`)) return;
-  state.dncNumbers.clear();
-  saveDNCNumbers();
-  renderDNCList();
-  toast('🗑 DNC list cleared', 'gray');
-}
-
-function dedupeAllContacts() {
-  const seen = new Set();
-  const before = state.contacts.length;
-  state.contacts = state.contacts.filter(c => {
-    const key = (c.name||'').toLowerCase().trim() + '|' + (c.address||'').toLowerCase().trim();
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-  const removed = before - state.contacts.length;
-  saveContacts();
-  renderQueue();
-  const el = document.getElementById('dedupeResult');
-  if (el) el.textContent = removed ? `Removed ${removed} duplicate${removed!==1?'s':''}` : 'No duplicates found';
-  toast(removed ? `✅ Removed ${removed} duplicate contact${removed!==1?'s':''}` : '✅ No duplicates found', removed ? 'green' : 'yellow');
-}
-
 //  DNC
 // ============================================================
 function toggleDNC() {
   if (drawerContactIdx === null) return;
   const c = state.contacts[drawerContactIdx];
   c.isDNC = !c.isDNC;
-  if (c.isDNC) {
-    c.status = 'noanswer';
-    (c.phones||[]).forEach(p => addToDNCList(p.number||p.raw));
-    toast(`🚫 ${c.name} added to DNC`, 'red');
-  } else {
-    (c.phones||[]).forEach(p => removeFromDNCList(p.number||p.raw));
-    toast(`✅ ${c.name} removed from DNC`, 'green');
-  }
+  if (c.isDNC) { c.status = 'noanswer'; toast(`🚫 ${c.name} added to DNC`, 'red'); }
+  else { toast(`✅ ${c.name} removed from DNC`, 'green'); }
   // Update button
   const dncBtn = document.getElementById('dncDrawerBtn');
   if (dncBtn) { dncBtn.textContent = c.isDNC ? '✅ Remove DNC' : '🚫 DNC'; dncBtn.style.color = c.isDNC ? 'var(--green)' : 'var(--red)'; }
@@ -7646,7 +6664,7 @@ function formatTime(s) {
 function showModal(id) { document.getElementById(id).classList.remove('hidden'); }
 function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
-function toast(msg, color = 'gray', duration = 3000) {
+function toast(msg, color = 'gray') {
   const colors = { green:'var(--green)', yellow:'var(--yellow)', red:'var(--red)', accent:'var(--accent)', orange:'var(--orange)', gray:'var(--text-secondary)' };
   const container = document.getElementById('toastContainer');
   const t = document.createElement('div');
@@ -7655,7 +6673,7 @@ function toast(msg, color = 'gray', duration = 3000) {
   t.style.borderLeftWidth = '3px';
   t.textContent = msg;
   container.appendChild(t);
-  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.3s'; setTimeout(()=>t.remove(), 300); }, duration);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.3s'; setTimeout(()=>t.remove(), 300); }, 3000);
 }
 
 // ============================================================
@@ -7669,12 +6687,11 @@ async function init() {
     // Ensure smsTemplates array is preserved (merge doesn't deep-copy arrays)
     if (saved.smsTemplates) state.settings.smsTemplates = saved.smsTemplates;
     if (saved.localPresence) state.settings.localPresence = saved.localPresence;
-    state.demoMode = false; // Railway co-hosted: empty backendUrl = same origin, always real mode
+    state.demoMode = !state.settings.backendUrl;
   } catch(e) {}
   // Load action plans and list rules
   try { state.actionPlans = JSON.parse(localStorage.getItem('powerdial_actionPlans') || '[]'); } catch(e) {}
   try { state.listRules   = JSON.parse(localStorage.getItem('powerdial_listRules')   || '[]'); } catch(e) {}
-  loadDNCNumbers();
 
   // Restore lists, groups, and contacts from last session
   const savedLists = await loadListsDB();
@@ -7695,14 +6712,8 @@ async function init() {
     state.queue = [...savedContacts];
     if (needsSave) saveContacts(); // persist migrated format back to DB
   }
-  // Ensure the permanent Expireds list exists
-  initExpiredsList();
-
   renderSidebar();
   renderQueue();
-
-  // Check for pending expireds from the automation pipeline
-  checkPendingExpireds();
 
   // Show Resume button if there are contacts already dialed from a prior session
   if (state.contacts.some(c => !c.isDNC && c.status !== 'pending')) {
@@ -7728,368 +6739,125 @@ async function init() {
 
   setTimeout(() => {
     toast(state.demoMode ? '🎬 Demo Mode — Set backend URL in ⚙️ Settings for live calls' : '✅ Backend configured — ready for live calls', state.demoMode ? 'accent' : 'green');
-    startAgentConnection();
   }, 500);
 }
 
-
-
-// ─── Twilio WebRTC Device ────────────────────────────────────────────────────
-// ─── Agent Connection: Dial-In OR WebRTC ───────────────────────────────────
-let _dialInPollInterval = null;
-
-// startAgentConnection: if myPhone is set, show "📞 Call Me" button.
-// Clicking it calls /api/call-agent → Twilio calls your phone, parks you in
-// conference. Poll until agentReady=true, then Start Session dials leads.
-// If no myPhone is set, fall back to WebRTC browser mode.
-function startAgentConnection() {
-  const myPhone = state.settings.myPhone;
-  if (myPhone && !state.demoMode) {
-    showCallMeButton(myPhone);
-  } else {
-    initTwilioDevice();
-  }
-}
-
-function showCallMeButton(phone) {
-  const el = document.getElementById('headsetStatus');
-  if (!el) return;
-  el.textContent = '📞 Call Me';
-  el.style.color = '#3b82f6';
-  el.style.cursor = 'pointer';
-  el.title = 'Click — Twilio will call ' + phone + ', answer and wait, then press Start Session';
-  el.onclick = () => triggerCallMe(phone);
-}
-
-async function triggerCallMe(phone) {
-  const el = document.getElementById('headsetStatus');
-  const base = state.settings.backendUrl || '';
-  if (!base) { toast('Set backend URL in Settings first', 'red'); return; }
-  el.textContent = '📞 Calling…';
-  el.style.color = '#f59e0b';
-  el.onclick = null;
-  try {
-    const r = await fetch(base + '/api/call-agent', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ agentPhone: phone })
-    });
-    const d = await r.json();
-    if (!d.success) throw new Error(d.error || 'Failed');
-    el.textContent = '📞 Ringing…';
-    toast('📞 Calling ' + phone + ' — answer, then press ▶ Start Session', 'accent', 8000);
-    pollForAgentReady();
-  } catch(e) {
-    el.textContent = '📞 Call Me';
-    el.style.color = '#ef4444';
-    toast('Call Me failed: ' + e.message, 'red');
-    setTimeout(() => showCallMeButton(phone), 3000);
-  }
-}
-
-function pollForAgentReady() {
-  const el = document.getElementById('headsetStatus');
-  if (_dialInPollInterval) clearInterval(_dialInPollInterval);
-  _dialInPollInterval = setInterval(async () => {
-    try {
-      const base = state.settings.backendUrl || '';
-      if (!base) return;
-      const r = await fetch(base + '/api/agent-ready');
-      if (!r.ok) return;
-      const d = await r.json();
-      if (d.agentReady && d.conferenceSid) {
-        clearInterval(_dialInPollInterval);
-        _dialInPollInterval = null;
-        el.textContent = '✅ Connected — Start Session';
-        el.style.color = '#22c55e';
-        el.style.cursor = 'default';
-        el.onclick = null;
-      } else if (d.agentReady && !d.conferenceSid) {
-        el.textContent = '⏳ Connecting to conference…';
-      }
-    } catch(e) {}
-  }, 2000);
-}
-
-let twilioDevice   = null;
-let twilioActiveCall = null;
-
-function updateHeadsetUI(st) {
-  const el = document.getElementById('headsetStatus');
-  if (!el) return;
-  const map = {
-    connecting: { text: '🎧 Connecting…', color: '#f59e0b' },
-    ready:      { text: '🎧 Ready',        color: '#22c55e' },
-    active:     { text: '🎧 On Call',      color: '#3b82f6' },
-    error:      { text: '🎧 Error',        color: '#ef4444' },
-    off:        { text: '🎧 Off',          color: '#6b7280' }
-  };
-  const s = map[st] || map.off;
-  el.textContent = s.text;
-  el.style.color = s.color;
-}
-
-async function initTwilioDevice() {
-  // Skip in demo mode or if Twilio SDK not loaded
-  if (state.demoMode || typeof Twilio === 'undefined') { updateHeadsetUI('off'); return; }
-  try {
-    const r = await fetch(`${state.settings.backendUrl || ''}/api/token`);
-    if (!r.ok) { updateHeadsetUI('off'); return; } // API keys not configured — PSTN fallback
-    const { token } = await r.json();
-    if (!token) { updateHeadsetUI('off'); return; }
-
-    twilioDevice = new Twilio.Device(token, { edge: 'roaming', logLevel: 1 });
-
-    twilioDevice.on('registered',   () => updateHeadsetUI('ready'));
-    twilioDevice.on('unregistered', () => updateHeadsetUI('off'));
-    twilioDevice.on('error',        () => updateHeadsetUI('error'));
-    twilioDevice.on('incoming', call => {
-      twilioActiveCall = call;
-      updateHeadsetUI('active');
-      call.accept();
-      call.on('disconnect', () => { twilioActiveCall = null; updateHeadsetUI('ready'); });
-    });
-
-    updateHeadsetUI('connecting');
-    await twilioDevice.register();
-  } catch(e) {
-    console.warn('[WebRTC] initTwilioDevice error:', e.message);
-    updateHeadsetUI('off');
-  }
-}
-// ─────────────────────────────────────────────────────────────────────────────
-
-// ── Mojo-style active-call keyboard shortcuts ────────────────────────────────
-// 1 = Contact (spoke to them)  2 = No Contact Next #  3 = No Contact Next Record
-// 4 = Bad Number  5 = Voicemail  R = Redial/mute  H = Hang up  P = Pause
-document.addEventListener('keydown', function(e) {
-  // Only fire when a call is live (activeCallCard visible) and focus is NOT in a text input
-  const card = document.getElementById('activeCallCard');
-  if (!card || card.style.display === 'none') return;
-  const tag = (document.activeElement || {}).tagName || '';
-  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-
-  switch (e.key) {
-    case '1':
-      e.preventDefault();
-      hangupActive();
-      break;
-    case '2':
-      e.preventDefault();
-      hangupNextNumber();
-      break;
-    case '3':
-      e.preventDefault();
-      hangupNoContact();
-      break;
-    case '4':
-      e.preventDefault();
-      hangupThenBadNumber();
-      break;
-    case '5':
-      e.preventDefault();
-      dropVoicemailById(0);
-      break;
-    case 'r': case 'R':
-      e.preventDefault();
-      (function() {
-        const l = state.activeLineId != null && state.lines?.[state.activeLineId];
-        if (l) muteLine(l);
-      })();
-      break;
-    case 'h': case 'H':
-      e.preventDefault();
-      hangupActive();
-      break;
-    case 'p': case 'P':
-      e.preventDefault();
-      togglePause();
-      break;
-  }
-});
-
 document.addEventListener('DOMContentLoaded', init);
 
-// ═══════════════════════════════════════════════════════
-// CLAUDE SUMMARY — mirrors Mojo Dialer MCP data format
-// ═══════════════════════════════════════════════════════
+// ============================================================
+//  EXPIREDS TAB
+// ============================================================
+let expiredsContacts = [];
 
-let _claudeRange = 'today';
+async function loadExpiredsTab() {
+  document.querySelectorAll('.mojo-all-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('expiredsBtn');
+  if (btn) btn.classList.add('active');
+  state.activeListId = null;
+  state.activeGroup = null;
+  state.showingExpireds = true;
 
-function openClaudeSummary() {
-  document.getElementById('claudeModal').classList.remove('hidden');
-  setClaudeRange('today');
-}
+  const backendUrl = (state.settings?.backendUrl || '').replace(/\/$/, '');
+  if (!backendUrl) { toast('\u26a0\ufe0f Set backend URL in Settings first', 'red'); return; }
 
-function closeClaudeModal() {
-  document.getElementById('claudeModal').classList.add('hidden');
-}
-
-function setClaudeRange(range) {
-  _claudeRange = range;
-  ['today','week','all'].forEach(r => {
-    const el = document.getElementById('cr' + r.charAt(0).toUpperCase() + r.slice(1));
-    if (el) el.style.background = r === range ? 'var(--accent)' : '';
-    if (el) el.style.color = r === range ? '#fff' : '';
-  });
-  document.getElementById('claudeSummaryText').value = generateClaudeSummary(range);
-}
-
-function copyClaudeSummary() {
-  const el = document.getElementById('claudeSummaryText');
-  el.select();
-  navigator.clipboard.writeText(el.value).catch(() => document.execCommand('copy'));
-  const fb = document.getElementById('claudeCopyFeedback');
-  fb.style.display = 'inline';
-  setTimeout(() => fb.style.display = 'none', 2000);
-}
-
-function generateClaudeSummary(range) {
   try {
-    const records  = JSON.parse(localStorage.getItem('powerdial_call_records') || '[]');
-    const sessions = JSON.parse(localStorage.getItem('powerdial_session_reports') || '[]');
-    const now      = new Date();
+    // Use cached contacts if already loaded today — avoid consuming queue twice
+    const today = new Date().toDateString();
+    const cached = (() => { try { const d = JSON.parse(localStorage.getItem('expiredsCache') || '{}'); return d.date === today ? d.contacts : null; } catch(_) { return null; } })();
 
-    // Date filter
-    function inRange(dateStr) {
-      const d = new Date(dateStr);
-      if (range === 'today') {
-        return d.toDateString() === now.toDateString();
-      } else if (range === 'week') {
-        const weekAgo = new Date(now); weekAgo.setDate(weekAgo.getDate() - 7);
-        return d >= weekAgo;
+    let rawContacts;
+    let sourceLabel = 'server';
+    // Fetch from server — /api/expireds/today is non-destructive (never clears queue)
+    try {
+      const r = await fetch(backendUrl + '/api/expireds/today');
+      const data = await r.json();
+      rawContacts = data.contacts || [];
+      // Save to localStorage as backup whenever server has data
+      if (rawContacts.length > 0) {
+        try { localStorage.setItem('expiredsCache', JSON.stringify({ date: today, contacts: rawContacts })); } catch(_) {}
       }
-      return true; // all
+    } catch(fetchErr) {
+      rawContacts = [];
+    }
+    // If server returned nothing, fall back to localStorage backup
+    if (rawContacts.length === 0 && cached && cached.length > 0) {
+      rawContacts = cached;
+      sourceLabel = 'local backup';
     }
 
-    const filtered  = records.filter(r => inRange(r.date));
-    const filtSess  = sessions.filter(s => inRange(s.date));
+    expiredsContacts = rawContacts.map(c => ({
+      id: 'exp_' + Math.random().toString(36).slice(2),
+      name: c.name || 'Property Owner',
+      phones: c.phones || [],
+      address: [c.address, c.city, c.state].filter(Boolean).join(', '),
+      listPrice: c.listPrice ? '$' + Number(c.listPrice).toLocaleString() : '',
+      beds: c.beds || '', baths: c.baths || '', county: c.county || '',
+      status: 'pending', tag: 'expired'
+    }));
 
-    // ── Stats ──
-    const totalCalls     = filtered.length;
-    const connected      = filtered.filter(r => !['No Contact','No Answer','noanswer','Left VM','voicemail','Voicemail','Bad Number','DNC'].includes(r.outcome)).length;
-    const leftVM         = filtered.filter(r => ['Left VM','voicemail','Voicemail'].includes(r.outcome)).length;
-    const appts          = filtered.filter(r => ['Appointment','Hot Lead','Interested'].includes(r.outcome)).length;
-    const contactRate    = totalCalls ? Math.round(connected / totalCalls * 100) : 0;
-    const totalSecs      = filtSess.reduce((s, r) => s + (r.durationSecs || 0), 0);
-    const hrs            = totalSecs / 3600;
-    const cph            = hrs > 0 ? Math.round(totalCalls / hrs) : 0;
+    const el = document.getElementById('expiredsCount');
+    if (el) el.textContent = expiredsContacts.length;
 
-    const rangeLabel = range === 'today' ? 'Today (' + now.toLocaleDateString() + ')'
-                     : range === 'week'  ? 'Last 7 Days'
-                     : 'All Time';
-
-    // ── Format output (mirrors Mojo MCP structure) ──
-    let out = '';
-
-    out += '=== POWERDIAL ACCOUNT ===\n';
-    out += 'Agent: ' + (state.settings?.agentName || 'PowerDial User') + '\n';
-    out += 'Generated: ' + now.toLocaleString() + '\n';
-    out += 'Range: ' + rangeLabel + '\n\n';
-
-    out += '=== DIALING STATISTICS ===\n';
-    out += 'Total Calls:    ' + totalCalls + '\n';
-    out += 'Contacts:       ' + connected + '\n';
-    out += 'Left VM:        ' + leftVM + '\n';
-    out += 'Appointments:   ' + appts + '\n';
-    out += 'Contact Rate:   ' + contactRate + '%\n';
-    out += 'Sessions:       ' + filtSess.length + '\n';
-    out += 'Dial Time:      ' + formatDurSecs(totalSecs) + '\n';
-    out += 'Calls/Hour:     ' + (cph || '—') + '\n\n';
-
-    // ── Session reports ──
-    out += '=== DIAL SESSIONS ===\n';
-    if (filtSess.length === 0) {
-      out += 'No sessions in this range.\n';
-    } else {
-      filtSess.slice(0, 20).forEach((s, i) => {
-        const d = new Date(s.date);
-        out += (i + 1) + '. ' + d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-        out += ' — ' + s.calls + ' calls, ' + s.connected + ' contacts, ' + s.appts + ' appts';
-        out += ', ' + formatDurSecs(s.durationSecs) + '\n';
-      });
+    const queueList = document.getElementById('queueList');
+    if (!expiredsContacts.length) {
+      queueList.innerHTML = '<div class="empty-state"><div class="empty-icon">\ud83d\udcad</div><div class="empty-title">No expireds yet</div><div class="empty-sub">Run the daily pipeline or check back after 6 AM.</div></div>';
+      return;
     }
-    out += '\n';
+    queueList.innerHTML = expiredsContacts.map((c, i) => `
+      <div class="contact-card" style="padding:10px 12px;border-bottom:1px solid var(--border)">
+        <div style="font-weight:600;font-size:13px">${c.name}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${c.address}</div>
+        <div style="font-size:11px;color:var(--accent);margin-top:2px">${c.listPrice}${c.beds ? ' \u00b7 ' + c.beds + 'bd' : ''}${c.baths ? '/' + c.baths + 'ba' : ''} \u00b7 ${c.county}</div>
+        <div style="font-size:11px;color:var(--text-secondary);margin-top:3px">${c.phones.map(p=>p.phone+' ('+p.label+')').join(', ')}</div>
+        <button class="btn btn-ghost" style="margin-top:6px;font-size:11px;padding:3px 10px" onclick="loadExpiredToQueue(${i})">\u2b06 Load to Queue</button>
+      </div>
+    `).join('') + '<div style="padding:10px;text-align:center"><button class="btn btn-primary" style="font-size:12px" onclick="loadAllExpiredsToQueue()">\ud83d\udce5 Load All to Queue</button></div>';
 
-    // ── Call details ──
-    out += '=== CALL DETAILS (' + filtered.length + ' calls) ===\n';
-    if (filtered.length === 0) {
-      out += 'No calls in this range.\n';
-    } else {
-      filtered.slice(0, 100).forEach((r, i) => {
-        const d = new Date(r.date);
-        const time = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-        const dur  = r.duration ? formatDurSecs(r.duration) : '—';
-        out += (i + 1) + '. ' + d.toLocaleDateString() + ' ' + time;
-        out += ' | ' + (r.contactName || '—');
-        out += ' | ' + (r.phone || '—');
-        out += ' | ' + (r.outcome || '—');
-        out += ' | ' + dur;
-        if (r.notes) out += ' | Notes: ' + r.notes.replace(/\n/g, ' ');
-        out += '\n';
-      });
-      if (filtered.length > 100) out += '... and ' + (filtered.length - 100) + ' more\n';
-    }
-    out += '\n';
-
-    // ── Queue snapshot ──
-    const pending = (state.contacts || []).filter(c => c.status === 'pending').length;
-    const called  = (state.contacts || []).filter(c => c.status !== 'pending').length;
-    const total   = (state.contacts || []).length;
-    out += '=== QUEUE SNAPSHOT ===\n';
-    out += 'Total contacts: ' + total + '\n';
-    out += 'Pending:        ' + pending + '\n';
-    out += 'Called:         ' + called + '\n';
-    (state.lists || []).forEach(l => {
-      const lc = (state.contacts || []).filter(c => c.listId === l.id);
-      const lp = lc.filter(c => c.status === 'pending').length;
-      out += '  List "' + l.name + '": ' + lc.length + ' total, ' + lp + ' pending\n';
-    });
-
-    return out;
+    toast('\u2705 ' + expiredsContacts.length + ' expired contacts loaded (' + sourceLabel + ')', 'green');
   } catch(e) {
-    return 'Error generating summary: ' + e.message;
+    toast('\u274c Failed to fetch expireds: ' + e.message, 'red');
   }
 }
 
-function formatDurSecs(secs) {
-  if (!secs) return '0:00';
-  const m = Math.floor(secs / 60);
-  const s = Math.floor(secs % 60);
-  return m + ':' + String(s).padStart(2, '0');
+function getOrCreateExpiredsList() {
+  const name = "Today's Expireds";
+  let list = state.lists.find(l => l.name === name);
+  if (!list) list = createList(name);
+  return list;
 }
 
+function loadExpiredToQueue(i) {
+  const c = expiredsContacts[i];
+  if (!c) return;
+  const list = getOrCreateExpiredsList();
+  state.contacts.push({ ...c, listId: list.id });
+  saveContacts();
+  renderSidebar();
+  toast('\u2705 ' + c.name + " added to Today's Expireds folder", 'green');
+}
+
+function loadAllExpiredsToQueue() {
+  const list = getOrCreateExpiredsList();
+  const tagged = expiredsContacts.map(c => ({ ...c, listId: list.id }));
+  state.contacts.push(...tagged);
+  saveContacts();
+  state.showingExpireds = false;
+  setActiveList(list.id);
+  toast('\u2705 ' + expiredsContacts.length + " expireds loaded into Today's Expireds folder", 'green');
+}
+
+async function refreshExpiredsCount() {
+  const backendUrl = (state.settings?.backendUrl || '').replace(/\/$/, '');
+  if (!backendUrl) return;
+  try {
+    const r = await fetch(backendUrl + '/api/expireds/status');
+    const data = await r.json();
+    const el = document.getElementById('expiredsCount');
+    if (el) el.textContent = data.pending || 0;
+  } catch(e) {}
+}
+setTimeout(refreshExpiredsCount, 2000);
+
 </script>
-
-<!-- ===== CLAUDE SUMMARY MODAL ===== -->
-<div id="claudeModal" class="modal-overlay hidden" onclick="if(event.target===this)closeClaudeModal()">
-  <div class="modal-box" style="max-width:640px;width:95%">
-    <div class="modal-header">
-      <span style="font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px">
-        🤖 PowerDial → Claude
-      </span>
-      <button class="modal-close" onclick="closeClaudeModal()">✕</button>
-    </div>
-    <div style="padding:0 20px 8px;font-size:12px;color:var(--text-muted)">
-      Copy this and paste it into Claude to ask questions about your dialing activity — stats, calls, sessions, anything.
-    </div>
-    <div style="padding:0 20px 16px">
-      <div style="display:flex;gap:8px;margin-bottom:10px">
-        <button class="btn btn-ghost" style="font-size:12px;padding:4px 10px" onclick="setClaudeRange('today')" id="crToday">Today</button>
-        <button class="btn btn-ghost" style="font-size:12px;padding:4px 10px" onclick="setClaudeRange('week')" id="crWeek">This Week</button>
-        <button class="btn btn-ghost" style="font-size:12px;padding:4px 10px" onclick="setClaudeRange('all')" id="crAll">All Time</button>
-      </div>
-      <textarea id="claudeSummaryText" readonly
-        style="width:100%;height:340px;resize:vertical;font-family:monospace;font-size:11px;
-               background:var(--surface);border:1px solid var(--border);border-radius:8px;
-               padding:12px;color:var(--text-main);box-sizing:border-box;line-height:1.5"></textarea>
-      <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
-        <button class="btn btn-primary" style="flex:1" onclick="copyClaudeSummary()">📋 Copy to Clipboard</button>
-        <span id="claudeCopyFeedback" style="font-size:12px;color:var(--green);display:none">✅ Copied!</span>
-      </div>
-    </div>
-  </div>
-</div>
-
 </body>
 </html>
