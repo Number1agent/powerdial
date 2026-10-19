@@ -1762,6 +1762,7 @@
     <button id="btnPause" class="btn btn-pause hidden" onclick="togglePause()">⏸ Pause</button>
     <button id="btnStop" class="btn btn-danger hidden" onclick="stopSession()">⏹ End Session</button>
     <button id="btnResume" class="btn btn-accent hidden" onclick="resumeSession()" title="Continue from where you left off">↩ Resume</button>
+    <span id="headsetStatus" style="font-size:0.82rem;font-weight:600;padding:4px 12px;color:#f59e0b;align-self:center;white-space:nowrap;cursor:pointer;" title="Click to call your phone before starting session">🎧 Connecting…</span>
     <button id="btnStart" class="btn btn-primary" onclick="startSession()">▶ Start Session</button>
   </div>
 </div>
@@ -2765,7 +2766,7 @@ function saveSettings() {
   // Save action plans and list rules from rendered inputs
   saveActionPlansFromUI();
   saveListRulesFromUI();
-  state.demoMode = !state.settings.backendUrl;
+  state.demoMode = false; // Railway co-hosted: relative URLs work, always real mode
   localStorage.setItem('powerdial_settings', JSON.stringify(state.settings));
   localStorage.setItem('powerdial_actionPlans', JSON.stringify(state.actionPlans));
   localStorage.setItem('powerdial_listRules', JSON.stringify(state.listRules));
@@ -6737,9 +6738,102 @@ async function init() {
   const banner = document.getElementById('demoBanner');
   if (banner) banner.style.display = state.demoMode ? '' : 'none';
 
+  // Wire up "Call Me" button if myPhone is configured
+  startAgentConnection();
+
   setTimeout(() => {
     toast(state.demoMode ? '🎬 Demo Mode — Set backend URL in ⚙️ Settings for live calls' : '✅ Backend configured — ready for live calls', state.demoMode ? 'accent' : 'green');
   }, 500);
+}
+
+
+// ─── "Call Me First" — call agent phone before leads dial ────────────────────
+let _dialInPollInterval = null;
+
+function startAgentConnection() {
+  const myPhone = state.settings.myPhone;
+  if (myPhone) {
+    showCallMeButton(myPhone);
+  } else {
+    initTwilioDevice();
+  }
+}
+
+function showCallMeButton(phone) {
+  const el = document.getElementById('headsetStatus');
+  if (!el) return;
+  el.textContent = '📞 Call Me';
+  el.style.color = '#3b82f6';
+  el.style.cursor = 'pointer';
+  el.title = 'Click — Twilio will call ' + phone + ', answer and wait, then press ▶ Start Session';
+  el.onclick = () => triggerCallMe(phone);
+}
+
+async function triggerCallMe(phone) {
+  const el = document.getElementById('headsetStatus');
+  const base = state.settings.backendUrl || '';
+  el.textContent = '📞 Calling…';
+  el.style.color = '#f59e0b';
+  el.onclick = null;
+  try {
+    const r = await fetch(base + '/api/call-agent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agentPhone: phone })
+    });
+    const d = await r.json();
+    if (!d.success) throw new Error(d.error || 'Failed');
+    el.textContent = '📞 Ringing…';
+    toast('📞 Calling ' + phone + ' — answer and wait, then press ▶ Start Session', 'accent', 8000);
+    pollForAgentReady();
+  } catch(e) {
+    el.textContent = '📞 Call Me';
+    el.style.color = '#ef4444';
+    toast('Call Me failed: ' + e.message, 'red');
+    setTimeout(() => showCallMeButton(phone), 3000);
+  }
+}
+
+function pollForAgentReady() {
+  const el = document.getElementById('headsetStatus');
+  if (_dialInPollInterval) clearInterval(_dialInPollInterval);
+  _dialInPollInterval = setInterval(async () => {
+    try {
+      const base = state.settings.backendUrl || '';
+      const r = await fetch(base + '/api/agent-ready');
+      if (!r.ok) return;
+      const d = await r.json();
+      if (d.agentReady && d.conferenceSid) {
+        clearInterval(_dialInPollInterval);
+        _dialInPollInterval = null;
+        el.textContent = '✅ Connected — Start Session';
+        el.style.color = '#22c55e';
+        el.style.cursor = 'default';
+        el.onclick = null;
+      } else if (d.agentReady && !d.conferenceSid) {
+        el.textContent = '⏳ Connecting to conference…';
+      }
+    } catch(e) {}
+  }, 2000);
+}
+
+function updateHeadsetUI(st) {
+  const el = document.getElementById('headsetStatus');
+  if (!el) return;
+  const map = {
+    connecting: { text: '🎧 Connecting…', color: '#f59e0b' },
+    ready:      { text: '🎧 Ready',            color: '#22c55e' },
+    active:     { text: '🎧 On Call',          color: '#3b82f6' },
+    error:      { text: '🎧 Error',            color: '#ef4444' },
+    off:        { text: '🎧 Off',              color: '#6b7280' }
+  };
+  const s = map[st] || map.off;
+  el.textContent = s.text;
+  el.style.color = s.color;
+}
+
+async function initTwilioDevice() {
+  updateHeadsetUI('off');
 }
 
 document.addEventListener('DOMContentLoaded', init);
