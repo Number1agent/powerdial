@@ -6258,7 +6258,7 @@ function lineConnected(line) {
   line.status = 'connected';
   if (line.phoneEntry) line.phoneEntry.status = 'connected';
   state.activeLineId = line.id;
-  state.stats.connected++;
+  // stats.connected is incremented only on actual Contact dispositions (dispose/disposeContinue)
   if (state.goal.type === 'contacts') { state.goal.current++; updateGoalUI(); }
   updateStatsUI();
 
@@ -6483,6 +6483,7 @@ async function dispose(result) {
     const tempMap = { 'Hot Lead': 'hot', 'Appointment': 'hot', 'Interested': 'warm', 'Callback': 'warm', 'Left VM': 'cold', 'No Answer': 'cold', 'Not Interested': 'cold' };
     contact.temperature = tempMap[result] || contact.temperature || 'cold';
 
+    if (result === 'Contact') state.stats.connected++;
     if (result === 'Hot Lead' || result === 'Interested' || result === 'Appointment') state.stats.appts++;
     if (result === 'Callback') state.stats.callbacks++;
     addToLog(contact, newStatus, 0);
