@@ -2109,6 +2109,57 @@
           </div>
         </div>
       </div>
+
+      <div id="line4" class="line-card idle" style="display:none">
+        <div class="line-top">
+          <span class="line-label">Line 4</span>
+          <span id="l4badge" class="line-status-badge status-idle">Idle</span>
+        </div>
+        <div id="l4name" class="line-name" style="color:var(--text-muted)">—</div>
+        <div id="l4num" class="line-number">—</div>
+        <div id="l4meta" class="line-meta"></div>
+        <div class="line-footer">
+          <span id="l4timer" class="line-timer">—</span>
+          <div style="display:flex;gap:6px">
+            <button id="l4mute" class="line-btn line-btn-mute hidden" onclick="toggleMute(4)">🎤 Mute</button>
+            <button id="l4drop" class="line-btn line-btn-drop hidden" onclick="dropLine(4)">✕ Drop</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="line5" class="line-card idle" style="display:none">
+        <div class="line-top">
+          <span class="line-label">Line 5</span>
+          <span id="l5badge" class="line-status-badge status-idle">Idle</span>
+        </div>
+        <div id="l5name" class="line-name" style="color:var(--text-muted)">—</div>
+        <div id="l5num" class="line-number">—</div>
+        <div id="l5meta" class="line-meta"></div>
+        <div class="line-footer">
+          <span id="l5timer" class="line-timer">—</span>
+          <div style="display:flex;gap:6px">
+            <button id="l5mute" class="line-btn line-btn-mute hidden" onclick="toggleMute(5)">🎤 Mute</button>
+            <button id="l5drop" class="line-btn line-btn-drop hidden" onclick="dropLine(5)">✕ Drop</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="line6" class="line-card idle" style="display:none">
+        <div class="line-top">
+          <span class="line-label">Line 6</span>
+          <span id="l6badge" class="line-status-badge status-idle">Idle</span>
+        </div>
+        <div id="l6name" class="line-name" style="color:var(--text-muted)">—</div>
+        <div id="l6num" class="line-number">—</div>
+        <div id="l6meta" class="line-meta"></div>
+        <div class="line-footer">
+          <span id="l6timer" class="line-timer">—</span>
+          <div style="display:flex;gap:6px">
+            <button id="l6mute" class="line-btn line-btn-mute hidden" onclick="toggleMute(6)">🎤 Mute</button>
+            <button id="l6drop" class="line-btn line-btn-drop hidden" onclick="dropLine(6)">✕ Drop</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Progress -->
@@ -2577,6 +2628,19 @@
         <div class="input-group"><div class="input-label">Delay between call sets (seconds)</div>
           <input class="input-field" id="settingDelay" value="3" type="number" min="1" max="30"></div>
         <div style="height:1px;background:var(--border);margin:14px 0"></div>
+        <div class="stab-section-title">Lines per Set</div>
+        <div style="display:flex;gap:10px;margin-bottom:4px">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;background:var(--bg-3);border:1px solid var(--border);border-radius:8px;padding:10px 14px">
+            <input type="radio" name="settingLineCount" id="settingLineCount3" value="3" style="accent-color:var(--accent)">
+            <span><strong>3 Lines</strong><br><span style="font-size:11px;color:var(--text-muted)">Standard triple-dial</span></span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;background:var(--bg-3);border:1px solid var(--border);border-radius:8px;padding:10px 14px">
+            <input type="radio" name="settingLineCount" id="settingLineCount6" value="6" style="accent-color:var(--accent)">
+            <span><strong>6 Lines</strong><br><span style="font-size:11px;color:var(--text-muted)">High-volume power dial</span></span>
+          </label>
+        </div>
+        <p style="font-size:11px;color:var(--text-muted);margin-top:4px">⚠️ 6-line mode requires your backend to support 6 simultaneous Twilio calls. Changes take effect on next session start.</p>
+        <div style="height:1px;background:var(--border);margin:14px 0"></div>
         <div class="stab-section-title">Compliance</div>
         <label class="toggle-row">
           <span class="toggle-label"><strong>⏰ Time Zone Protection</strong><span class="toggle-sub">Skip contacts outside 8am–9pm local time based on area code</span></span>
@@ -2814,6 +2878,9 @@ const state = {
     { id: 1, status: 'idle', contact: null, callSid: null, muted: false, timerStart: null, timerVal: 0, timerInt: null },
     { id: 2, status: 'idle', contact: null, callSid: null, muted: false, timerStart: null, timerVal: 0, timerInt: null },
     { id: 3, status: 'idle', contact: null, callSid: null, muted: false, timerStart: null, timerVal: 0, timerInt: null },
+    { id: 4, status: 'idle', contact: null, callSid: null, muted: false, timerStart: null, timerVal: 0, timerInt: null },
+    { id: 5, status: 'idle', contact: null, callSid: null, muted: false, timerStart: null, timerVal: 0, timerInt: null },
+    { id: 6, status: 'idle', contact: null, callSid: null, muted: false, timerStart: null, timerVal: 0, timerInt: null },
   ],
   activeLineId: null,
   activeTimerInt: null,
@@ -2829,6 +2896,7 @@ const state = {
     vmUrl: '',
     vmLibrary: [],
     delay: 3,
+    lineCount: 3,
     tzProtect: false,
     recordCalls: false,
     amdEnabled: true,
@@ -3024,6 +3092,9 @@ function showSettingsModal() {
   document.getElementById('settingVMUrl').value = state.settings.vmUrl;
   document.getElementById('settingDelay').value = state.settings.delay;
   document.getElementById('settingTzProtect').checked = !!state.settings.tzProtect;
+  const lc = state.settings.lineCount || 3;
+  document.getElementById('settingLineCount3').checked = (lc === 3);
+  document.getElementById('settingLineCount6').checked = (lc === 6);
   document.getElementById('settingRecordCalls').checked = !!state.settings.recordCalls;
   document.getElementById('settingAmd').checked = state.settings.amdEnabled !== false;
   renderVmLibraryList();
@@ -3042,6 +3113,7 @@ function saveSettings() {
   state.settings.callerId = document.getElementById('settingCallerId').value.trim();
   state.settings.vmUrl = document.getElementById('settingVMUrl').value.trim();
   state.settings.delay = parseInt(document.getElementById('settingDelay').value) || 3;
+  state.settings.lineCount = document.getElementById('settingLineCount6').checked ? 6 : 3;
   state.settings.tzProtect = document.getElementById('settingTzProtect').checked;
   state.settings.recordCalls = document.getElementById('settingRecordCalls').checked;
   state.settings.amdEnabled  = document.getElementById('settingAmd').checked;
@@ -3064,6 +3136,7 @@ function saveSettings() {
   localStorage.setItem('powerdial_listRules', JSON.stringify(state.listRules));
   const banner = document.getElementById('demoBanner');
   if (banner) banner.style.display = state.demoMode ? '' : 'none';
+  applyLineCount();
   closeModal('settingsModal');
   toast(state.demoMode ? '⚠️ No backend URL — running in Demo Mode' : '✅ Settings saved', state.demoMode ? 'yellow' : 'green');
 }
@@ -5560,7 +5633,8 @@ function callNowFromDrawer() {
   renderQueue();
 
   if (state.session && !state.paused) {
-    const idleLine = state.lines.find(l => l.status === 'idle');
+    const lc = state.settings.lineCount || 3;
+    const idleLine = state.lines.slice(0, lc).find(l => l.status === 'idle');
     if (idleLine) {
       dialContact(idleLine, c, phoneEntry);
       if (state.demoMode) simulateDemoCall(idleLine, c, phoneEntry);
@@ -6116,10 +6190,11 @@ async function dialNextSet() {
     return;
   }
 
-  // Pick up to 3, pairing each with its next pending phone
+  // Pick up to lineCount, pairing each with its next pending phone
+  const lineCount = state.settings.lineCount || 3;
   const toCall = [];
   for (const contact of pending) {
-    if (toCall.length >= 3) break;
+    if (toCall.length >= lineCount) break;
     const phoneEntry = (contact.phones || []).find(p => p.status === 'pending');
     if (phoneEntry) toCall.push({ contact, phoneEntry });
   }
@@ -6696,6 +6771,26 @@ function processBackendEvents(data) {
 // ============================================================
 //  UI UPDATES
 // ============================================================
+function applyLineCount() {
+  const count = state.settings.lineCount || 3;
+  // Show/hide line cards 4-6
+  for (let i = 4; i <= 6; i++) {
+    const card = document.getElementById(`line${i}`);
+    if (card) card.style.display = (count >= i) ? '' : 'none';
+  }
+  // Reset lines 4-6 to idle when switching to 3-line mode
+  if (count === 3) {
+    for (let i = 3; i < 6; i++) {
+      const l = state.lines[i];
+      if (l && l.status !== 'idle') {
+        if (l.timerInt) clearInterval(l.timerInt);
+        l.status = 'idle'; l.contact = null; l.phoneEntry = null; l.callSid = null; l.muted = false;
+        updateLineUI(l);
+      }
+    }
+  }
+}
+
 function updateLineUI(line) {
   const card = document.getElementById(`line${line.id}`);
   const badge = document.getElementById(`l${line.id}badge`);
@@ -7727,6 +7822,7 @@ async function init() {
   renderCallbacks();
 
   // Initialize line UIs
+  applyLineCount();
   state.lines.forEach(l => updateLineUI(l));
 
   // Show/hide demo banner
