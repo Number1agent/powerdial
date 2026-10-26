@@ -2631,6 +2631,10 @@
         <div class="stab-section-title">Lines per Set</div>
         <div style="display:flex;gap:10px;margin-bottom:4px">
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;background:var(--bg-3);border:1px solid var(--border);border-radius:8px;padding:10px 14px">
+            <input type="radio" name="settingLineCount" id="settingLineCount1" value="1" style="accent-color:var(--accent)">
+            <span><strong>1 Line</strong><br><span style="font-size:11px;color:var(--text-muted)">Follow-up / warm leads</span></span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;background:var(--bg-3);border:1px solid var(--border);border-radius:8px;padding:10px 14px">
             <input type="radio" name="settingLineCount" id="settingLineCount3" value="3" style="accent-color:var(--accent)">
             <span><strong>3 Lines</strong><br><span style="font-size:11px;color:var(--text-muted)">Standard triple-dial</span></span>
           </label>
@@ -2639,7 +2643,7 @@
             <span><strong>6 Lines</strong><br><span style="font-size:11px;color:var(--text-muted)">High-volume power dial</span></span>
           </label>
         </div>
-        <p style="font-size:11px;color:var(--text-muted);margin-top:4px">⚠️ 6-line mode requires your backend to support 6 simultaneous Twilio calls. Changes take effect on next session start.</p>
+        <p style="font-size:11px;color:var(--text-muted);margin-top:4px">1-line mode dials contacts one at a time — ideal for follow-ups and warm leads. ⚠️ 6-line mode requires backend support for 6 simultaneous Twilio calls. Changes take effect on next session start.</p>
         <div style="height:1px;background:var(--border);margin:14px 0"></div>
         <div class="stab-section-title">Compliance</div>
         <label class="toggle-row">
@@ -3093,6 +3097,7 @@ function showSettingsModal() {
   document.getElementById('settingDelay').value = state.settings.delay;
   document.getElementById('settingTzProtect').checked = !!state.settings.tzProtect;
   const lc = state.settings.lineCount || 3;
+  document.getElementById('settingLineCount1').checked = (lc === 1);
   document.getElementById('settingLineCount3').checked = (lc === 3);
   document.getElementById('settingLineCount6').checked = (lc === 6);
   document.getElementById('settingRecordCalls').checked = !!state.settings.recordCalls;
@@ -3113,7 +3118,7 @@ function saveSettings() {
   state.settings.callerId = document.getElementById('settingCallerId').value.trim();
   state.settings.vmUrl = document.getElementById('settingVMUrl').value.trim();
   state.settings.delay = parseInt(document.getElementById('settingDelay').value) || 3;
-  state.settings.lineCount = document.getElementById('settingLineCount6').checked ? 6 : 3;
+  state.settings.lineCount = document.getElementById('settingLineCount6').checked ? 6 : document.getElementById('settingLineCount1').checked ? 1 : 3;
   state.settings.tzProtect = document.getElementById('settingTzProtect').checked;
   state.settings.recordCalls = document.getElementById('settingRecordCalls').checked;
   state.settings.amdEnabled  = document.getElementById('settingAmd').checked;
