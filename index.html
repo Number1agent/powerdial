@@ -5864,6 +5864,7 @@ async function callMeFirst() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ agentPhone: state.settings.myPhone })
     });
+    clearTimeout(_dialTimer);
     const data = await resp.json();
     if (!data.success) throw new Error(data.error || 'Failed');
 
@@ -6208,12 +6209,8 @@ async function dialNextSet() {
     dialContact(state.lines[i], contact, phoneEntry);
   });
 
-  if (state.demoMode) simulateDemoSession(toCall);
-  else await dialReal(toCall);
-
-  // Safety net: force-close any lines still ringing after 90s (Twilio webhook failure / network lag)
-  // This runs in both demo and real mode so a stuck set always eventually clears.
-  const _safetyLines = toCall.map(p => p.contact); // snapshot contacts we just dialed
+  // Safety net set BEFORE await so it fires even if dialReal() hangs on a slow Railway response
+  const _safetyLines = toCall.map(p => p.contact);
   setTimeout(() => {
     if (!state.session) return;
     state.lines.forEach(l => {
@@ -6223,6 +6220,9 @@ async function dialNextSet() {
       }
     });
   }, 90000);
+
+  if (state.demoMode) simulateDemoSession(toCall);
+  else await dialReal(toCall);
 }
 
 function dialContact(line, contact, phoneEntry) {
@@ -6321,8 +6321,11 @@ async function dialRealSingle(line, contact, phoneEntry) {
   const base = state.settings.backendUrl;
   if (!base) return;
   try {
+    const _dialAbort = new AbortController();
+    const _dialTimer = setTimeout(() => _dialAbort.abort(), 15000); // 15s fetch timeout
     const resp = await fetch(`${base}/api/session/start`, {
       method: 'POST',
+      signal: _dialAbort.signal,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contacts: [{ name: contact.name, phone: phoneEntry.phone, callerId: getOutboundCallerId(phoneEntry.phone) }],
