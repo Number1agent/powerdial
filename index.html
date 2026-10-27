@@ -6210,6 +6210,19 @@ async function dialNextSet() {
 
   if (state.demoMode) simulateDemoSession(toCall);
   else await dialReal(toCall);
+
+  // Safety net: force-close any lines still ringing after 90s (Twilio webhook failure / network lag)
+  // This runs in both demo and real mode so a stuck set always eventually clears.
+  const _safetyLines = toCall.map(p => p.contact); // snapshot contacts we just dialed
+  setTimeout(() => {
+    if (!state.session) return;
+    state.lines.forEach(l => {
+      if (l.status === 'ringing' && _safetyLines.includes(l.contact)) {
+        console.warn(`Safety timeout: force-closing line ${l.id} stuck ringing`);
+        lineDone(l, 'noanswer', true);
+      }
+    });
+  }, 90000);
 }
 
 function dialContact(line, contact, phoneEntry) {
@@ -6381,6 +6394,19 @@ function lineVoicemail(line) {
   // Auto-drop voicemail line after 2s
   setTimeout(() => { if (line.status === 'voicemail') lineDone(line, 'vm_dropped'); }, 2000);
   toast(`📬 VM dropped: ${line.contact.name}`, 'orange');
+
+  // If other lines are still ringing (multi-line mode), start a 45s watchdog for them
+  // so a Twilio webhook delay doesn't leave the dialer frozen
+  const ringing = state.lines.filter(l => l.id !== line.id && l.status === 'ringing');
+  if (ringing.length) {
+    setTimeout(() => {
+      if (!state.session) return;
+      state.lines.forEach(l => {
+        if (l.status === 'ringing') { console.warn(`VM watchdog: force-closing line ${l.id}`); lineDone(l, 'noanswer', true); }
+      });
+    }, 45000);
+  }
+
   checkAllDone();
 }
 
