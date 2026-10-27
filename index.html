@@ -7310,7 +7310,7 @@ function renderReportToday() {
 
   // Also include current live session stats
   const calls   = today.length || state.stats.calls;
-  const contacts = today.filter(r => !['No Contact','No Answer','noanswer','Left VM','voicemail'].includes(r.outcome)).length || state.stats.connected;
+  const contacts = today.filter(r => !['No Contact','No Contact (Next Number)','No Answer','noanswer','Left VM','voicemail','Voicemail'].includes(r.outcome)).length || state.stats.connected;
   const vm      = today.filter(r => ['Left VM','voicemail','Voicemail'].includes(r.outcome)).length || state.stats.vm;
   const appts   = today.filter(r => ['Appointment','Hot Lead','Interested'].includes(r.outcome)).length || state.stats.appts;
   const noContact = today.filter(r => ['No Contact','No Answer','noanswer'].includes(r.outcome)).length;
@@ -7357,6 +7357,63 @@ function renderReportHistory() {
     return `${m}m ${s}s`;
   };
 
+  // Group sessions by calendar day
+  const dayMap = {};
+  sessions.forEach(s => {
+    const dayKey = new Date(s.date).toISOString().slice(0,10);
+    if (!dayMap[dayKey]) dayMap[dayKey] = [];
+    dayMap[dayKey].push(s);
+  });
+  const days = Object.keys(dayMap).sort().reverse(); // newest first
+
+  const dayCards = days.map(dayKey => {
+    const daySessions = dayMap[dayKey];
+    const dCalls     = daySessions.reduce((a,s) => a + (s.calls||0), 0);
+    const dContacts  = daySessions.reduce((a,s) => a + (s.connected||0), 0);
+    const dVm        = daySessions.reduce((a,s) => a + (s.vm||0), 0);
+    const dAppts     = daySessions.reduce((a,s) => a + (s.appts||0), 0);
+    const dCallbacks = daySessions.reduce((a,s) => a + (s.callbacks||0), 0);
+    const dRate      = dCalls ? Math.round(dContacts/dCalls*100) : 0;
+    const d          = new Date(dayKey + 'T12:00:00');
+    const dateStr    = d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+    const sessionWord = daySessions.length === 1 ? '1 session' : `${daySessions.length} sessions`;
+
+    const innerRows = daySessions.length > 1 ? daySessions.map(s => {
+      const t = new Date(s.date).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+      const r = s.calls ? Math.round((s.connected||0)/s.calls*100) : 0;
+      return `<div onclick="event.stopPropagation();showSessionDetail('${s.id}')" style="display:flex;justify-content:space-between;align-items:center;padding:6px 12px;border-top:1px solid var(--border);font-size:11px;cursor:pointer;color:var(--text-secondary)">
+        <span>${t} · ${fmtDur(s.durationSecs)}</span>
+        <span style="display:flex;gap:10px">
+          <span>${s.calls} dials</span>
+          <span style="color:var(--green)">${s.connected} contacts</span>
+          <span style="color:var(--accent)">${r}%</span>
+          ${(s.vm||0)?`<span style="color:var(--yellow)">${s.vm} VM</span>`:''}
+        </span>
+      </div>`;
+    }).join('') : '';
+
+    return `<div class="hist-session-card" style="cursor:default;padding:0;overflow:hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;cursor:pointer" onclick="this.nextElementSibling && (this.nextElementSibling.style.display = this.nextElementSibling.style.display==='none'?'block':'none')">
+        <div>
+          <span class="hist-session-date">${dateStr}</span>
+          <span class="hist-session-dur"> · ${sessionWord}</span>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          ${dAppts ? `<span style="background:var(--green-dim);color:var(--green);padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700">🔥 ${dAppts} hot</span>` : ''}
+          ${daySessions.length > 1 ? `<span style="color:var(--text-muted);font-size:13px">▾</span>` : ''}
+        </div>
+      </div>
+      <div class="hist-session-stats" style="padding:0 12px 10px">
+        <div class="hist-stat"><span class="hv">${dCalls}</span><span style="color:var(--text-muted)">dials</span></div>
+        <div class="hist-stat"><span class="hv" style="color:var(--green)">${dContacts}</span><span style="color:var(--text-muted)">contacts</span></div>
+        <div class="hist-stat"><span class="hv" style="color:var(--accent)">${dRate}%</span><span style="color:var(--text-muted)">rate</span></div>
+        <div class="hist-stat"><span class="hv" style="color:var(--yellow)">${dVm}</span><span style="color:var(--text-muted)">VMs</span></div>
+        ${dCallbacks > 0 ? `<div class="hist-stat"><span class="hv" style="color:var(--blue)">${dCallbacks}</span><span style="color:var(--text-muted)">callbacks</span></div>` : ''}
+      </div>
+      ${daySessions.length > 1 ? `<div style="display:none">${innerRows}</div>` : `<div style="display:none"><div onclick="event.stopPropagation();showSessionDetail('${daySessions[0].id}')" style="padding:6px 12px;border-top:1px solid var(--border);font-size:11px;cursor:pointer;color:var(--accent);text-align:right">View call log ›</div></div>`}
+    </div>`;
+  }).join('');
+
   el.innerHTML = `
     <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">All-Time Totals · ${sessions.length} Session${sessions.length!==1?'s':''}</div>
     <div class="hist-totals">
@@ -7365,33 +7422,8 @@ function renderReportHistory() {
       <div class="hist-total-card"><div class="hist-total-val" style="color:var(--red)">${totAppts}</div><div class="hist-total-lbl">Hot / Appts</div></div>
       <div class="hist-total-card"><div class="hist-total-val" style="color:var(--accent)">${avgRate}%</div><div class="hist-total-lbl">Avg Contact Rate</div></div>
     </div>
-    <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Session Log</div>
-    ${sessions.map(s => {
-      const d = new Date(s.date);
-      const dateStr = d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
-      const timeStr = d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
-      const dur = fmtDur(s.durationSecs);
-      const rate = s.contactRate || 0;
-      return `<div class="hist-session-card" onclick="showSessionDetail('${s.id}')">
-        <div class="hist-session-header">
-          <div>
-            <span class="hist-session-date">${dateStr}</span>
-            <span class="hist-session-dur"> at ${timeStr} · ${dur}</span>
-          </div>
-          <div style="display:flex;gap:6px;align-items:center">
-            ${s.appts ? `<span style="background:var(--green-dim);color:var(--green);padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700">🔥 ${s.appts} hot</span>` : ''}
-            <span style="color:var(--text-muted);font-size:16px">›</span>
-          </div>
-        </div>
-        <div class="hist-session-stats">
-          <div class="hist-stat"><span class="hv">${s.calls}</span><span style="color:var(--text-muted)">dials</span></div>
-          <div class="hist-stat"><span class="hv" style="color:var(--green)">${s.connected}</span><span style="color:var(--text-muted)">contacts</span></div>
-          <div class="hist-stat"><span class="hv" style="color:var(--accent)">${rate}%</span><span style="color:var(--text-muted)">rate</span></div>
-          <div class="hist-stat"><span class="hv" style="color:var(--yellow)">${s.vm||0}</span><span style="color:var(--text-muted)">VMs</span></div>
-          ${(s.callbacks||0) > 0 ? `<div class="hist-stat"><span class="hv" style="color:var(--blue)">${s.callbacks}</span><span style="color:var(--text-muted)">callbacks</span></div>` : ''}
-        </div>
-      </div>`;
-    }).join('')}
+    <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Daily Log</div>
+    ${dayCards}
   `;
 }
 
