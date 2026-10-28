@@ -6644,6 +6644,13 @@ function resumeAfterDisposition() {
 
 // Bad Number from disposition panel — removes the phone that was just called
 function disposeBadNumber() {
+  // Hang up the Twilio call immediately so the contact is not left on the line
+  if (state.activeLineId !== null) {
+    const _badLine = state.lines[state.activeLineId - 1];
+    if (_badLine && _badLine.callSid && state.settings.backendUrl) {
+      fetch(`${state.settings.backendUrl}/api/lines/${_badLine.id}/hangup`, { method: 'POST' }).catch(() => {});
+    }
+  }
   const contact = state._pendingContact || state.contacts.find(c => c.status === 'dialing' || c.status === 'connected' || c.status === 'voicemail');
   const phoneEntry = state._pendingPhoneEntry || (contact?.phones || []).find(p => p.status === 'dialing' || p.status === 'connected' || p.status === 'voicemail');
   state._pendingContact = null;
