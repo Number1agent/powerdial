@@ -6398,8 +6398,27 @@ function lineVoicemail(line) {
   updateLineUI(line);
   addToLog(line.contact, 'vm', line.timerVal);
 
-  // Auto-drop voicemail line after 2s
-  setTimeout(() => { if (line.status === 'voicemail') lineDone(line, 'vm_dropped'); }, 2000);
+  // Show contact card so agent can see whose voicemail it was (only when no human call is active)
+  const _vmCardShown = state.activeLineId === null;
+  if (_vmCardShown) {
+    showActiveCall(line);
+    // Re-label the banner chip from "LIVE" to "📬 VM"
+    const _vmBanner = document.getElementById('liveCallBanner');
+    if (_vmBanner) {
+      const _liveChip = _vmBanner.querySelector('span:first-child');
+      if (_liveChip) { _liveChip.textContent = '📬 VM'; _liveChip.style.background = 'rgba(234,88,12,0.7)'; }
+    }
+    const _vmTimer = document.getElementById('activeTimer');
+    if (_vmTimer) _vmTimer.textContent = 'Auto-drop';
+  }
+
+  // Auto-drop voicemail line after 2s; clear card if we showed it
+  setTimeout(() => {
+    if (line.status === 'voicemail') {
+      if (_vmCardShown && state.activeLineId === null) clearActiveCall();
+      lineDone(line, 'vm_dropped');
+    }
+  }, 2000);
   toast(`📬 VM dropped: ${line.contact.name}`, 'orange');
 
   // If other lines are still ringing (multi-line mode), start a 45s watchdog for them
