@@ -5989,6 +5989,10 @@ function togglePause() {
   state.paused = !state.paused;
   setSessionUI(state.paused ? 'paused' : 'live');
   toast(state.paused ? '⏸ Session paused' : '▶ Session resumed', 'yellow');
+  // Restart dialing when resuming — lines may all be idle from finishing while paused
+  if (!state.paused && state.session) {
+    setTimeout(() => { if (state.session && !state.paused) dialNextSet(); }, 500);
+  }
 }
 
 function stopSession() {
