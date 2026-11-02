@@ -6353,7 +6353,13 @@ async function dialRealSingle(line, contact, phoneEntry) {
 //  LINE STATE TRANSITIONS
 // ============================================================
 function lineConnected(line) {
-  if (!line.contact) { console.error('[PowerDial] lineConnected: line.contact is null — card NOT shown', {lineId: line.id, status: line.status}); return; }
+  if (!line.contact) {
+    // Backend says connected but we have no contact data (cleanup timer ran, or safety timeout fired).
+    // Create a minimal placeholder so the agent can see the call and hang up properly.
+    console.error('[PowerDial] lineConnected: null contact — showing Unknown Caller card', {lineId: line.id, status: line.status});
+    line.contact = { name: 'Unknown Caller', phones: [], status: 'ringing', _unknown: true };
+    line.phoneEntry = { phone: '', status: 'ringing' };
+  }
   if (line.timerInt) clearInterval(line.timerInt);
   line.status = 'connected';
   if (line.phoneEntry) line.phoneEntry.status = 'connected';
@@ -6846,6 +6852,25 @@ function processBackendEvents(data) {
     else if (lineData.status === 'voicemail') { if (activeStates.includes(line.status) && line.status !== 'voicemail') lineVoicemail(line); }
     else if (lineData.status === 'noanswer' || lineData.status === 'busy') { if (activeStates.includes(line.status)) lineDone(line, lineData.status); }
   });
+
+  // ── Watchdog: catch any connected line the normal path missed ──────────────
+  // Runs every poll; handles cases where line.contact was null or status was wrong
+  if (state.session && state.activeLineId === null) {
+    const _connLineData = (data.lines || []).find(ld => ld.status === 'connected');
+    if (_connLineData) {
+      const _wl = state.lines[(_connLineData.lineId || 0) - 1];
+      if (_wl && _wl.status !== 'connected') {
+        console.warn('[PowerDial] Watchdog: missed connected event on line', _connLineData.lineId, '— forcing lineConnected. Line status was:', _wl.status);
+        if (!_wl.contact) {
+          _wl.contact = { name: 'Unknown Caller', phones: [], status: 'ringing', _unknown: true };
+          _wl.phoneEntry = { phone: '', status: 'ringing' };
+        } else {
+          _wl.status = 'ringing'; // reset so lineConnected runs cleanly
+        }
+        lineConnected(_wl);
+      }
+    }
+  }
 }
 
 // ============================================================
