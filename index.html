@@ -6915,7 +6915,12 @@ function showActiveCall(line) {
 
   // ── Live call banner ─────────────────────────────────────
   const banner = document.getElementById('liveCallBanner');
-  if (banner) banner.classList.add('visible');
+  if (banner) {
+    banner.classList.add('visible');
+    // Always reset chip to LIVE (VM detection may have changed it to '📬 VM')
+    const _liveChipReset = banner.querySelector('span:first-child');
+    if (_liveChipReset) { _liveChipReset.textContent = 'LIVE'; _liveChipReset.style.background = 'rgba(0,0,0,0.25)'; }
+  }
   const c = line.contact;
   const activePhone = line.phoneEntry?.phone || (c.phones?.[0]?.phone) || '';
   // Banner fields
