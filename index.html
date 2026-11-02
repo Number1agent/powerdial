@@ -6353,7 +6353,7 @@ async function dialRealSingle(line, contact, phoneEntry) {
 //  LINE STATE TRANSITIONS
 // ============================================================
 function lineConnected(line) {
-  if (!line.contact) return;  // race: contact cleared before poll fired
+  if (!line.contact) { console.error('[PowerDial] lineConnected: line.contact is null — card NOT shown', {lineId: line.id, status: line.status}); return; }
   if (line.timerInt) clearInterval(line.timerInt);
   line.status = 'connected';
   if (line.phoneEntry) line.phoneEntry.status = 'connected';
@@ -6415,7 +6415,11 @@ function lineVoicemail(line) {
   // Auto-drop voicemail line after 2s; clear card if we showed it
   setTimeout(() => {
     if (line.status === 'voicemail') {
-      if (_vmCardShown && state.activeLineId === null) clearActiveCall();
+      if (_vmCardShown && state.activeLineId === null) {
+        // Don't wipe the disposition panel if it's showing from a prior call that ended
+        const _dispVisible = document.getElementById('dispSection')?.style.display !== 'none';
+        if (!_dispVisible) clearActiveCall();
+      }
       lineDone(line, 'vm_dropped');
     }
   }, 2000);
@@ -6826,7 +6830,19 @@ function processBackendEvents(data) {
     if (!line.contact) return;          // line already cleared — skip
     if (line.status === lineData.status) return;
     const activeStates = ['ringing', 'connected', 'voicemail', 'machine'];
-    if (lineData.status === 'connected') { if (activeStates.includes(line.status)) lineConnected(line); }
+    if (lineData.status === 'connected') {
+      if (activeStates.includes(line.status)) {
+        lineConnected(line);
+      } else {
+        console.warn('[PowerDial] Backend says connected but line status is', line.status, '— skipping lineConnected for line', lineData.lineId);
+        // If we have a contact still, try to recover (safety timeout may have fired prematurely)
+        if (line.contact && (line.status === 'noanswer' || line.status === 'idle')) {
+          console.warn('[PowerDial] Recovering missed connection — line still has contact, showing card');
+          line.status = 'ringing'; // reset so lineConnected guard passes
+          lineConnected(line);
+        }
+      }
+    }
     else if (lineData.status === 'voicemail') { if (activeStates.includes(line.status) && line.status !== 'voicemail') lineVoicemail(line); }
     else if (lineData.status === 'noanswer' || lineData.status === 'busy') { if (activeStates.includes(line.status)) lineDone(line, lineData.status); }
   });
