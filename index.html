@@ -6403,6 +6403,7 @@ function lineVoicemail(line) {
   updateStatsUI();
   updateLineUI(line);
   addToLog(line.contact, 'vm', line.timerVal);
+  saveCallRecord(line.contact, line.phoneEntry, 'Left VM', line.timerVal, '');
 
   // Show contact card so agent can see whose voicemail it was (only when no human call is active)
   const _vmCardShown = state.activeLineId === null;
@@ -6477,6 +6478,10 @@ function lineDone(line, outcome, silent = false) {
       const hasMorePending = (line.contact.phones || []).some(p => p.status === 'pending');
       line.contact.status = hasMorePending ? 'pending' : phoneStatus;
       if (!silent) addToLog(line.contact, outcome, line.timerVal);
+      // Save a call record so the report totals match the top-bar dial count
+      if (!silent && (outcome === 'noanswer' || outcome === 'busy')) {
+        saveCallRecord(line.contact, line.phoneEntry, 'No Answer', line.timerVal, '');
+      }
     }
   }
   line.status = 'noanswer';
