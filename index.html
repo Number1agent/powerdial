@@ -6480,6 +6480,16 @@ function lineDone(line, outcome, silent = false) {
     }
   }
   line.status = 'noanswer';
+
+  // If this was the active call (e.g. brief carrier-intercept connection that
+  // ended without agent action), clear the active state so the card doesn't freeze.
+  if (line.id === state.activeLineId) {
+    console.warn('[PowerDial] lineDone called on active line — auto-clearing active call card', {lineId: line.id, outcome});
+    state.activeLineId = null;
+    if (state.activeTimerInt) clearInterval(state.activeTimerInt);
+    clearActiveCall();
+  }
+
   setTimeout(() => {
     line.status = 'idle';
     line.contact = null;
@@ -6859,7 +6869,7 @@ function processBackendEvents(data) {
     const _connLineData = (data.lines || []).find(ld => ld.status === 'connected');
     if (_connLineData) {
       const _wl = state.lines[(_connLineData.lineId || 0) - 1];
-      if (_wl && _wl.status !== 'connected') {
+      if (_wl && _wl.status === 'ringing') {
         console.warn('[PowerDial] Watchdog: missed connected event on line', _connLineData.lineId, '— forcing lineConnected. Line status was:', _wl.status);
         if (!_wl.contact) {
           _wl.contact = { name: 'Unknown Caller', phones: [], status: 'ringing', _unknown: true };
