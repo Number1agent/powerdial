@@ -114,6 +114,9 @@ let sessionState = {
     { lineId: 1, callSid: null, status: 'idle', contact: null },
     { lineId: 2, callSid: null, status: 'idle', contact: null },
     { lineId: 3, callSid: null, status: 'idle', contact: null },
+    { lineId: 4, callSid: null, status: 'idle', contact: null },
+    { lineId: 5, callSid: null, status: 'idle', contact: null },
+    { lineId: 6, callSid: null, status: 'idle', contact: null },
   ],
   agentCallSid: null,    // The call connecting agent to conference
   connectedLine: null,   // Which lineId is connected to agent
@@ -230,7 +233,7 @@ app.post('/api/session/start', async (req, res) => {
 
   sessionState.active = true;
   // Preserve per-contact callerId (local presence match sent by the frontend)
-  const pendingContacts = contacts.slice(0, 3).map(c => ({ ...c, callerId: c.callerId || null }));
+  const pendingContacts = contacts.slice(0, 6).map(c => ({ ...c, callerId: c.callerId || null }));
 
   // ── "Call Me" flow: agent already on hold in conference ──────────────────────
   // If the agent clicked "Call Me" first and is already parked on hold,
