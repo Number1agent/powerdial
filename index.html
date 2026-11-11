@@ -6405,9 +6405,17 @@ function lineVoicemail(line) {
   addToLog(line.contact, 'vm', line.timerVal);
   saveCallRecord(line.contact, line.phoneEntry, 'Left VM', line.timerVal, '');
 
-  // Show contact card so agent can see whose voicemail it was (only when no human call is active)
-  const _vmCardShown = state.activeLineId === null;
+  // Show contact card so agent can see whose voicemail it was.
+  // Show when no human call is active, OR when this line itself was briefly
+  // set as the active line (Twilio AMD: connected → voicemail transition).
+  const _vmCardShown = state.activeLineId === null || state.activeLineId === line.id;
   if (_vmCardShown) {
+    // If this VM line was briefly the active line, clear it now — the VM auto-drops,
+    // no agent disposition needed, and we don't want activeLineId blocking checkAllDone.
+    if (state.activeLineId === line.id) {
+      state.activeLineId = null;
+      if (state.activeTimerInt) clearInterval(state.activeTimerInt);
+    }
     showActiveCall(line);
     // Re-label the banner chip from "LIVE" to "📬 VM"
     const _vmBanner = document.getElementById('liveCallBanner');
