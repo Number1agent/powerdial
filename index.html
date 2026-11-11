@@ -6410,12 +6410,6 @@ function lineVoicemail(line) {
   // set as the active line (Twilio AMD: connected → voicemail transition).
   const _vmCardShown = state.activeLineId === null || state.activeLineId === line.id;
   if (_vmCardShown) {
-    // If this VM line was briefly the active line, clear it now — the VM auto-drops,
-    // no agent disposition needed, and we don't want activeLineId blocking checkAllDone.
-    if (state.activeLineId === line.id) {
-      state.activeLineId = null;
-      if (state.activeTimerInt) clearInterval(state.activeTimerInt);
-    }
     showActiveCall(line);
     // Re-label the banner chip from "LIVE" to "📬 VM"
     const _vmBanner = document.getElementById('liveCallBanner');
@@ -6541,6 +6535,9 @@ function dropLine(lineId, silent = false) {
 function hangupActive() {
   if (state.activeLineId === null) return;
   const line = state.lines[state.activeLineId - 1];
+  // If the active line is a voicemail auto-drop, don't show disposition —
+  // just fire lineDone immediately so the line hangs up and dialing resumes.
+  if (line && line.status === 'voicemail') { lineDone(line, 'vm_dropped'); return; }
   if (line.timerInt) clearInterval(line.timerInt);
   const duration = line.timerVal;
   const contact = line.contact;
@@ -6575,6 +6572,9 @@ function hangupActive() {
 function hangupThenBadNumber() {
   if (state.activeLineId === null) return;
   const line = state.lines[state.activeLineId - 1];
+  // If the active line is a voicemail auto-drop, don't show disposition —
+  // just fire lineDone immediately so the line hangs up and dialing resumes.
+  if (line && line.status === 'voicemail') { lineDone(line, 'vm_dropped'); return; }
   if (line.timerInt) clearInterval(line.timerInt);
   const contact = line.contact;
   const phoneEntry = line.phoneEntry;
@@ -7201,6 +7201,9 @@ function hangupNextNumber() {
   // so the dialer queues up the next phone on the same person.
   if (state.activeLineId === null) return;
   const line = state.lines[state.activeLineId - 1];
+  // If the active line is a voicemail auto-drop, don't show disposition —
+  // just fire lineDone immediately so the line hangs up and dialing resumes.
+  if (line && line.status === 'voicemail') { lineDone(line, 'vm_dropped'); return; }
   if (line.timerInt) clearInterval(line.timerInt);
   // Hang up the actual Twilio call so backend clears connectedLine
   const _hnnBase = state.settings.backendUrl;
@@ -7247,6 +7250,9 @@ function hangupNextNumber() {
 function hangupNoContact() {
   if (state.activeLineId === null) return;
   const line = state.lines[state.activeLineId - 1];
+  // If the active line is a voicemail auto-drop, don't show disposition —
+  // just fire lineDone immediately so the line hangs up and dialing resumes.
+  if (line && line.status === 'voicemail') { lineDone(line, 'vm_dropped'); return; }
   if (line.timerInt) clearInterval(line.timerInt);
   // Hang up the actual Twilio call so backend clears connectedLine
   const _hncBase = state.settings.backendUrl;
