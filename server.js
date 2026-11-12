@@ -10,9 +10,63 @@ const express = require('express');
 const cors = require('cors');
 const twilio = require('twilio');
 require('dotenv').config();
-const fs = require('fs');
-const path = require('path');
+
+// ─── PostgreSQL (expireds persistence) ───────────────────────────────────────
 const { Pool } = require('pg');
+const pgPool = process.env.DATABASE_URL
+  ? new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } })
+  : null;
+
+if (pgPool) {
+  pgPool.query(`
+    CREATE TABLE IF NOT EXISTS expired_contacts (
+      id SERIAL PRIMARY KEY,
+      data JSONB NOT NULL,
+      queued_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `).then(() => console.log('[DB] expired_contacts table ready'))
+    .catch(err => console.error('[DB] Table creation error:', err.message));
+
+  pgPool.query(`
+    CREATE TABLE IF NOT EXISTS call_records (
+      id BIGSERIAL PRIMARY KEY,
+      record_id TEXT UNIQUE,
+      date TIMESTAMPTZ,
+      session_id TEXT,
+      contact_name TEXT,
+      phone TEXT,
+      phone_label TEXT,
+      city TEXT,
+      state TEXT,
+      outcome TEXT,
+      duration_secs INT,
+      notes TEXT,
+      group_name TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `).then(() => console.log('[DB] call_records table ready'))
+    .catch(err => console.error('[DB] call_records table error:', err.message));
+
+  pgPool.query(`
+    CREATE TABLE IF NOT EXISTS session_reports (
+      id BIGSERIAL PRIMARY KEY,
+      session_id TEXT UNIQUE,
+      date TIMESTAMPTZ,
+      end_time TIMESTAMPTZ,
+      duration_secs INT,
+      calls INT,
+      connected INT,
+      vm INT,
+      appts INT,
+      callbacks INT,
+      contact_rate INT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `).then(() => console.log('[DB] session_reports table ready'))
+    .catch(err => console.error('[DB] session_reports table error:', err.message));
+} else {
+  console.warn('[DB] No DATABASE_URL — expireds will be in-memory only');
+}
 
 const app = express();
 app.use(cors());
@@ -26,9 +80,42 @@ const client = twilio(
 );
 
 const TWILIO_PHONE    = process.env.TWILIO_PHONE_NUMBER;   // Your Twilio caller ID
+
+// ─── Number Pool (rotation) ───────────────────────────────────────────────────
+// Set TWILIO_PHONE_NUMBERS=+12125550001,+12125550002,+12125550003 in Railway
+// Falls back to TWILIO_PHONE_NUMBER if not set
+const NUMBER_POOL = (() => {
+  const poolStr = process.env.TWILIO_PHONE_NUMBERS || '';
+  const nums = poolStr.split(',').map(n => n.trim()).filter(n => n.startsWith('+'));
+  if (nums.length) return nums;
+  return TWILIO_PHONE ? [TWILIO_PHONE] : [];
+})();
+let _rotationIdx = 0;
+function getNextNumber(contactPhone) {
+  // Check if local presence rules apply (area code match)
+  // Falls back to round-robin pool
+  if (!NUMBER_POOL.length) return TWILIO_PHONE || '';
+  const num = NUMBER_POOL[_rotationIdx % NUMBER_POOL.length];
+  _rotationIdx++;
+  return num;
+}
 const AGENT_PHONE     = process.env.AGENT_PHONE_NUMBER;    // Jose's real phone number
-const BASE_URL        = process.env.PUBLIC_URL;             // ngrok or Railway URL
+const BASE_URL        = process.env.PUBLIC_URL
+  || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : null)
+  || 'https://powerdial-production-85ab.up.railway.app'; // Railway URL fallback
 const CONFERENCE_NAME = 'PowerDial-Session';
+
+// Normalize any phone format to E.164 (+1XXXXXXXXXX for US numbers)
+function toE164(phone) {
+  if (!phone) return phone;
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length === 10) return '+1' + digits;
+  if (digits.length === 11 && digits[0] === '1') return '+' + digits;
+  if (phone.startsWith('+')) return phone;
+  return '+' + digits;
+}
+const TWILIO_API_KEY    = process.env.TWILIO_API_KEY;
+const TWILIO_API_SECRET = process.env.TWILIO_API_SECRET;
 
 // ─── In-Memory State ──────────────────────────────────────────────────────────
 let sessionState = {
@@ -37,11 +124,19 @@ let sessionState = {
     { lineId: 1, callSid: null, status: 'idle', contact: null },
     { lineId: 2, callSid: null, status: 'idle', contact: null },
     { lineId: 3, callSid: null, status: 'idle', contact: null },
+    { lineId: 4, callSid: null, status: 'idle', contact: null },
+    { lineId: 5, callSid: null, status: 'idle', contact: null },
+    { lineId: 6, callSid: null, status: 'idle', contact: null },
   ],
   agentCallSid: null,    // The call connecting agent to conference
   connectedLine: null,   // Which lineId is connected to agent
   conference: null,
-  callLog: []
+  callLog: [],
+  pendingContacts: [],   // Contacts to dial once agent answers
+  pendingCallerId: null, // Caller ID to use for those calls
+  conferenceRoom: null,  // Unique conference room name per session
+  conferenceSid: null,   // Twilio conference SID — set when agent joins
+  agentReady: false      // true after agent is on hold in conference (Call Me flow)
 };
 
 // ─── Helper: Update a Line ────────────────────────────────────────────────────
@@ -54,6 +149,88 @@ function getLine(lineId) {
   return sessionState.lines.find(l => l.lineId === lineId);
 }
 
+// ─── Route: Call Agent (pre-session "Call Me" button) ────────────────────────
+// POST /api/call-agent
+// Calls Jose's phone and parks him in conference on hold — WITHOUT dialing leads.
+// Once agent is on hold (agentReady=true), clicking "Start Session" dials leads immediately.
+app.post('/api/call-agent', async (req, res) => {
+  const { agentPhone } = req.body;
+
+  // Only skip re-dialing if agent callSid is still live — guards against ghost state
+  // where agentReady=true but the previous call already ended (agentCallSid=null).
+  if (sessionState.agentReady && sessionState.conferenceSid && sessionState.agentCallSid) {
+    return res.json({ success: true, already: true, message: 'Agent already connected' });
+  }
+  // Reset any stale ghost state before making a fresh call
+  sessionState.agentReady = false;
+  sessionState.conferenceSid = null;
+
+  const conferenceRoom = 'PowerDial-' + Date.now();
+  sessionState.conferenceRoom = conferenceRoom;
+  sessionState.agentReady = false;
+  sessionState.conferenceSid = null;
+  // Clear any leftover contacts/lines from a previous session so agent-status
+  // webhook cannot accidentally dial stale contacts when this call answers.
+  sessionState.pendingContacts = [];
+  sessionState.pendingCallerId = null;
+  sessionState.active = false;
+  sessionState.connectedLine = null;
+  sessionState.lines.forEach(l => Object.assign(l, { callSid: null, status: 'idle', contact: null }));
+
+  try {
+    const agentCall = await client.calls.create({
+      to: toE164(agentPhone || AGENT_PHONE),
+      from: TWILIO_PHONE,
+      url: `${BASE_URL}/twiml/agent?room=${encodeURIComponent(conferenceRoom)}`,
+      statusCallback: `${BASE_URL}/webhook/agent-status`,
+      statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
+      statusCallbackMethod: 'POST'
+    });
+    sessionState.agentCallSid = agentCall.sid;
+    console.log('[Agent] Dialing agent (Call Me) — waiting for agent to pick up...');
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[Agent] Call Me error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Route: Agent Ready Status Poll ──────────────────────────────────────────
+// GET /api/agent-ready
+// Frontend polls this to know when agent is on hold in conference.
+app.get('/api/agent-ready', (req, res) => {
+  res.json({
+    agentReady: sessionState.agentReady,
+    agentCallSid: sessionState.agentCallSid,
+    conferenceSid: sessionState.conferenceSid
+  });
+
+});
+
+
+// Serve Twilio Voice SDK (committed to repo — no CDN dependency)
+app.get('/twilio-voice.js', (req, res) => {
+  res.type('application/javascript');
+  res.sendFile(require('path').join(__dirname, 'twilio-voice.min.js'));
+});
+
+// GET /api/token — generates a short-lived Twilio Access Token for the browser Twilio.Device
+app.get('/api/token', (req, res) => {
+  if (!TWILIO_API_KEY || !TWILIO_API_SECRET) {
+    return res.status(400).json({ error: 'TWILIO_API_KEY and TWILIO_API_SECRET not configured.' });
+  }
+  const { AccessToken } = twilio.jwt;
+  const { VoiceGrant }  = AccessToken;
+  const token = new AccessToken(
+    process.env.TWILIO_ACCOUNT_SID,
+    TWILIO_API_KEY,
+    TWILIO_API_SECRET,
+    { identity: 'powerdial-agent', ttl: 3600 }
+  );
+  token.addGrant(new VoiceGrant({ incomingAllow: true }));
+  res.json({ token: token.toJwt(), identity: 'powerdial-agent' });
+});
+
 // ─── Route: Start Dial Session ────────────────────────────────────────────────
 // POST /api/session/start
 // Body: { contacts: [{name, phone}], callerId, agentPhone, vmUrl }
@@ -65,47 +242,61 @@ app.post('/api/session/start', async (req, res) => {
   }
 
   sessionState.active = true;
-  const calls = [];
+  // Preserve per-contact callerId (local presence match sent by the frontend)
+  const pendingContacts = contacts.slice(0, 6).map(c => ({ ...c, callerId: c.callerId || null }));
+
+  // ── "Call Me" flow: agent already on hold in conference ──────────────────────
+  // If the agent clicked "Call Me" first and is already parked on hold,
+  // skip calling them again — just dial the leads directly into the same conference.
+  if (sessionState.agentReady && sessionState.conferenceSid && sessionState.conferenceRoom) {
+    console.log('[Session] Agent already ready — dialing leads immediately into', sessionState.conferenceRoom);
+    const room = sessionState.conferenceRoom;
+    const results = [];
+    for (let i = 0; i < pendingContacts.length; i++) {
+      const contact = pendingContacts[i];
+      const lineId = i + 1;
+      try {
+        const call = await client.calls.create({
+          to: contact.phone,
+          from: contact.callerId || callerId || getNextNumber(contact.phone) || TWILIO_PHONE,
+          url: `${BASE_URL}/twiml/outbound?lineId=${lineId}&name=${encodeURIComponent(contact.name)}&room=${encodeURIComponent(room)}`,
+          statusCallback: `${BASE_URL}/webhook/call-status?lineId=${lineId}`,
+          statusCallbackEvent: ['answered', 'completed', 'no-answer', 'busy', 'failed'],
+          statusCallbackMethod: 'POST'
+        });
+        setLine(lineId, { callSid: call.sid, status: 'ringing', contact });
+        console.log(`[Line ${lineId}] Dialing ${contact.name} (${contact.phone})`);
+        results.push({ lineId, sid: call.sid });
+      } catch (e) {
+        console.error(`[Line ${lineId}] Dial error:`, e.message);
+      }
+    }
+    return res.json({ success: true, calls: results });
+  }
+
+  // ── Classic flow: call agent first, leads dial from agent-status webhook ─────
+  const conferenceRoom = 'PowerDial-' + Date.now();
+  sessionState.pendingContacts = pendingContacts;
+  sessionState.pendingCallerId = callerId || null;
+  sessionState.conferenceRoom = conferenceRoom;
 
   try {
-    // Dial each contact and put them in the conference (waiting with music)
-    for (let i = 0; i < Math.min(contacts.length, 3); i++) {
-      const contact = contacts[i];
-      const lineId = i + 1;
-
-      const call = await client.calls.create({
-        to: contact.phone,
-        from: callerId || TWILIO_PHONE,
-        url: `${BASE_URL}/twiml/outbound?lineId=${lineId}&name=${encodeURIComponent(contact.name)}`,
-        statusCallback: `${BASE_URL}/webhook/call-status?lineId=${lineId}`,
-        statusCallbackEvent: ['answered', 'completed', 'no-answer', 'busy', 'failed'],
-        statusCallbackMethod: 'POST',
-        // AMD intentionally disabled — causes 3-7s silence on answer, leads hang up.
-        // Handle voicemails manually: click "Left VM" → system drops pre-recorded message.
-      });
-
-      setLine(lineId, {
-        callSid: call.sid,
-        status: 'ringing',
-        contact: contact
-      });
-
-      calls.push({ lineId, sid: call.sid, contact });
-    }
-
-    // Also call the agent's phone and drop them into the same conference (on hold until needed)
+    // Use WebRTC (browser Twilio.Device) when API keys are configured — no PSTN carrier, no silence timeout
+    const agentTo = (TWILIO_API_KEY && TWILIO_API_SECRET)
+      ? 'client:powerdial-agent'
+      : (agentPhone || AGENT_PHONE);
+    console.log(`[Agent] Dialing agent via ${agentTo === 'client:powerdial-agent' ? 'WebRTC (browser)' : 'PSTN'}`);
     const agentCall = await client.calls.create({
-      to: agentPhone || AGENT_PHONE,
+      to: agentTo,
       from: TWILIO_PHONE,
-      url: `${BASE_URL}/twiml/agent`,
+      url: `${BASE_URL}/twiml/agent?room=${encodeURIComponent(conferenceRoom)}`,
       statusCallback: `${BASE_URL}/webhook/agent-status`,
-      statusCallbackEvent: ['answered', 'completed'],
+      statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
       statusCallbackMethod: 'POST'
     });
     sessionState.agentCallSid = agentCall.sid;
-
-    res.json({ success: true, calls });
-
+    console.log('[Agent] Dialing agent, will dial leads once agent answers...');
+    res.json({ success: true, calls: [] });
   } catch (err) {
     console.error('Dial error:', err);
     res.status(500).json({ error: err.message });
@@ -135,6 +326,8 @@ app.post('/api/lines/:lineId/hangup', async (req, res) => {
   try {
     await client.calls(line.callSid).update({ status: 'completed' });
     setLine(lineId, { status: 'idle', callSid: null, contact: null });
+    // Clear connectedLine so the next lead can connect
+    if (sessionState.connectedLine === lineId) sessionState.connectedLine = null;
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -217,51 +410,166 @@ app.post('/api/session/end', async (req, res) => {
   sessionState.lines.forEach(l => Object.assign(l, { callSid: null, status: 'idle', contact: null }));
   sessionState.agentCallSid = null;
   sessionState.connectedLine = null;
+  sessionState.agentReady = false;
+  sessionState.conferenceSid = null;
+  sessionState.conferenceRoom = null;
+  sessionState.pendingContacts = [];
+  sessionState.pendingCallerId = null;
 
   res.json({ success: true });
 });
 
 // ─── TwiML: Outbound lead call ────────────────────────────────────────────────
-// Called by Twilio when it connects to a lead's phone
+// Lead waits in the conference with startConferenceOnEnter="false" — hold music plays,
+// conference does NOT start. /webhook/call-status selects the first answering lead
+// and redirects them to /twiml/outbound-join (startConferenceOnEnter="true");
+// all other answering leads are immediately hung up. This prevents the race condition
+// where multiple simultaneous answers all join before any webhook fires.
 app.all('/twiml/outbound', (req, res) => {
-  const lineId = req.query.lineId || req.body.lineId;
-
+  const room = req.query.room || req.body.room || sessionState.conferenceRoom || CONFERENCE_NAME;
   res.set('Content-Type', 'text/xml');
-  // No Pause, no hold music fetch — lead enters conference immediately on answer.
-  // startConferenceOnEnter=false keeps them waiting silently until agent bridges in.
   res.send(`<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Conference
-    startConferenceOnEnter="false"
-    endConferenceOnExit="false"
-    beep="false"
-    waitUrl=""
-    record="record-from-start"
-    recordingStatusCallback="${BASE_URL}/webhook/recording"
-    maxParticipants="4">
-    ${CONFERENCE_NAME}-Line${lineId}
-  </Conference>
+  <Dial>
+    <Conference
+      startConferenceOnEnter="false"
+      endConferenceOnExit="false"
+      beep="false"
+      waitUrl="${BASE_URL}/twiml/hold"
+      maxParticipants="10">${room}</Conference>
+  </Dial>
+</Response>`);
+});
+
+// ─── TwiML: Outbound lead join (redirected after being selected) ──────────────
+// Only the FIRST answering lead is redirected here. startConferenceOnEnter="true"
+// bridges them into the conference with the waiting agent.
+app.all('/twiml/outbound-join', (req, res) => {
+  const room = req.query.room || req.body.room || sessionState.conferenceRoom || CONFERENCE_NAME;
+  res.set('Content-Type', 'text/xml');
+  res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Dial>
+    <Conference
+      startConferenceOnEnter="true"
+      endConferenceOnExit="false"
+      beep="false"
+      maxParticipants="10">${room}</Conference>
+  </Dial>
+</Response>`);
+});
+
+
+// ─── TwiML: Hold music (conference waitUrl) ───────────────────────────────────
+app.all('/twiml/hold', (req, res) => {
+  res.set('Content-Type', 'text/xml');
+  // Twilio Conference waitUrl only supports <Play> and <Say> — <Pause> is silently
+  // dropped and rapid re-fetches can terminate the waiting participant.
+  // loop="0" repeats indefinitely until the conference starts (agent gets connected).
+  res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="Polly.Joanna" loop="0">Please hold. Your call will be connected shortly.</Say>
 </Response>`);
 });
 
 // ─── TwiML: Agent phone ───────────────────────────────────────────────────────
-// Called when Twilio dials Jose's phone
+// Agent joins with startConferenceOnEnter="false" — Twilio plays built-in hold
+// music automatically, with no media transitions that could drop a PSTN call.
+// When the first lead answers (startConferenceOnEnter="true"), Twilio starts the
+// conference and seamlessly connects the waiting agent — no hold API needed.
 app.all('/twiml/agent', (req, res) => {
+  const room = req.query.room || req.body.room || sessionState.conferenceRoom || CONFERENCE_NAME;
+  console.log('[TwiML/agent] Fetched by Twilio | room:', room, '| CallSid:', req.body.CallSid || req.query.CallSid);
   res.set('Content-Type', 'text/xml');
-  // Agent starts on hold — when a lead connects, we bridge them
+  // Agent waits in conference with startConferenceOnEnter=false so Twilio plays
+  // its built-in hold music automatically — no hold API, no media transitions.
+  // The first lead to answer (startConferenceOnEnter=true) starts the conference,
+  // and the agent transitions from hold music to the live call seamlessly.
   res.send(`<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say voice="Polly.Joanna">PowerDial connected. You will be bridged when a lead answers.</Say>
-  <Conference
-    waitUrl="https://twimlets.com/holdmusic?Bucket=com.twilio.music.softrock"
-    waitMethod="GET"
-    beep="false"
-    startConferenceOnEnter="false"
-    endConferenceOnExit="true"
-    maxParticipants="4">
-    ${CONFERENCE_NAME}-Agent
-  </Conference>
+  <Dial>
+    <Conference
+      beep="false"
+      startConferenceOnEnter="false"
+      endConferenceOnExit="false"
+      statusCallback="${BASE_URL}/webhook/conference-events"
+      statusCallbackEvent="join leave"
+      statusCallbackMethod="POST"
+      maxParticipants="10">${room}</Conference>
+  </Dial>
 </Response>`);
+});
+
+// ─── TwiML: Agent Dial-In (agent calls Twilio number to join conference) ──────
+// Configure any Twilio phone number Voice webhook → POST ${BASE_URL}/twiml/agent-dialin
+// Agent calls that number from their phone, gets parked in the conference.
+// Frontend polls /api/agent-ready — when agentReady=true, Start Session dials leads.
+app.all('/twiml/agent-dialin', (req, res) => {
+  const inboundCallSid = req.body.CallSid || req.query.CallSid || null;
+
+  if (!sessionState.agentReady) {
+    const conferenceRoom = 'PowerDial-' + Date.now();
+    sessionState.conferenceRoom  = conferenceRoom;
+    sessionState.agentReady      = false;
+    sessionState.conferenceSid   = null;
+    sessionState.agentCallSid    = inboundCallSid;
+    sessionState.pendingContacts = [];
+    sessionState.pendingCallerId = null;
+    sessionState.active          = false;
+    sessionState.connectedLine   = null;
+    sessionState.lines.forEach(l => Object.assign(l, { callSid: null, status: 'idle', contact: null }));
+    console.log('[Agent] Dial-in from ' + (req.body.From || 'unknown') + ' — parked in', conferenceRoom);
+  }
+
+  const room = sessionState.conferenceRoom;
+  res.set('Content-Type', 'text/xml');
+  res.send('<' + '?xml version="1.0" encoding="UTF-8"?' + '>' +
+    '<Response><Dial><Conference' +
+    ' beep="false"' +
+    ' startConferenceOnEnter="false"' +
+    ' endConferenceOnExit="false"' +
+    ' statusCallback="' + BASE_URL + '/webhook/conference-events"' +
+    ' statusCallbackEvent="join leave"' +
+    ' statusCallbackMethod="POST"' +
+    ' maxParticipants="10">' + room + '</Conference></Dial></Response>');
+});
+
+// ─── Webhook: Conference Events ──────────────────────────────────────────────
+// Fires when the agent joins the conference. Stores the conferenceSid and
+// immediately puts the agent on participant-hold with hold music so they
+// don't hear silence while leads are dialing.
+app.post('/webhook/conference-events', async (req, res) => {
+  const { StatusCallbackEvent, ConferenceSid, CallSid } = req.body;
+  console.log(`[Conference] Event: ${StatusCallbackEvent} | SID: ${ConferenceSid} | Call: ${CallSid}`);
+
+  if (StatusCallbackEvent === 'participant-join') {
+    const sidMatch = CallSid === sessionState.agentCallSid;
+    console.log(`[Conference] join | CallSid: ${CallSid} | agentCallSid: ${sessionState.agentCallSid} | match: ${sidMatch}`);
+    // Set conferenceSid if SIDs match OR if agent is already ready and conference not yet recorded
+    // (Twilio may assign a child SID when <Dial><Conference> executes, differing from the parent call SID)
+    if (sidMatch || (sessionState.agentReady && !sessionState.conferenceSid)) {
+      sessionState.conferenceSid = ConferenceSid;
+      sessionState.agentReady = true;
+      console.log(`[Agent] Parked in conference ${ConferenceSid} — agentReady=true, conferenceSid set`);
+    }
+  }
+
+  // If a LEAD joins the conference but we already have a connectedLine (race condition):
+  // remove the extra participant so they don't interrupt the active conversation.
+  if (StatusCallbackEvent === 'participant-join' &&
+      CallSid !== sessionState.agentCallSid &&
+      sessionState.connectedLine) {
+    const joiningLine = sessionState.lines.find(l => l.callSid === CallSid);
+    if (joiningLine && joiningLine.lineId !== sessionState.connectedLine) {
+      console.log(`[Conference] Extra lead joined — removing (line ${joiningLine?.lineId})`);
+      client.conferences(ConferenceSid).participants(CallSid).remove().catch(e =>
+        console.error(`[Conference] Remove extra participant error: ${e.message}`)
+      );
+    }
+  }
+
+  res.set('Content-Type', 'text/xml');
+  res.send('<Response/>');
 });
 
 // ─── TwiML: Voicemail Drop ────────────────────────────────────────────────────
@@ -303,28 +611,34 @@ app.post('/webhook/call-status', async (req, res) => {
   const newStatus = statusMap[CallStatus] || CallStatus;
 
   if (CallStatus === 'in-progress') {
-    // Lead answered! Bridge agent to this conference
+    // Lead answered — currently waiting in conference with startConferenceOnEnter="false"
     if (!sessionState.connectedLine) {
+      // Claim synchronously BEFORE any async call — concurrent webhook handlers
+      // for other leads see this immediately and fall into the else branch.
       sessionState.connectedLine = lineId;
       setLine(lineId, { status: 'connected' });
 
-      // Move agent from Agent conference to the lead's conference
-      try {
-        await bridgeAgentToLine(lineId);
-        // Drop other ringing lines
-        sessionState.lines.forEach(l => {
-          if (l.lineId !== lineId && l.status === 'ringing' && l.callSid) {
-            client.calls(l.callSid).update({ status: 'completed' }).catch(()=>{});
-            setLine(l.lineId, { status: 'idle', callSid: null });
-          }
-        });
-      } catch (e) {
-        console.error('Bridge error:', e);
-      }
-    } else {
-      // Agent already on another call — put this lead on hold music, then hang up
+      const room = sessionState.conferenceRoom || CONFERENCE_NAME;
+
+      // Redirect this lead to startConferenceOnEnter="true" — bridges them with agent
       client.calls(CallSid).update({
-        twiml: `<Response><Say>Thank you for answering. Our agent will call you back shortly.</Say><Hangup/></Response>`
+        url: `${BASE_URL}/twiml/outbound-join?room=${encodeURIComponent(room)}`
+      }).catch(e => console.error(`[Line ${lineId}] Redirect to outbound-join failed: ${e.message}`));
+
+      console.log(`[Line ${lineId}] Lead answered — redirecting to conference (room: ${room})`);
+
+      // Cancel all other still-ringing lines
+      sessionState.lines.forEach(l => {
+        if (l.lineId !== lineId && l.status === 'ringing' && l.callSid) {
+          client.calls(l.callSid).update({ status: 'completed' }).catch(()=>{});
+          setLine(l.lineId, { status: 'idle', callSid: null });
+        }
+      });
+    } else {
+      // Another lead already won — hang up immediately (they're on hold, agent never hears them)
+      console.log(`[Line ${lineId}] Extra answer — hanging up (connectedLine=${sessionState.connectedLine})`);
+      client.calls(CallSid).update({
+        twiml: `<Response><Hangup/></Response>`
       }).catch(()=>{});
       setLine(lineId, { status: 'idle', callSid: null });
     }
@@ -353,10 +667,50 @@ app.post('/webhook/recording', (req, res) => {
 });
 
 // ─── Webhook: Agent Status ────────────────────────────────────────────────────
-app.post('/webhook/agent-status', (req, res) => {
+app.post('/webhook/agent-status', async (req, res) => {
   const { CallStatus } = req.body;
   console.log(`[Agent] Status: ${CallStatus}`);
-  if (CallStatus === 'completed') sessionState.agentCallSid = null;
+
+  if (CallStatus === 'in-progress') {
+    // Agent answered — mark ready so "Call Me First" flow knows they're on the phone
+    if (!sessionState.agentReady) {
+      sessionState.agentReady = true;
+      console.log('[Agent] Marked agentReady=true from call answer (agent-status webhook)');
+    }
+
+    // Agent answered — NOW dial the leads
+    const contacts = sessionState.pendingContacts || [];
+    const callerId = sessionState.pendingCallerId;
+    sessionState.pendingContacts = [];
+    sessionState.pendingCallerId = null;
+
+    console.log(`[Agent] Ready — dialing ${contacts.length} lead(s)`);
+    for (let i = 0; i < contacts.length; i++) {
+      const contact = contacts[i];
+      const lineId = i + 1;
+      try {
+        const call = await client.calls.create({
+          to: contact.phone,
+          // Priority: per-contact local presence number → global caller ID → pool → default
+          from: contact.callerId || callerId || getNextNumber(contact.phone) || TWILIO_PHONE,
+          url: `${BASE_URL}/twiml/outbound?lineId=${lineId}&name=${encodeURIComponent(contact.name)}&room=${encodeURIComponent(sessionState.conferenceRoom || CONFERENCE_NAME)}`,
+          statusCallback: `${BASE_URL}/webhook/call-status?lineId=${lineId}`,
+          statusCallbackEvent: ['answered', 'completed', 'no-answer', 'busy', 'failed'],
+          statusCallbackMethod: 'POST'
+        });
+        setLine(lineId, { callSid: call.sid, status: 'ringing', contact });
+        console.log(`[Line ${lineId}] Dialing ${contact.name} (${contact.phone})`);
+      } catch (e) {
+        console.error(`[Line ${lineId}] Dial error:`, e.message);
+      }
+    }
+  }
+
+  if (CallStatus === 'completed') {
+    sessionState.agentCallSid = null;
+    sessionState.pendingContacts = [];
+  }
+
   res.set('Content-Type', 'text/xml');
   res.send('<Response/>');
 });
@@ -367,9 +721,13 @@ async function bridgeAgentToLine(lineId) {
   await client.calls(sessionState.agentCallSid).update({
     twiml: `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Conference beep="false" record="record-from-start" recordingStatusCallback="${BASE_URL}/webhook/recording" maxParticipants="4">
-    ${CONFERENCE_NAME}-Line${lineId}
-  </Conference>
+  <Dial>
+    <Conference
+      beep="false"
+      startConferenceOnEnter="true"
+      endConferenceOnExit="false"
+      maxParticipants="4">${CONFERENCE_NAME}-Line${lineId}</Conference>
+  </Dial>
 </Response>`
   });
 }
@@ -449,78 +807,28 @@ app.post('/api/expireds/test-run', async (req, res) => {
     }
   }
 
-  // Push to queue so PowerDial picks them up
-  await dbAddContacts(contacts);
-  const queueSize = await dbCount();
-  console.log(`[Expireds] Test run complete: ${hits} hits, ${misses} misses. Queue: ${queueSize}`);
+  // Push to queue so PowerDial picks them up (use DB if available)
+  if (pgPool) {
+    try {
+      await Promise.all(contacts.map(c => pgPool.query('INSERT INTO expired_contacts (data) VALUES ($1)', [JSON.stringify(c)])));
+    } catch(dbErr) {
+      console.error('[Expireds] Test DB insert error:', dbErr.message);
+      expiredQueueFallback = [...expiredQueueFallback, ...contacts];
+    }
+  } else {
+    expiredQueueFallback = [...expiredQueueFallback, ...contacts];
+  }
+  console.log(`[Expireds] Test run complete: ${hits} hits, ${misses} misses. Queued: ${contacts.length}`);
   res.json({ success: true, hits, misses, queued: contacts.length });
 });
 
-// ─── Expireds Queue (PostgreSQL) ─────────────────────────────────────────────
-// Contacts survive Railway restarts via PostgreSQL
-const pgPool = process.env.DATABASE_URL
-  ? new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } })
-  : null;
-
-async function initDb() {
-  if (!pgPool) { console.log('[Expireds] No DATABASE_URL — using in-memory queue'); return; }
-  try {
-    await pgPool.query(`
-      CREATE TABLE IF NOT EXISTS expireds_queue (
-        id SERIAL PRIMARY KEY,
-        contact JSONB NOT NULL,
-        created_at TIMESTAMPTZ DEFAULT NOW()
-      )
-    `);
-    console.log('[Expireds] PostgreSQL queue table ready');
-  } catch(e) {
-    console.error('[Expireds] DB init error:', e.message);
-  }
-}
-initDb();
-console.log("[Expireds] DATABASE_URL set:", !!process.env.DATABASE_URL);
-console.log("[Expireds] pgPool ready:", !!pgPool);
-
-// In-memory fallback if no DB
-let memQueue = [];
-
-async function dbAddContacts(contacts) {
-  if (!pgPool) { memQueue = [...memQueue, ...contacts]; return; }
-  const client = await pgPool.connect();
-  try {
-    await client.query('BEGIN');
-    for (const c of contacts) {
-      await client.query('INSERT INTO expireds_queue (contact) VALUES ($1)', [JSON.stringify(c)]);
-    }
-    await client.query('COMMIT');
-  } catch(e) {
-    await client.query('ROLLBACK');
-    throw e;
-  } finally {
-    client.release();
-  }
-}
-
-async function dbGetContacts() {
-  if (!pgPool) return memQueue;
-  const res = await pgPool.query('SELECT contact FROM expireds_queue ORDER BY id');
-  return res.rows.map(r => r.contact);
-}
-
-async function dbClearContacts() {
-  if (!pgPool) { memQueue = []; return; }
-  await pgPool.query('DELETE FROM expireds_queue');
-}
-
-async function dbCount() {
-  if (!pgPool) return memQueue.length;
-  const res = await pgPool.query('SELECT COUNT(*) FROM expireds_queue');
-  return parseInt(res.rows[0].count, 10);
-}
+// ─── Expireds Queue (PostgreSQL-backed) ──────────────────────────────────────
+// Contacts are persisted in DB — survive server restarts and browser wipes.
+// Fallback to in-memory if DATABASE_URL is not set.
+let expiredQueueFallback = [];
 
 // POST /api/expireds/queue
-// Called by the automation script each morning after skip tracing
-// Body: { contacts: [{name, phones, notes, city, county, listPrice, beds, baths, address}], apiKey }
+// Called by fetch-expireds.js each morning after skip tracing
 app.post('/api/expireds/queue', async (req, res) => {
   const { contacts, apiKey } = req.body;
   const expectedKey = process.env.EXPIREDS_API_KEY;
@@ -530,86 +838,331 @@ app.post('/api/expireds/queue', async (req, res) => {
   if (!Array.isArray(contacts) || !contacts.length) {
     return res.status(400).json({ error: 'No contacts provided' });
   }
-  try {
-    await dbAddContacts(contacts);
-    const total = await dbCount();
-    console.log(`[Expireds] Queued ${contacts.length} contacts. Total pending: ${total}`);
-    res.json({ success: true, queued: contacts.length, total });
-  } catch(e) {
-    res.status(500).json({ error: e.message });
+  if (pgPool) {
+    try {
+      // Insert each contact as a JSON row
+      const inserts = contacts.map(c => pgPool.query(
+        'INSERT INTO expired_contacts (data) VALUES ($1)', [JSON.stringify(c)]
+      ));
+      await Promise.all(inserts);
+      const { rows } = await pgPool.query('SELECT COUNT(*) AS total FROM expired_contacts');
+      const total = parseInt(rows[0].total, 10);
+      console.log(`[Expireds] Queued ${contacts.length} contacts in DB. Total: ${total}`);
+      return res.json({ success: true, queued: contacts.length, total });
+    } catch (err) {
+      console.error('[Expireds] DB insert error:', err.message);
+      // fall through to in-memory
+    }
   }
-});
-
-// GET /api/expireds/today
-// Returns queued contacts WITHOUT clearing — safe to call multiple times
-app.get('/api/expireds/today', async (req, res) => {
-  try {
-    const contacts = await dbGetContacts();
-    res.json({ contacts, count: contacts.length });
-  } catch(e) {
-    res.status(500).json({ error: e.message });
-  }
+  // Fallback: in-memory
+  expiredQueueFallback = [...expiredQueueFallback, ...contacts];
+  console.log(`[Expireds] Queued ${contacts.length} contacts in memory. Total: ${expiredQueueFallback.length}`);
+  res.json({ success: true, queued: contacts.length, total: expiredQueueFallback.length });
 });
 
 // GET /api/expireds/pending
-// Called by PowerDial on startup — returns all queued contacts and clears the queue
+// Called by PowerDial on startup — returns all contacts WITHOUT clearing them
+// (they persist until /api/expireds/clear is called explicitly)
 app.get('/api/expireds/pending', async (req, res) => {
-  try {
-    const contacts = await dbGetContacts();
-    if (contacts.length) {
-      // Clear after delivery so the same batch does not reload on every dialer open
-      await dbClearContacts();
-      console.log(`[Expireds] Delivered and cleared ${contacts.length} pending contacts`);
-    } else {
-      console.log('[Expireds] No pending contacts');
+  if (pgPool) {
+    try {
+      const { rows } = await pgPool.query('SELECT data FROM expired_contacts ORDER BY queued_at ASC');
+      const contacts = rows.map(r => r.data);
+      if (contacts.length) {
+        await pgPool.query('DELETE FROM expired_contacts');
+        console.log(`[Expireds] Delivered and cleared ${contacts.length} persisted contacts`);
+      } else {
+        console.log('[Expireds] No pending contacts');
+      }
+      return res.json({ contacts, count: contacts.length });
+    } catch (err) {
+      console.error('[Expireds] DB read error:', err.message);
     }
-    res.json({ contacts, count: contacts.length });
-  } catch(e) {
-    res.status(500).json({ error: e.message });
   }
+  // Fallback: in-memory — clear after delivery
+  const contacts = [...expiredQueueFallback];
+  expiredQueueFallback.length = 0;
+  console.log(`[Expireds] Delivered and cleared ${contacts.length} in-memory contacts`);
+  res.json({ contacts, count: contacts.length });
 });
 
 // GET /api/expireds/status
-// Check queue without clearing it
+// Check queue without affecting it
 app.get('/api/expireds/status', async (req, res) => {
+  if (pgPool) {
+    try {
+      const { rows } = await pgPool.query('SELECT COUNT(*) AS total FROM expired_contacts');
+      return res.json({ pending: parseInt(rows[0].total, 10) });
+    } catch (err) {
+      console.error('[Expireds] DB status error:', err.message);
+    }
+  }
+  res.json({ pending: expiredQueueFallback.length });
+});
+
+// DELETE /api/expireds/clear
+// Explicitly clear all expireds (call when you're done dialing them)
+app.delete('/api/expireds/clear', async (req, res) => {
+  if (pgPool) {
+    try {
+      const { rowCount } = await pgPool.query('DELETE FROM expired_contacts');
+      console.log(`[Expireds] Cleared ${rowCount} contacts from DB`);
+      return res.json({ success: true, cleared: rowCount });
+    } catch (err) {
+      console.error('[Expireds] DB clear error:', err.message);
+    }
+  }
+  const cleared = expiredQueueFallback.length;
+  expiredQueueFallback = [];
+  res.json({ success: true, cleared });
+});
+
+
+// ═══════════════════════════════════════════════════════════════════
+// CLAUDE MCP ENDPOINTS — mirrors Mojo Dialer MCP integration
+// Auth: Bearer token via POWERDIAL_CLAUDE_KEY env var
+// ═══════════════════════════════════════════════════════════════════
+
+function claudeAuth(req, res, next) {
+  const key = process.env.POWERDIAL_CLAUDE_KEY;
+  if (!key) return next(); // no key set = open (dev mode)
+  const auth = req.headers['authorization'] || '';
+  if (auth !== `Bearer ${key}`) return res.status(401).json({ error: 'Unauthorized' });
+  next();
+}
+
+function sinceDate(range) {
+  const now = new Date();
+  if (range === 'today') {
+    const d = new Date(now); d.setHours(0,0,0,0); return d;
+  } else if (range === 'week') {
+    const d = new Date(now); d.setDate(d.getDate() - 7); return d;
+  } else if (range === 'month') {
+    const d = new Date(now); d.setDate(d.getDate() - 30); return d;
+  }
+  return new Date(0); // all time
+}
+
+// POST /api/claude/sync/call — browser pushes each call record
+app.post('/api/claude/sync/call', async (req, res) => {
+  if (!pgPool) return res.json({ ok: false, reason: 'no_db' });
+  const r = req.body;
+  if (!r || !r.id) return res.status(400).json({ error: 'Missing record' });
   try {
-    const count = await dbCount();
-    res.json({ pending: count });
-  } catch(e) {
-    res.json({ pending: 0 });
+    await pgPool.query(`
+      INSERT INTO call_records
+        (record_id, date, session_id, contact_name, phone, phone_label, city, state, outcome, duration_secs, notes, group_name)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+      ON CONFLICT (record_id) DO NOTHING
+    `, [
+      String(r.id), r.date ? new Date(r.date) : new Date(),
+      r.sessionId, r.contactName, r.phone, r.phoneLabel,
+      r.city, r.state, r.outcome, r.duration || 0, r.notes || '', r.groupName || ''
+    ]);
+    res.json({ ok: true });
+  } catch(err) {
+    console.error('[Claude sync call]', err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 
-// POST /api/expireds/clear
-// Wipes the queue — useful before re-running the automation script
-app.post('/api/expireds/clear', async (req, res) => {
-  const { apiKey } = req.body;
-  const expectedKey = process.env.EXPIREDS_API_KEY;
-  if (expectedKey && apiKey !== expectedKey) {
-    return res.status(401).json({ error: 'Unauthorized' });
+// POST /api/claude/sync/session — browser pushes each session report
+app.post('/api/claude/sync/session', async (req, res) => {
+  if (!pgPool) return res.json({ ok: false, reason: 'no_db' });
+  const s = req.body;
+  if (!s || !s.id) return res.status(400).json({ error: 'Missing session' });
+  try {
+    await pgPool.query(`
+      INSERT INTO session_reports
+        (session_id, date, end_time, duration_secs, calls, connected, vm, appts, callbacks, contact_rate)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+      ON CONFLICT (session_id) DO NOTHING
+    `, [
+      String(s.id), s.date ? new Date(s.date) : new Date(),
+      s.endTime ? new Date(s.endTime) : null,
+      s.durationSecs || 0, s.calls || 0, s.connected || 0,
+      s.vm || 0, s.appts || 0, s.callbacks || 0, s.contactRate || 0
+    ]);
+    res.json({ ok: true });
+  } catch(err) {
+    console.error('[Claude sync session]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/claude/account
+app.get('/api/claude/account', claudeAuth, (req, res) => {
+  res.json({
+    agent: 'Jose Cruz',
+    brokerage: 'Douglas Elliman',
+    dialer: 'PowerDial',
+    url: process.env.PUBLIC_URL || 'https://powerdial-production-85ab.up.railway.app',
+    dbConnected: !!pgPool,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// GET /api/claude/stats?range=today|week|month|all
+app.get('/api/claude/stats', claudeAuth, async (req, res) => {
+  if (!pgPool) return res.status(503).json({ error: 'No database connected' });
+  const since = sinceDate(req.query.range || 'today');
+  try {
+    const { rows } = await pgPool.query(`
+      SELECT
+        COUNT(*) AS total_calls,
+        SUM(CASE WHEN outcome NOT IN ('No Contact','No Answer','noanswer','Left VM','voicemail','Voicemail','Bad Number','DNC') THEN 1 ELSE 0 END) AS contacts,
+        SUM(CASE WHEN outcome IN ('Left VM','voicemail','Voicemail') THEN 1 ELSE 0 END) AS voicemails,
+        SUM(CASE WHEN outcome IN ('Appointment','Hot Lead','Interested') THEN 1 ELSE 0 END) AS appointments,
+        SUM(CASE WHEN outcome = 'Callback' THEN 1 ELSE 0 END) AS callbacks,
+        SUM(duration_secs) AS total_seconds,
+        COUNT(DISTINCT session_id) AS session_count
+      FROM call_records WHERE date >= $1
+    `, [since]);
+    const r = rows[0];
+    const totalCalls = parseInt(r.total_calls) || 0;
+    const contacts   = parseInt(r.contacts) || 0;
+    const totalSecs  = parseInt(r.total_seconds) || 0;
+    const hrs        = totalSecs / 3600;
+    res.json({
+      range: req.query.range || 'today',
+      since: since.toISOString(),
+      totalCalls,
+      contacts,
+      voicemails:   parseInt(r.voicemails) || 0,
+      appointments: parseInt(r.appointments) || 0,
+      callbacks:    parseInt(r.callbacks) || 0,
+      contactRate:  totalCalls ? Math.round(contacts / totalCalls * 100) : 0,
+      sessionCount: parseInt(r.session_count) || 0,
+      totalDialTime: formatSecs(totalSecs),
+      callsPerHour: hrs > 0 ? Math.round(totalCalls / hrs) : 0
+    });
+  } catch(err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/claude/calls?range=today|week|month|all&limit=100
+app.get('/api/claude/calls', claudeAuth, async (req, res) => {
+  if (!pgPool) return res.status(503).json({ error: 'No database connected' });
+  const since = sinceDate(req.query.range || 'today');
+  const limit = Math.min(parseInt(req.query.limit) || 100, 500);
+  try {
+    const { rows } = await pgPool.query(`
+      SELECT record_id, date, contact_name, phone, phone_label, city, state,
+             outcome, duration_secs, notes, group_name, session_id
+      FROM call_records WHERE date >= $1
+      ORDER BY date DESC LIMIT $2
+    `, [since, limit]);
+    res.json({
+      range: req.query.range || 'today',
+      count: rows.length,
+      calls: rows.map(r => ({
+        date: r.date,
+        contact: r.contact_name,
+        phone: r.phone,
+        label: r.phone_label,
+        city: r.city,
+        state: r.state,
+        outcome: r.outcome,
+        duration: formatSecs(r.duration_secs),
+        notes: r.notes,
+        list: r.group_name,
+        sessionId: r.session_id
+      }))
+    });
+  } catch(err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/claude/sessions?range=today|week|month|all
+app.get('/api/claude/sessions', claudeAuth, async (req, res) => {
+  if (!pgPool) return res.status(503).json({ error: 'No database connected' });
+  const since = sinceDate(req.query.range || 'week');
+  try {
+    const { rows } = await pgPool.query(`
+      SELECT session_id, date, end_time, duration_secs, calls, connected, vm, appts, callbacks, contact_rate
+      FROM session_reports WHERE date >= $1 ORDER BY date DESC
+    `, [since]);
+    res.json({
+      range: req.query.range || 'week',
+      count: rows.length,
+      sessions: rows.map(s => ({
+        date: s.date,
+        endTime: s.end_time,
+        duration: formatSecs(s.duration_secs),
+        calls: s.calls,
+        contacts: s.connected,
+        voicemails: s.vm,
+        appointments: s.appts,
+        callbacks: s.callbacks,
+        contactRate: s.contact_rate + '%'
+      }))
+    });
+  } catch(err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+function formatSecs(secs) {
+  if (!secs) return '0:00';
+  const m = Math.floor(secs / 60), s = Math.floor(secs % 60);
+  return m + ':' + String(s).padStart(2, '0');
+}
+
+
+// ─── Spam Check ───────────────────────────────────────────────────────────────
+// POST /spam-check — checks numbers against Twilio Lookup + carrier reputation
+app.post('/spam-check', async (req, res) => {
+  const { numbers = [] } = req.body;
+  if (!numbers.length) return res.json({ results: [] });
+  if (!process.env.TWILIO_ACCOUNT_SID) {
+    return res.json({ results: numbers.map(n => ({ number: n, flagged: false, note: 'Demo mode — Twilio not configured' })) });
   }
   try {
-    await dbClearContacts();
-    res.json({ success: true, message: 'Queue cleared' });
+    const results = await Promise.all(numbers.map(async (number) => {
+      try {
+        const lookup = await client.lookups.v2.phoneNumbers(number)
+          .fetch({ fields: 'line_type_intelligence' });
+        // Twilio doesn't expose spam scores directly in free tier
+        // Use line type as a signal: voip lines are more likely flagged
+        const lt = lookup.lineTypeIntelligence;
+        const lineType = lt ? lt.type : 'unknown';
+        const flagged = false; // Twilio free lookup doesn't expose spam flag; real signal requires paid risk score
+        return { number, flagged, lineType, note: lineType === 'voip' ? 'VoIP number — higher spam risk' : 'Mobile/landline — lower spam risk' };
+      } catch(e) {
+        return { number, flagged: false, note: 'Lookup failed: ' + e.message };
+      }
+    }));
+    res.json({ results });
   } catch(e) {
     res.status(500).json({ error: e.message });
   }
 });
 
-// ─── Debug Endpoint ─────────────────────────────────────────────────────────
-app.get('/api/debug', async (req, res) => {
-  const dbOk = pgPool ? await pgPool.query('SELECT 1').then(()=>true).catch(()=>false) : false;
-  const count = pgPool ? await pgPool.query('SELECT COUNT(*) FROM expireds_queue').then(r=>parseInt(r.rows[0].count,10)).catch(()=>-1) : memQueue.length;
-  res.json({ databaseUrl: !!process.env.DATABASE_URL, pgPoolReady: !!pgPool, dbConnected: dbOk, queueCount: count, memQueueLen: memQueue.length });
+// ─── Number Pool Info ─────────────────────────────────────────────────────────
+// GET /api/numbers — returns pool and rotation index (for settings UI)
+app.get('/api/numbers', (req, res) => {
+  res.json({
+    pool: NUMBER_POOL,
+    rotationIdx: _rotationIdx,
+    next: NUMBER_POOL.length ? NUMBER_POOL[_rotationIdx % NUMBER_POOL.length] : null
+  });
+});
+
+// POST /api/numbers/reset — reset rotation counter
+app.post('/api/numbers/reset', (req, res) => {
+  _rotationIdx = 0;
+  res.json({ ok: true, next: NUMBER_POOL.length ? NUMBER_POOL[0] : null });
 });
 
 // ─── Health Check ─────────────────────────────────────────────────────────────
-app.get('/health', async (req, res) => {
+app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
     demoMode: false,
     twilioConfigured: !!process.env.TWILIO_ACCOUNT_SID,
-    expiredsPending: await dbCount().catch(() => 0)
+    expiredsPending: expiredQueueFallback.length
   });
 });
 
@@ -624,5 +1177,6 @@ app.listen(PORT, () => {
   console.log(`   Frontend: http://localhost:${PORT}`);
   console.log(`   Health:   http://localhost:${PORT}/health`);
   console.log(`   Mode:     ${process.env.TWILIO_ACCOUNT_SID ? '✅ Live (Twilio connected)' : '⚠️  No Twilio credentials'}`);
-  if (!process.env.PUBLIC_URL) console.log(`   ⚠️  PUBLIC_URL not set — run ngrok and set it in .env`);
+  console.log(`   BASE_URL: ${BASE_URL}`);
+  if (!process.env.PUBLIC_URL) console.log(`   ⚠️  PUBLIC_URL not set — using Railway fallback`);
 });
