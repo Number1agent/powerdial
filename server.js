@@ -556,8 +556,13 @@ app.get('/api/expireds/today', async (req, res) => {
 app.get('/api/expireds/pending', async (req, res) => {
   try {
     const contacts = await dbGetContacts();
-    // Don't clear — use /api/expireds/today for non-destructive reads
-    console.log(`[Expireds] Delivered ${contacts.length} pending contacts`);
+    if (contacts.length) {
+      // Clear after delivery so the same batch does not reload on every dialer open
+      await dbClearContacts();
+      console.log(`[Expireds] Delivered and cleared ${contacts.length} pending contacts`);
+    } else {
+      console.log('[Expireds] No pending contacts');
+    }
     res.json({ contacts, count: contacts.length });
   } catch(e) {
     res.status(500).json({ error: e.message });
