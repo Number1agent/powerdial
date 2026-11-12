@@ -422,9 +422,8 @@ app.post('/api/session/end', async (req, res) => {
 // ─── TwiML: Outbound lead call ────────────────────────────────────────────────
 // Lead waits in the conference with startConferenceOnEnter="false" — hold music plays,
 // conference does NOT start. /webhook/call-status selects the first answering lead
-// and redirects them to /twiml/outbound-join (startConferenceOnEnter="true");
-// all other answering leads are immediately hung up. This prevents the race condition
-// where multiple simultaneous answers all join before any webhook fires.
+// Leads join the conference immediately. The first answerer starts the bridge
+// with the waiting agent; the in-progress webhook cancels all other ringing lines.
 app.all('/twiml/outbound', (req, res) => {
   const room = req.query.room || req.body.room || sessionState.conferenceRoom || CONFERENCE_NAME;
   res.set('Content-Type', 'text/xml');
@@ -432,10 +431,9 @@ app.all('/twiml/outbound', (req, res) => {
 <Response>
   <Dial>
     <Conference
-      startConferenceOnEnter="false"
+      startConferenceOnEnter="true"
       endConferenceOnExit="false"
       beep="false"
-      waitUrl="${BASE_URL}/twiml/hold"
       maxParticipants="10">${room}</Conference>
   </Dial>
 </Response>`);
@@ -611,23 +609,15 @@ app.post('/webhook/call-status', async (req, res) => {
   const newStatus = statusMap[CallStatus] || CallStatus;
 
   if (CallStatus === 'in-progress') {
-    // Lead answered — currently waiting in conference with startConferenceOnEnter="false"
+    // Lead answered — claim the first one, cancel all others
     if (!sessionState.connectedLine) {
-      // Claim synchronously BEFORE any async call — concurrent webhook handlers
-      // for other leads see this immediately and fall into the else branch.
+      // Claim synchronously — concurrent webhook handlers for other leads see this
+      // immediately and fall into the else branch below.
       sessionState.connectedLine = lineId;
       setLine(lineId, { status: 'connected' });
+      console.log(`[Line ${lineId}] Lead answered — connected to conference`);
 
-      const room = sessionState.conferenceRoom || CONFERENCE_NAME;
-
-      // Redirect this lead to startConferenceOnEnter="true" — bridges them with agent
-      client.calls(CallSid).update({
-        url: `${BASE_URL}/twiml/outbound-join?room=${encodeURIComponent(room)}`
-      }).catch(e => console.error(`[Line ${lineId}] Redirect to outbound-join failed: ${e.message}`));
-
-      console.log(`[Line ${lineId}] Lead answered — redirecting to conference (room: ${room})`);
-
-      // Cancel all other still-ringing lines
+      // Cancel all other still-ringing lines so they never join the conference
       sessionState.lines.forEach(l => {
         if (l.lineId !== lineId && l.status === 'ringing' && l.callSid) {
           client.calls(l.callSid).update({ status: 'completed' }).catch(()=>{});
@@ -635,7 +625,7 @@ app.post('/webhook/call-status', async (req, res) => {
         }
       });
     } else {
-      // Another lead already won — hang up immediately (they're on hold, agent never hears them)
+      // Another lead already won — hang up this one immediately
       console.log(`[Line ${lineId}] Extra answer — hanging up (connectedLine=${sessionState.connectedLine})`);
       client.calls(CallSid).update({
         twiml: `<Response><Hangup/></Response>`

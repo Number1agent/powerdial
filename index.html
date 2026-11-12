@@ -6856,40 +6856,48 @@ function processBackendEvents(data) {
         lineMachine(line); return;
       }
     }
-    if (!line.contact) return;          // line already cleared — skip
+
+    // ── Handle 'connected' BEFORE any guards — always try to show the card ──────
+    if (lineData.status === 'connected') {
+      if (line.status === 'connected') return; // card already showing — skip
+      // Ensure we have a contact (create Unknown Caller if cleared early)
+      if (!line.contact) {
+        console.warn('[PowerDial] Backend connected but contact is null on line', lineData.lineId, '— showing Unknown Caller');
+        line.contact = { name: 'Unknown Caller', phones: [], status: 'ringing', _unknown: true };
+        line.phoneEntry = { phone: '', status: 'ringing' };
+      }
+      // Reset status to ringing so lineConnected guard passes (handles idle/noanswer edge cases)
+      const activeStates = ['ringing', 'connected', 'voicemail', 'machine'];
+      if (!activeStates.includes(line.status)) {
+        console.warn('[PowerDial] Backend connected but line status is', line.status, '— resetting to ringing for line', lineData.lineId);
+        line.status = 'ringing';
+      }
+      lineConnected(line);
+      return;
+    }
+
+    // For all other events: skip if line already cleared
+    if (!line.contact) return;
     if (line.status === lineData.status) return;
     const activeStates = ['ringing', 'connected', 'voicemail', 'machine'];
-    if (lineData.status === 'connected') {
-      if (activeStates.includes(line.status)) {
-        lineConnected(line);
-      } else {
-        console.warn('[PowerDial] Backend says connected but line status is', line.status, '— skipping lineConnected for line', lineData.lineId);
-        // If we have a contact still, try to recover (safety timeout may have fired prematurely)
-        if (line.contact && (line.status === 'noanswer' || line.status === 'idle')) {
-          console.warn('[PowerDial] Recovering missed connection — line still has contact, showing card');
-          line.status = 'ringing'; // reset so lineConnected guard passes
-          lineConnected(line);
-        }
-      }
-    }
-    else if (lineData.status === 'voicemail') { if (activeStates.includes(line.status) && line.status !== 'voicemail') lineVoicemail(line); }
+    if (lineData.status === 'voicemail') { if (activeStates.includes(line.status) && line.status !== 'voicemail') lineVoicemail(line); }
     else if (lineData.status === 'noanswer' || lineData.status === 'busy') { if (activeStates.includes(line.status)) lineDone(line, lineData.status); }
   });
 
   // ── Watchdog: catch any connected line the normal path missed ──────────────
-  // Runs every poll; handles cases where line.contact was null or status was wrong
+  // Runs every poll; fires whenever backend shows 'connected' but activeLineId is still null
   if (state.session && state.activeLineId === null) {
     const _connLineData = (data.lines || []).find(ld => ld.status === 'connected');
     if (_connLineData) {
       const _wl = state.lines[(_connLineData.lineId || 0) - 1];
-      if (_wl && _wl.status === 'ringing') {
-        console.warn('[PowerDial] Watchdog: missed connected event on line', _connLineData.lineId, '— forcing lineConnected. Line status was:', _wl.status);
+      if (_wl && _wl.status !== 'connected') {
+        // Frontend missed the connected event (any reason) — force it now
+        console.warn('[PowerDial] Watchdog: missed connected event on line', _connLineData.lineId, '— forcing lineConnected. Frontend status was:', _wl.status);
         if (!_wl.contact) {
           _wl.contact = { name: 'Unknown Caller', phones: [], status: 'ringing', _unknown: true };
           _wl.phoneEntry = { phone: '', status: 'ringing' };
-        } else {
-          _wl.status = 'ringing'; // reset so lineConnected runs cleanly
         }
+        _wl.status = 'ringing'; // reset so lineConnected runs cleanly
         lineConnected(_wl);
       }
     }
