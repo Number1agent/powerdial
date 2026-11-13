@@ -6859,7 +6859,7 @@ function processBackendEvents(data) {
 
     // ── Handle 'connected' BEFORE any guards — always try to show the card ──────
     if (lineData.status === 'connected') {
-      if (line.status === 'connected') return; // card already showing — skip
+      if (['connected', 'voicemail', 'machine'].includes(line.status)) return; // card already showing — skip
       // Ensure we have a contact (create Unknown Caller if cleared early)
       if (!line.contact) {
         console.warn('[PowerDial] Backend connected but contact is null on line', lineData.lineId, '— showing Unknown Caller');
