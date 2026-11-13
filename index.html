@@ -6860,12 +6860,8 @@ function processBackendEvents(data) {
     // ── Handle 'connected' BEFORE any guards — always try to show the card ──────
     if (lineData.status === 'connected') {
       if (['connected', 'voicemail', 'machine'].includes(line.status)) return; // card already showing — skip
-      // Ensure we have a contact (create Unknown Caller if cleared early)
-      if (!line.contact) {
-        console.warn('[PowerDial] Backend connected but contact is null on line', lineData.lineId, '— showing Unknown Caller');
-        line.contact = { name: 'Unknown Caller', phones: [], status: 'ringing', _unknown: true };
-        line.phoneEntry = { phone: '', status: 'ringing' };
-      }
+      // Skip if contact already cleared — watchdog handles genuine missed events
+      if (!line.contact) return;
       // Reset status to ringing so lineConnected guard passes (handles idle/noanswer edge cases)
       const activeStates = ['ringing', 'connected', 'voicemail', 'machine'];
       if (!activeStates.includes(line.status)) {
@@ -6890,14 +6886,13 @@ function processBackendEvents(data) {
     const _connLineData = (data.lines || []).find(ld => ld.status === 'connected');
     if (_connLineData) {
       const _wl = state.lines[(_connLineData.lineId || 0) - 1];
-      if (_wl && _wl.status !== 'connected') {
-        // Frontend missed the connected event (any reason) — force it now
-        console.warn('[PowerDial] Watchdog: missed connected event on line', _connLineData.lineId, '— forcing lineConnected. Frontend status was:', _wl.status);
+      if (_wl && _wl.status === 'ringing') {
+        // Frontend missed the connected event while line was ringing — force it now
+        console.warn('[PowerDial] Watchdog: missed connected event on line', _connLineData.lineId, '— forcing lineConnected');
         if (!_wl.contact) {
           _wl.contact = { name: 'Unknown Caller', phones: [], status: 'ringing', _unknown: true };
           _wl.phoneEntry = { phone: '', status: 'ringing' };
         }
-        _wl.status = 'ringing'; // reset so lineConnected runs cleanly
         lineConnected(_wl);
       }
     }
