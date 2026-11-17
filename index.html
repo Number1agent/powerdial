@@ -6860,12 +6860,8 @@ function processBackendEvents(data) {
     // ── Handle 'connected' BEFORE any guards — always try to show the card ──────
     if (lineData.status === 'connected') {
       if (['connected', 'voicemail', 'machine'].includes(line.status)) return; // card already showing — skip
-      // Skip ONLY when line.status === 'idle': hangupActive() sets that immediately on agent hangup,
-      // so idle = definitely stale backend event after a clean hangup.
-      // We allow 'noanswer' through: lineDone may have fired early (safety timeout, dropped line)
-      // while the backend hangup request silently failed — the person is still live in the conference.
-      // lineConnected() already handles null contact by showing an Unknown Caller card.
-      if (line.status === 'idle') return;
+      // Skip if contact already cleared — prevents spurious Unknown Caller on stale backend events
+      if (!line.contact) return;
       // Reset status to ringing so lineConnected logic passes cleanly
       const activeStates = ['ringing', 'connected', 'voicemail', 'machine'];
       if (!activeStates.includes(line.status)) {
@@ -6890,10 +6886,8 @@ function processBackendEvents(data) {
     const _connLineData = (data.lines || []).find(ld => ld.status === 'connected');
     if (_connLineData) {
       const _wl = state.lines[(_connLineData.lineId || 0) - 1];
-      // Fire for 'ringing' (normal missed event) OR 'noanswer' (lineDone fired early but
-      // hangup failed — person still live in conference).  Skip 'idle' (clean hangup path).
-      if (_wl && (_wl.status === 'ringing' || _wl.status === 'noanswer')) {
-        console.warn('[PowerDial] Watchdog: missed connected event on line', _connLineData.lineId, '(line status:', _wl.status, ')— forcing lineConnected');
+      if (_wl && _wl.status === 'ringing') {
+        console.warn('[PowerDial] Watchdog: missed connected event on line', _connLineData.lineId, '— forcing lineConnected');
         if (!_wl.contact) {
           _wl.contact = { name: 'Unknown Caller', phones: [], status: 'ringing', _unknown: true };
           _wl.phoneEntry = { phone: '', status: 'ringing' };
