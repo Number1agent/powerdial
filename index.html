@@ -6860,8 +6860,15 @@ function processBackendEvents(data) {
     // ── Handle 'connected' BEFORE any guards — always try to show the card ──────
     if (lineData.status === 'connected') {
       if (['connected', 'voicemail', 'machine'].includes(line.status)) return; // card already showing — skip
-      // Skip if contact already cleared — prevents spurious Unknown Caller on stale backend events
-      if (!line.contact) return;
+      // ── Restore contact from backend if frontend cleared it (lineDone ran early, 90s safety fired, etc.)
+      // The backend preserves contact for connected lines, so lineData.contact is the source of truth.
+      // Only skip if BOTH sides have no contact — that's a truly stale backend event.
+      if (!line.contact && lineData.contact) {
+        line.contact = lineData.contact;
+        line.phoneEntry = { phone: lineData.contact.phone || '', status: 'ringing', label: 'Phone' };
+        console.warn('[PowerDial] Contact restored from backend for connected line', lineData.lineId, lineData.contact.name);
+      }
+      if (!line.contact) return; // Both sides null — truly stale/spurious event
       // Reset status to ringing so lineConnected logic passes cleanly
       const activeStates = ['ringing', 'connected', 'voicemail', 'machine'];
       if (!activeStates.includes(line.status)) {
@@ -6886,12 +6893,18 @@ function processBackendEvents(data) {
     const _connLineData = (data.lines || []).find(ld => ld.status === 'connected');
     if (_connLineData) {
       const _wl = state.lines[(_connLineData.lineId || 0) - 1];
-      if (_wl && _wl.status === 'ringing') {
-        console.warn('[PowerDial] Watchdog: missed connected event on line', _connLineData.lineId, '— forcing lineConnected');
+      if (_wl && (_wl.status === 'ringing' || _wl.status === 'noanswer')) {
+        console.warn('[PowerDial] Watchdog: missed connected event on line', _connLineData.lineId, '— forcing lineConnected (status was', _wl.status + ')');
+        // Restore contact from backend if cleared
+        if (!_wl.contact && _connLineData.contact) {
+          _wl.contact = _connLineData.contact;
+          _wl.phoneEntry = { phone: _connLineData.contact.phone || '', status: 'ringing', label: 'Phone' };
+        }
         if (!_wl.contact) {
           _wl.contact = { name: 'Unknown Caller', phones: [], status: 'ringing', _unknown: true };
           _wl.phoneEntry = { phone: '', status: 'ringing' };
         }
+        _wl.status = 'ringing'; // reset before lineConnected
         lineConnected(_wl);
       }
     }
