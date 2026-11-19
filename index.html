@@ -6860,6 +6860,13 @@ function processBackendEvents(data) {
     // ── Handle 'connected' BEFORE any guards — always try to show the card ──────
     if (lineData.status === 'connected') {
       if (['connected', 'voicemail', 'machine'].includes(line.status)) return; // card already showing — skip
+      // lineDone was called on this line (status='noanswer') and its hangup request is in-flight (~100-500ms).
+      // The backend still briefly shows 'connected' during that window. Restoring contact here would
+      // re-fire lineConnected → loop: lineConnected sets 'connected', old lineDone timer fires 'idle',
+      // next poll sees 'connected' again → repeat → 5 cards. Skip now; after the 1500ms cleanup timer
+      // the line becomes 'idle' and legitimate recovery (genuine re-answer after spurious lineDone)
+      // flows through the 'idle' path below instead.
+      if (line.status === 'noanswer') return;
       // ── Restore contact from backend if frontend cleared it (lineDone ran early, 90s safety fired, etc.)
       // The backend preserves contact for connected lines, so lineData.contact is the source of truth.
       // Only skip if BOTH sides have no contact — that's a truly stale backend event.
@@ -6893,7 +6900,7 @@ function processBackendEvents(data) {
     const _connLineData = (data.lines || []).find(ld => ld.status === 'connected');
     if (_connLineData) {
       const _wl = state.lines[(_connLineData.lineId || 0) - 1];
-      if (_wl && (_wl.status === 'ringing' || _wl.status === 'noanswer')) {
+      if (_wl && _wl.status === 'ringing') {
         console.warn('[PowerDial] Watchdog: missed connected event on line', _connLineData.lineId, '— forcing lineConnected (status was', _wl.status + ')');
         // Restore contact from backend if cleared
         if (!_wl.contact && _connLineData.contact) {

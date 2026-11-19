@@ -608,6 +608,19 @@ app.post('/webhook/call-status', async (req, res) => {
 
   const newStatus = statusMap[CallStatus] || CallStatus;
 
+  // ── Guard: ignore stale Twilio webhook retries ───────────────────────────────
+  // Twilio retries failed webhooks for up to several minutes. A retry for a
+  // *previous* call on this lineId (old CallSid) must not corrupt the status of
+  // the *current* call (different CallSid). Only let the webhook through when
+  // the CallSid matches what we have on file, OR when the line is already idle
+  // (callSid was cleared — the webhook is harmless in that case).
+  const _wl = getLine(lineId);
+  if (_wl && _wl.callSid && _wl.callSid !== CallSid) {
+    console.warn(`[Line ${lineId}] Stale webhook ignored: expected callSid=${_wl.callSid}, got ${CallSid} (status=${CallStatus})`);
+    res.set('Content-Type', 'text/xml');
+    return res.send('<Response/>');
+  }
+
   if (CallStatus === 'in-progress') {
     // Lead answered — claim the first one, cancel all others
     if (!sessionState.connectedLine) {
