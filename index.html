@@ -2341,6 +2341,15 @@
         </div>
         <div id="activeNoteLog" style="display:flex;flex-direction:column;gap:5px;margin-top:6px"></div>
       </div>
+
+      <!-- Transcript -->
+      <div id="transcriptSection" style="display:none;margin-top:8px;padding:10px 12px;background:var(--bg-2);border:1px solid var(--border);border-radius:8px">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+          <span style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em">🎙 Transcript</span>
+          <span id="transcriptStatus" style="font-size:11px;color:var(--text-secondary)"></span>
+        </div>
+        <div id="transcriptText" style="font-size:12px;line-height:1.6;color:var(--text-primary);white-space:pre-wrap;max-height:160px;overflow-y:auto;padding:4px 0"></div>
+      </div>
     </div>
   </div>
 
@@ -6552,6 +6561,7 @@ function hangupActive() {
   // Save for dispose()
   state._pendingContact = contact;
   state._pendingPhoneEntry = phoneEntry;
+  state._pendingCallSid = line.callSid || null;
 
   // Show disposition
   showDisposition(contact, duration);
@@ -6616,6 +6626,14 @@ function showDisposition(contact, duration) {
   document.getElementById('noCallState').style.display = 'none';
   document.getElementById('dispSection').style.display = 'block';
   document.getElementById('notesSection').style.display = 'block';
+  // Kick off post-call transcription if recording is enabled and we have a callSid
+  const _tCallSid = state._pendingCallSid;
+  if (!state.demoMode && state.settings.backendUrl && state.settings.recordCalls && _tCallSid) {
+    scheduleTranscript(_tCallSid);
+  } else {
+    const _ts = document.getElementById('transcriptSection');
+    if (_ts) _ts.style.display = 'none';
+  }
 
   document.getElementById('activeName').textContent = contact ? contact.name : '—';
   document.getElementById('activeSub').textContent = duration ? `Call duration: ${formatTime(duration)}` : 'Call ended';
@@ -6630,6 +6648,7 @@ async function dispose(result) {
   const phoneEntry = state._pendingPhoneEntry || (contact?.phones || []).find(p => p.status === 'dialing' || p.status === 'connected' || p.status === 'voicemail');
   state._pendingContact = null;
   state._pendingPhoneEntry = null;
+  state._pendingCallSid = null;
 
   // Trigger voicemail drop on backend if live mode
   if (result === 'Left VM' && !state.demoMode && state.activeLineId !== null) {
@@ -6687,6 +6706,59 @@ async function dispose(result) {
   renderCallbacks();
   // Resume dialing after disposition is picked
   resumeAfterDisposition();
+}
+
+// ─── Transcript via Groq Whisper ─────────────────────────────────────────────
+function scheduleTranscript(callSid) {
+  const ts = document.getElementById('transcriptSection');
+  const statusEl = document.getElementById('transcriptStatus');
+  const textEl = document.getElementById('transcriptText');
+  if (!ts) return;
+  ts.style.display = 'block';
+  textEl.textContent = '';
+  statusEl.textContent = '— waiting for recording…';
+
+  // Twilio needs ~30-90s to process recording; poll every 15s up to 3 mins
+  let attempts = 0;
+  const maxAttempts = 12; // 12 × 15s = 3 min
+  async function tryFetch() {
+    attempts++;
+    statusEl.textContent = `— fetching… (${attempts})`;
+    try {
+      const resp = await fetch(`${state.settings.backendUrl}/api/transcribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ callSid })
+      });
+      const data = await resp.json();
+      if (resp.ok && data.transcript) {
+        textEl.textContent = data.transcript;
+        statusEl.textContent = '';
+        // Append to notes if notes are blank
+        const notesEl = document.getElementById('callNotes');
+        if (notesEl && !notesEl.value.trim()) {
+          notesEl.value = '[Transcript]
+' + data.transcript;
+        }
+        return; // done
+      }
+      if (data.error && data.error.includes('No recording')) {
+        if (attempts < maxAttempts) {
+          statusEl.textContent = '— waiting for recording…';
+          setTimeout(tryFetch, 15000);
+        } else {
+          statusEl.textContent = '— no recording available';
+        }
+        return;
+      }
+      statusEl.textContent = `— ${data.error || 'error'}`;
+    } catch(e) {
+      if (attempts < maxAttempts) setTimeout(tryFetch, 15000);
+      else statusEl.textContent = '— unavailable';
+    }
+  }
+  // First attempt after 30s to give Twilio time to process
+  setTimeout(tryFetch, 30000);
 }
 
 function resumeAfterDisposition() {
@@ -7140,6 +7212,13 @@ function showActiveCall(line) {
 function clearActiveCall(hideDisp = true) {
   const card = document.getElementById('activeCallCard');
   card.style.display = 'none';
+  // Hide transcript panel when call is fully cleared
+  if (hideDisp) {
+    const _tsc = document.getElementById('transcriptSection');
+    if (_tsc) _tsc.style.display = 'none';
+    const _ttx = document.getElementById('transcriptText');
+    if (_ttx) _ttx.textContent = '';
+  }
   const banner = document.getElementById('liveCallBanner');
   if (banner) banner.classList.remove('visible');
   // Only hide the disposition panel if explicitly asked — showDisposition() keeps it open

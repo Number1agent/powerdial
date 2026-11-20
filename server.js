@@ -1159,6 +1159,75 @@ app.post('/api/numbers/reset', (req, res) => {
   res.json({ ok: true, next: NUMBER_POOL.length ? NUMBER_POOL[0] : null });
 });
 
+
+// ─── Transcription: Groq Whisper ──────────────────────────────────────────────
+app.post('/api/transcribe', async (req, res) => {
+  const { callSid, recordingUrl } = req.body;
+  if (!callSid && !recordingUrl) return res.status(400).json({ error: 'callSid or recordingUrl required' });
+
+  // Look up recordingUrl from callLog if not provided directly
+  let recUrl = recordingUrl;
+  if (!recUrl && callSid) {
+    const entry = [...sessionState.callLog].reverse().find(e => e.callSid === callSid);
+    if (entry) recUrl = entry.recordingUrl;
+  }
+  if (!recUrl) return res.status(404).json({ error: 'No recording found for this call' });
+
+  if (!process.env.GROQ_API_KEY) return res.status(503).json({ error: 'GROQ_API_KEY not configured' });
+
+  try {
+    // Twilio recording URLs need .mp3 extension and basic auth
+    const audioUrl = recUrl.endsWith('.mp3') ? recUrl : recUrl + '.mp3';
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    const basicAuth = Buffer.from(`${accountSid}:${authToken}`).toString('base64');
+
+    // Fetch the audio from Twilio
+    const audioResp = await fetch(audioUrl, {
+      headers: { 'Authorization': `Basic ${basicAuth}` }
+    });
+    if (!audioResp.ok) {
+      console.error(`[Transcribe] Failed to fetch audio: ${audioResp.status}`);
+      return res.status(502).json({ error: `Failed to fetch recording (${audioResp.status})` });
+    }
+    const audioBuffer = Buffer.from(await audioResp.arrayBuffer());
+
+    // Build multipart form for Groq Whisper API
+    const boundary = '----FormBoundary' + Math.random().toString(36).slice(2);
+    const CRLF = '\r\n';
+    const fileHeader = `--${boundary}${CRLF}Content-Disposition: form-data; name="file"; filename="recording.mp3"${CRLF}Content-Type: audio/mpeg${CRLF}${CRLF}`;
+    const modelField = `--${boundary}${CRLF}Content-Disposition: form-data; name="model"${CRLF}${CRLF}whisper-large-v3-turbo`;
+    const footer = `${CRLF}--${boundary}--`;
+
+    const body = Buffer.concat([
+      Buffer.from(fileHeader),
+      audioBuffer,
+      Buffer.from(`${CRLF}${modelField}${footer}`)
+    ]);
+
+    const groqResp = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+        'Content-Type': `multipart/form-data; boundary=${boundary}`
+      },
+      body
+    });
+
+    const groqData = await groqResp.json();
+    if (!groqResp.ok) {
+      console.error('[Transcribe] Groq error:', groqData);
+      return res.status(502).json({ error: groqData.error?.message || 'Groq API error' });
+    }
+
+    console.log(`[Transcribe] Done for callSid=${callSid}, length=${groqData.text?.length}`);
+    res.json({ transcript: groqData.text || '' });
+  } catch (err) {
+    console.error('[Transcribe] Exception:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── Health Check ─────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
   res.json({
