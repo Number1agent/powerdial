@@ -6628,8 +6628,9 @@ function showDisposition(contact, duration) {
   document.getElementById('notesSection').style.display = 'block';
   // Kick off post-call transcription if recording is enabled and we have a callSid
   const _tCallSid = state._pendingCallSid;
+  const _tContact = state._pendingContact || state._dispContact || null;
   if (!state.demoMode && state.settings.backendUrl && state.settings.recordCalls && _tCallSid) {
-    scheduleTranscript(_tCallSid);
+    scheduleTranscript(_tCallSid, _tContact);
   } else {
     const _ts = document.getElementById('transcriptSection');
     if (_ts) _ts.style.display = 'none';
@@ -6709,21 +6710,45 @@ async function dispose(result) {
 }
 
 // ─── Transcript via Groq Whisper ─────────────────────────────────────────────
-function scheduleTranscript(callSid) {
+function scheduleTranscript(callSid, contact) {
   const ts = document.getElementById('transcriptSection');
   const statusEl = document.getElementById('transcriptStatus');
   const textEl = document.getElementById('transcriptText');
-  if (!ts) return;
-  ts.style.display = 'block';
-  textEl.textContent = '';
-  statusEl.textContent = '— waiting for recording…';
+  if (ts) {
+    ts.style.display = 'block';
+    textEl.textContent = '';
+    statusEl.textContent = '— waiting for recording…';
+  }
 
   // Twilio needs ~30-90s to process recording; poll every 15s up to 3 mins
   let attempts = 0;
   const maxAttempts = 12; // 12 × 15s = 3 min
+
+  function saveTranscriptRetroactive(transcript) {
+    // Always save to the contact object itself
+    if (contact) {
+      const existing = contact.callNotes ? contact.callNotes.trim() : '';
+      if (!existing.includes('[Transcript]')) {
+        contact.callNotes = (existing ? existing + '\n\n' : '') + '[Transcript]\n' + transcript;
+      }
+      saveContacts();
+    }
+    // Patch the most recent call record for this contact in localStorage
+    if (contact && contact.name) {
+      try {
+        const records = JSON.parse(localStorage.getItem('powerdial_call_records') || '[]');
+        const idx = records.findIndex(r => r.contactName === contact.name);
+        if (idx >= 0 && !(records[idx].notes || '').includes('[Transcript]')) {
+          records[idx].notes = (records[idx].notes ? records[idx].notes.trim() + '\n\n' : '') + '[Transcript]\n' + transcript;
+          localStorage.setItem('powerdial_call_records', JSON.stringify(records));
+        }
+      } catch(e) {}
+    }
+  }
+
   async function tryFetch() {
     attempts++;
-    statusEl.textContent = `— fetching… (${attempts})`;
+    if (statusEl) statusEl.textContent = `— fetching… (${attempts})`;
     try {
       const resp = await fetch(`${state.settings.backendUrl}/api/transcribe`, {
         method: 'POST',
@@ -6732,29 +6757,30 @@ function scheduleTranscript(callSid) {
       });
       const data = await resp.json();
       if (resp.ok && data.transcript) {
-        textEl.textContent = data.transcript;
-        statusEl.textContent = '';
-        // Append to notes if notes are blank
+        // Show in panel if still visible (user may have already disposed)
+        if (textEl) textEl.textContent = data.transcript;
+        if (statusEl) statusEl.textContent = '';
         const notesEl = document.getElementById('callNotes');
         if (notesEl && !notesEl.value.trim()) {
-          notesEl.value = '[Transcript]
-' + data.transcript;
+          notesEl.value = '[Transcript]\n' + data.transcript;
         }
+        // Always save retroactively to the contact + call record
+        saveTranscriptRetroactive(data.transcript);
         return; // done
       }
       if (data.error && data.error.includes('No recording')) {
         if (attempts < maxAttempts) {
-          statusEl.textContent = '— waiting for recording…';
+          if (statusEl) statusEl.textContent = '— waiting for recording…';
           setTimeout(tryFetch, 15000);
         } else {
-          statusEl.textContent = '— no recording available';
+          if (statusEl) statusEl.textContent = '— no recording available';
         }
         return;
       }
-      statusEl.textContent = `— ${data.error || 'error'}`;
+      if (statusEl) statusEl.textContent = `— ${data.error || 'error'}`;
     } catch(e) {
       if (attempts < maxAttempts) setTimeout(tryFetch, 15000);
-      else statusEl.textContent = '— unavailable';
+      else if (statusEl) statusEl.textContent = '— unavailable';
     }
   }
   // First attempt after 30s to give Twilio time to process
